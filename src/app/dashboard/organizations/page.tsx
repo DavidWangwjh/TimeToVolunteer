@@ -78,25 +78,24 @@ export default async function OrganizationsPage() {
 
           return (
             <Card key={organization.id} className="border-slate-200 bg-white">
-              <CardContent className="flex h-full flex-col gap-5 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex gap-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-                      <Building2 className="size-5" />
-                    </span>
-                    <div>
-                      <Link
-                        href={`/dashboard/organizations/${organization.id}`}
-                        className="font-bold text-slate-950 hover:text-emerald-800 hover:underline"
-                      >
-                        {organization.name}
-                      </Link>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {organization.contact_email}
-                      </p>
-                    </div>
-                  </div>
+              <CardContent className="flex h-full flex-col gap-4 p-5">
+                <div className="flex min-h-10 items-center justify-between gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+                    <Building2 className="size-5" />
+                  </span>
                   <MembershipBadge status={membershipStatus} />
+                </div>
+
+                <div>
+                  <Link
+                    href={`/dashboard/organizations/${organization.id}`}
+                    className="font-bold text-slate-950 hover:text-emerald-800 hover:underline"
+                  >
+                    {organization.name}
+                  </Link>
+                  <p className="mt-1 break-all text-sm text-slate-500">
+                    {organization.contact_email}
+                  </p>
                 </div>
 
                 {organization.description && (
@@ -105,29 +104,11 @@ export default async function OrganizationsPage() {
                   </p>
                 )}
 
-                <div className="mt-auto flex items-center justify-between gap-3">
-                  {organization.website ? (
-                    <a
-                      href={organization.website}
-                      className="text-sm font-semibold text-emerald-800 hover:text-emerald-700"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Website
-                    </a>
-                  ) : (
-                    <span />
-                  )}
-                  <Link
-                    href={`/dashboard/organizations/${organization.id}`}
-                    className="text-sm font-semibold text-emerald-800 hover:text-emerald-700 hover:underline"
-                  >
-                    View profile
-                  </Link>
-                  {canRequest && (
+                {canRequest && (
+                  <div className="mt-auto flex justify-end pt-1">
                     <OrganizationRequestButton organizationId={organization.id} />
-                  )}
-                </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           );

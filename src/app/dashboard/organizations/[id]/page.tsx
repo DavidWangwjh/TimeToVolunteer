@@ -87,37 +87,37 @@ export default async function OrganizationDetailPage({ params }: Props) {
         }
       />
 
-      <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-        <Card className="border-slate-200 bg-white">
-          <CardContent className="space-y-5 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex size-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+      <section className="space-y-4">
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm shadow-slate-950/5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
                 <Building2 className="size-5" />
               </span>
               <MembershipBadge status={membershipStatus} />
             </div>
 
-            <div className="space-y-3 text-sm text-slate-600">
-              <div className="flex gap-3">
-                <Mail className="mt-0.5 size-4 shrink-0 text-emerald-800" />
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+              <div className="flex min-w-0 items-center gap-2">
+                <Mail className="size-4 shrink-0 text-emerald-800" />
                 <a
                   href={`mailto:${organizationRecord.contact_email}`}
-                  className="hover:text-emerald-800 hover:underline"
+                  className="break-all hover:text-emerald-800 hover:underline"
                 >
                   {organizationRecord.contact_email}
                 </a>
               </div>
 
               {organizationRecord.contact_phone && (
-                <div className="flex gap-3">
-                  <Phone className="mt-0.5 size-4 shrink-0 text-emerald-800" />
+                <div className="flex items-center gap-2">
+                  <Phone className="size-4 shrink-0 text-emerald-800" />
                   <span>{organizationRecord.contact_phone}</span>
                 </div>
               )}
 
               {organizationRecord.website && (
-                <div className="flex gap-3">
-                  <Globe className="mt-0.5 size-4 shrink-0 text-emerald-800" />
+                <div className="flex min-w-0 items-center gap-2">
+                  <Globe className="size-4 shrink-0 text-emerald-800" />
                   <a
                     href={organizationRecord.website}
                     target="_blank"
@@ -129,8 +129,8 @@ export default async function OrganizationDetailPage({ params }: Props) {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <Card className="border-slate-200 bg-white">
           <CardContent className="p-5">
