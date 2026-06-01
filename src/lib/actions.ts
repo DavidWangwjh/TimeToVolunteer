@@ -6,11 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, getCurrentUserProfile } from "@/lib/auth";
 import {
-  sendAccountSetupEmail,
   sendBookingApprovedEmail,
   sendBookingRejectedEmail,
 } from "@/lib/email";
-import { generateTemporaryPassword } from "@/lib/password";
 import {
   volunteerApplicationSchema,
   opportunityCreateSchema,
@@ -65,8 +63,12 @@ export async function submitVolunteerApplication(data: VolunteerApplicationInput
 
 export async function acceptVolunteerApplication(applicationId: string) {
   await requireAdmin();
+
   const adminClient = createAdminClient();
   const supabase = await createClient();
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent("/reset-password")}`;
 
   const { data: application, error: fetchError } = await supabase
     .from("volunteer_applications")
@@ -78,31 +80,32 @@ export async function acceptVolunteerApplication(applicationId: string) {
     return { error: "Application not found" };
   }
 
-  const temporaryPassword = generateTemporaryPassword();
-  let userId: string;
+  let userId: string | undefined;
+  let emailWarning: string | undefined;
 
-  const { data: createData, error: createError } =
-    await adminClient.auth.admin.createUser({
-      email: application.email,
-      password: temporaryPassword,
-      email_confirm: true,
-      user_metadata: {
+  const { data: inviteData, error: inviteError } =
+    await adminClient.auth.admin.inviteUserByEmail(application.email, {
+      redirectTo,
+      data: {
         first_name: application.first_name,
         last_name: application.last_name,
+        role: "volunteer",
       },
     });
 
-  if (createError) {
+  if (inviteError) {
     const isDuplicate =
-      createError.message.toLowerCase().includes("already") ||
-      createError.message.toLowerCase().includes("registered");
+      inviteError.message.toLowerCase().includes("already") ||
+      inviteError.message.toLowerCase().includes("registered") ||
+      inviteError.message.toLowerCase().includes("exists");
 
     if (!isDuplicate) {
-      return { error: createError.message };
+      return { error: inviteError.message };
     }
 
     const { data: listData, error: listError } =
       await adminClient.auth.admin.listUsers();
+
     if (listError) {
       return { error: listError.message };
     }
@@ -110,22 +113,28 @@ export async function acceptVolunteerApplication(applicationId: string) {
     const existingUser = listData.users.find(
       (user) => user.email?.toLowerCase() === application.email.toLowerCase()
     );
+
     if (!existingUser) {
-      return { error: createError.message };
+      return { error: inviteError.message };
     }
 
-    const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(
-      existingUser.id,
-      { password: temporaryPassword }
-    );
-    if (updateAuthError) {
-      return { error: updateAuthError.message };
-    }
     userId = existingUser.id;
-  } else if (createData.user) {
-    userId = createData.user.id;
+
+    const { error: resetEmailError } =
+      await adminClient.auth.resetPasswordForEmail(application.email, {
+        redirectTo,
+      });
+
+    if (resetEmailError) {
+      emailWarning =
+        "Volunteer was accepted, but the password setup email failed to send.";
+    }
   } else {
-    return { error: "Failed to create user account" };
+    userId = inviteData.user?.id;
+  }
+
+  if (!userId) {
+    return { error: "Failed to create or invite user account" };
   }
 
   const { error: profileError } = await adminClient.from("profiles").upsert({
@@ -146,27 +155,22 @@ export async function acceptVolunteerApplication(applicationId: string) {
 
   const { error: updateError } = await supabase
     .from("volunteer_applications")
-    .update({ status: "accepted", updated_at: new Date().toISOString() })
+    .update({
+      status: "accepted",
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", applicationId);
 
   if (updateError) {
     return { error: updateError.message };
   }
 
-  const loginLink = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
-  const emailResult = await sendAccountSetupEmail(
-    application.email,
-    application.first_name,
-    loginLink,
-    temporaryPassword
-  );
-
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${applicationId}`);
 
   return {
     success: true,
-    emailWarning: emailResult.success ? undefined : "Account created but email failed to send",
+    emailWarning,
   };
 }
 
