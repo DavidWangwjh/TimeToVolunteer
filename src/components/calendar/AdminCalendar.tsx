@@ -5,6 +5,9 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import type { EventContentArg } from "@fullcalendar/core";
+import { formatTime } from "@/lib/dates";
+import { opportunityStatusLabels } from "@/lib/opportunity-labels";
 import type { VolunteerOpportunity } from "@/types/database";
 
 interface AdminCalendarProps {
@@ -17,19 +20,16 @@ interface AdminCalendarProps {
 const statusColors: Record<string, { bg: string; border: string }> = {
   draft: { bg: "#9ca3af", border: "#6b7280" },
   published: { bg: "#059669", border: "#047857" },
-  full: { bg: "#f97316", border: "#ea580c" },
   cancelled: { bg: "#ef4444", border: "#dc2626" },
   completed: { bg: "#3b82f6", border: "#2563eb" },
 };
 
 export function AdminCalendar({ opportunities }: AdminCalendarProps) {
   const events = opportunities.map((opp) => {
-    const displayStatus =
-      opp.approved_count >= opp.max_volunteers ? "full" : opp.status;
-    const colors = statusColors[displayStatus] ?? statusColors.draft;
+    const colors = statusColors[opp.status] ?? statusColors.draft;
     return {
       id: opp.id,
-      title: `${opp.title} (${opp.approved_count}/${opp.max_volunteers} registered)`,
+      title: opp.title,
       start: `${opp.date}T${opp.start_time}`,
       end: `${opp.date}T${opp.end_time}`,
       backgroundColor: colors.bg,
@@ -38,8 +38,30 @@ export function AdminCalendar({ opportunities }: AdminCalendarProps) {
     };
   });
 
+  function renderEventContent(info: EventContentArg) {
+    const opp = info.event.extendedProps.opportunity as VolunteerOpportunity & {
+      approved_count: number;
+      pending_count: number;
+    };
+
+    return (
+      <div className={`fc-admin-event fc-admin-event--${opp.status}`}>
+        <div className="fc-admin-event__topline">
+          <span>{formatTime(opp.start_time)}</span>
+          <span>
+            {opp.approved_count}/{opp.max_volunteers}
+          </span>
+        </div>
+        <div className="fc-admin-event__title">{opp.title}</div>
+        <div className="fc-admin-event__status">
+          {opportunityStatusLabels[opp.status]}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-lg border bg-white p-4">
+    <div className="fc-admin-calendar rounded-lg border bg-white p-4">
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -49,6 +71,8 @@ export function AdminCalendar({ opportunities }: AdminCalendarProps) {
           right: "dayGridMonth,timeGridWeek",
         }}
         events={events}
+        eventContent={renderEventContent}
+        eventDisplay="block"
         height="auto"
         eventClick={(info) => {
           const opp = info.event.extendedProps.opportunity as VolunteerOpportunity;

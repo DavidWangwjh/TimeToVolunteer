@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -18,10 +19,10 @@ import {
   formatTime,
   isOpportunityPast,
 } from "@/lib/dates";
-import type { VolunteerOpportunity } from "@/types/database";
+import type { VolunteerOpportunityWithOrganization } from "@/types/database";
 
 interface OpportunityDetailsDialogProps {
-  opportunity: VolunteerOpportunity;
+  opportunity: VolunteerOpportunityWithOrganization;
   approvedCount: number;
   hasExistingBooking: boolean;
   open: boolean;
@@ -35,6 +36,7 @@ export function OpportunityDetailsDialog({
   open,
   onOpenChange,
 }: OpportunityDetailsDialogProps) {
+  const router = useRouter();
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -86,6 +88,27 @@ export function OpportunityDetailsDialog({
               <dt className="text-muted-foreground">Time</dt>
               <dd className="font-medium">
                 {formatTime(opportunity.start_time)} – {formatTime(opportunity.end_time)}
+              </dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-muted-foreground">Organization</dt>
+              <dd className="font-medium">
+                {opportunity.organizations ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenChange(false);
+                      router.push(
+                        `/dashboard/organizations/${opportunity.organizations!.id}`
+                      );
+                    }}
+                    className="font-medium text-emerald-800 hover:underline"
+                  >
+                    {opportunity.organizations.name}
+                  </button>
+                ) : (
+                  "Independent"
+                )}
               </dd>
             </div>
             <div className="col-span-2">

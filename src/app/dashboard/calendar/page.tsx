@@ -9,7 +9,7 @@ export default async function CalendarPage() {
 
   const { data: opportunities } = await supabase
     .from("volunteer_opportunities")
-    .select("*")
+    .select("*, organizations(*)")
     .eq("status", "published")
     .order("date", { ascending: true });
 

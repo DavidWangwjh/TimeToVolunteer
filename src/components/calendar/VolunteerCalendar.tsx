@@ -8,11 +8,11 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg, EventContentArg } from "@fullcalendar/core";
 import { OpportunityDetailsDialog } from "./OpportunityDetailsDialog";
-import type { VolunteerOpportunity } from "@/types/database";
+import type { VolunteerOpportunityWithOrganization } from "@/types/database";
 import { formatTime } from "@/lib/dates";
 
 interface VolunteerCalendarProps {
-  opportunities: VolunteerOpportunity[];
+  opportunities: VolunteerOpportunityWithOrganization[];
   approvedCounts: Record<string, number>;
   userBookingOpportunityIds: string[];
 }
@@ -23,7 +23,7 @@ export function VolunteerCalendar({
   userBookingOpportunityIds,
 }: VolunteerCalendarProps) {
   const [selectedOpportunity, setSelectedOpportunity] =
-    useState<VolunteerOpportunity | null>(null);
+    useState<VolunteerOpportunityWithOrganization | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const events = opportunities.map((opp) => {
@@ -42,13 +42,15 @@ export function VolunteerCalendar({
   });
 
   function handleEventClick(info: EventClickArg) {
-    const opp = info.event.extendedProps.opportunity as VolunteerOpportunity;
+    const opp = info.event.extendedProps
+      .opportunity as VolunteerOpportunityWithOrganization;
     setSelectedOpportunity(opp);
     setDialogOpen(true);
   }
 
   function renderEventContent(info: EventContentArg) {
-    const opp = info.event.extendedProps.opportunity as VolunteerOpportunity;
+    const opp = info.event.extendedProps
+      .opportunity as VolunteerOpportunityWithOrganization;
     const approved = info.event.extendedProps.approvedCount as number;
     const isBooked = info.event.extendedProps.isBooked as boolean;
     const isFull = info.event.extendedProps.isFull as boolean;
@@ -77,7 +79,9 @@ export function VolunteerCalendar({
           </span>
         </div>
         <div className="fc-opportunity-event__title">{opp.title}</div>
-        <div className="fc-opportunity-event__meta">{opp.location}</div>
+        <div className="fc-opportunity-event__meta">
+          {opp.organizations?.name ?? opp.location}
+        </div>
       </div>
     );
   }

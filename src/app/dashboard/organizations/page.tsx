@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Building2, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveVolunteer } from "@/lib/auth";
@@ -84,9 +85,12 @@ export default async function OrganizationsPage() {
                       <Building2 className="size-5" />
                     </span>
                     <div>
-                      <h2 className="font-bold text-slate-950">
+                      <Link
+                        href={`/dashboard/organizations/${organization.id}`}
+                        className="font-bold text-slate-950 hover:text-emerald-800 hover:underline"
+                      >
                         {organization.name}
-                      </h2>
+                      </Link>
                       <p className="mt-1 text-sm text-slate-500">
                         {organization.contact_email}
                       </p>
@@ -114,6 +118,12 @@ export default async function OrganizationsPage() {
                   ) : (
                     <span />
                   )}
+                  <Link
+                    href={`/dashboard/organizations/${organization.id}`}
+                    className="text-sm font-semibold text-emerald-800 hover:text-emerald-700 hover:underline"
+                  >
+                    View profile
+                  </Link>
                   {canRequest && (
                     <OrganizationRequestButton organizationId={organization.id} />
                   )}

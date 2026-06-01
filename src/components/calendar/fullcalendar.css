@@ -41,10 +41,16 @@
 }
 
 .fc-volunteer-calendar .fc .fc-daygrid-event,
-.fc-volunteer-calendar .fc .fc-timegrid-event {
+.fc-volunteer-calendar .fc .fc-timegrid-event,
+.fc-admin-calendar .fc .fc-daygrid-event,
+.fc-admin-calendar .fc .fc-timegrid-event {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
+}
+
+.fc-admin-calendar .fc .fc-daygrid-event-dot {
+  display: none;
 }
 
 .fc .fc-daygrid-day-frame {
@@ -137,6 +143,84 @@
   opacity: 0.76;
 }
 
+.fc .fc-admin-event {
+  border: 1px solid rgb(16 185 129 / 28%);
+  border-left: 4px solid #047857;
+  border-radius: var(--radius-md);
+  background: #ecfdf5;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
+  color: #064e3b;
+  display: grid;
+  gap: 4px;
+  min-height: 70px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.fc .fc-admin-event--draft {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  border-left-color: #64748b;
+  color: #334155;
+}
+
+.fc .fc-admin-event--published {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  border-left-color: #047857;
+  color: #064e3b;
+}
+
+.fc .fc-admin-event--cancelled {
+  background: #fef2f2;
+  border-color: #fecaca;
+  border-left-color: #dc2626;
+  color: #7f1d1d;
+}
+
+.fc .fc-admin-event--completed {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  border-left-color: #2563eb;
+  color: #1e3a8a;
+}
+
+.fc .fc-admin-event__topline {
+  align-items: center;
+  display: flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: space-between;
+  line-height: 1.2;
+}
+
+.fc .fc-admin-event__topline span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc .fc-admin-event__topline span:last-child {
+  flex: 0 0 auto;
+}
+
+.fc .fc-admin-event__title {
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.fc .fc-admin-event__status {
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  opacity: 0.78;
+}
+
 .fc-theme-standard td,
 .fc-theme-standard th {
   border-color: var(--border);
@@ -182,8 +266,15 @@
     padding: 7px;
   }
 
+  .fc .fc-admin-event {
+    min-height: 60px;
+    padding: 7px;
+  }
+
   .fc .fc-opportunity-event__meta,
-  .fc .fc-opportunity-event__topline {
+  .fc .fc-opportunity-event__topline,
+  .fc .fc-admin-event__status,
+  .fc .fc-admin-event__topline {
     font-size: 0.64rem;
   }
 }

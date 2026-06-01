@@ -14,11 +14,15 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { formatDate, formatTime } from "@/lib/dates";
 import { approveBooking, rejectBooking, cancelBooking } from "@/lib/actions";
-import type { Booking, VolunteerOpportunity, Profile } from "@/types/database";
+import type {
+  Booking,
+  Profile,
+  VolunteerOpportunityWithOrganization,
+} from "@/types/database";
 
 interface BookingRow {
   booking: Booking;
-  opportunity?: VolunteerOpportunity;
+  opportunity?: VolunteerOpportunityWithOrganization;
   volunteer?: Profile;
 }
 
@@ -91,7 +95,15 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
                 </TableCell>
               )}
               <TableCell className="font-semibold text-slate-950">
-                {opportunity?.title ?? "—"}
+                <div>{opportunity?.title ?? "—"}</div>
+                {variant === "volunteer" && opportunity?.organizations && (
+                  <Link
+                    href={`/dashboard/organizations/${opportunity.organizations.id}`}
+                    className="mt-1 block text-xs font-medium text-emerald-800 hover:underline"
+                  >
+                    {opportunity.organizations.name}
+                  </Link>
+                )}
               </TableCell>
               <TableCell className="text-slate-600">
                 {opportunity ? formatDate(opportunity.date) : "—"}

@@ -10,7 +10,7 @@ export default async function BookingsPage() {
 
   const { data: allBookings } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*)")
+    .select("*, volunteer_opportunities(*, organizations(*))")
     .eq("volunteer_id", profile!.id)
     .order("created_at", { ascending: false });
 

@@ -21,7 +21,7 @@ export default async function VolunteerDashboardPage() {
 
   const { data: upcomingBookings } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*)")
+    .select("*, volunteer_opportunities(*, organizations(*))")
     .eq("volunteer_id", profile!.id)
     .in("status", ["pending", "approved"])
     .order("created_at", { ascending: false });
@@ -71,7 +71,9 @@ export default async function VolunteerDashboardPage() {
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/75 sm:text-base">
                 {nextOpportunity
-                  ? `${nextOpportunity.title} · ${formatDate(nextOpportunity.date)} · ${formatTime(nextOpportunity.start_time)} to ${formatTime(nextOpportunity.end_time)}`
+                  ? `${nextOpportunity.title} · ${
+                      nextOpportunity.organizations?.name ?? "Independent"
+                    } · ${formatDate(nextOpportunity.date)} · ${formatTime(nextOpportunity.start_time)} to ${formatTime(nextOpportunity.end_time)}`
                   : "Browse the calendar to find sessions that match your interests and availability."}
               </p>
             </div>

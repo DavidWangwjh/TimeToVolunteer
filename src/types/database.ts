@@ -102,6 +102,11 @@ export interface BookingWithDetails extends Booking {
   profiles: Profile;
 }
 
+export interface VolunteerOpportunityWithOrganization
+  extends VolunteerOpportunity {
+  organizations?: Organization | null;
+}
+
 export interface OpportunityWithCounts extends VolunteerOpportunity {
   approved_count?: number;
   pending_count?: number;
