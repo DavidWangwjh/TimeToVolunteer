@@ -1,0 +1,90 @@
+import { z } from "zod";
+
+export const volunteerApplicationSchema = z.object({
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().optional(),
+  age: z.string().optional(),
+  availability: z.string().optional(),
+  experience: z.string().optional(),
+  preferred_areas: z.string().optional(),
+  reason: z.string().min(1, "Reason for volunteering is required"),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_phone: z.string().optional(),
+  agreement_accepted: z.boolean().refine((val) => val === true, {
+    message: "You must agree to continue",
+  }),
+});
+
+export const opportunityFieldsSchema = z
+  .object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().optional(),
+    date: z.string().min(1, "Date is required"),
+    start_time: z.string().min(1, "Start time is required"),
+    end_time: z.string().min(1, "End time is required"),
+    location: z.string().min(1, "Location is required"),
+    experience_required: z.string().optional(),
+    max_volunteers: z.number().min(1, "At least 1 volunteer spot required"),
+  })
+  .refine((data) => data.end_time > data.start_time, {
+    message: "End time must be after start time",
+    path: ["end_time"],
+  });
+
+export const opportunityCreateSchema = opportunityFieldsSchema;
+
+export const opportunityUpdateSchema = opportunityFieldsSchema.extend({
+  status: z.enum(["draft", "published", "cancelled", "completed"]),
+});
+
+export const assignVolunteerSchema = z.object({
+  opportunity_id: z.string().uuid(),
+  volunteer_id: z.string().uuid(),
+});
+
+export const bookingRequestSchema = z.object({
+  opportunity_id: z.string().uuid("Opportunity ID is required"),
+  volunteer_note: z.string().optional(),
+});
+
+export const adminBookingUpdateSchema = z.object({
+  admin_note: z.string().optional(),
+});
+
+export const profileUpdateSchema = z.object({
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  phone: z.string().optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Valid email is required"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters"),
+    confirm_password: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: "Passwords do not match",
+    path: ["confirm_password"],
+  });
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export type VolunteerApplicationInput = z.infer<typeof volunteerApplicationSchema>;
+export type OpportunityCreateInput = z.infer<typeof opportunityCreateSchema>;
+export type OpportunityUpdateInput = z.infer<typeof opportunityUpdateSchema>;
+export type BookingRequestInput = z.infer<typeof bookingRequestSchema>;
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

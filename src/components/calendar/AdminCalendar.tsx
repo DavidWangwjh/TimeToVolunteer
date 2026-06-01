@@ -1,0 +1,71 @@
+"use client";
+
+import "./fullcalendar.css";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import type { VolunteerOpportunity } from "@/types/database";
+
+interface AdminCalendarProps {
+  opportunities: (VolunteerOpportunity & {
+    approved_count: number;
+    pending_count: number;
+  })[];
+}
+
+const statusColors: Record<string, { bg: string; border: string }> = {
+  draft: { bg: "#9ca3af", border: "#6b7280" },
+  published: { bg: "#059669", border: "#047857" },
+  full: { bg: "#f97316", border: "#ea580c" },
+  cancelled: { bg: "#ef4444", border: "#dc2626" },
+  completed: { bg: "#3b82f6", border: "#2563eb" },
+};
+
+export function AdminCalendar({ opportunities }: AdminCalendarProps) {
+  const events = opportunities.map((opp) => {
+    const displayStatus =
+      opp.approved_count >= opp.max_volunteers ? "full" : opp.status;
+    const colors = statusColors[displayStatus] ?? statusColors.draft;
+    return {
+      id: opp.id,
+      title: `${opp.title} (${opp.approved_count}/${opp.max_volunteers} registered)`,
+      start: `${opp.date}T${opp.start_time}`,
+      end: `${opp.date}T${opp.end_time}`,
+      backgroundColor: colors.bg,
+      borderColor: colors.border,
+      extendedProps: { opportunity: opp },
+    };
+  });
+
+  return (
+    <div className="rounded-lg border bg-white p-4">
+      <FullCalendar
+        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+        initialView="dayGridMonth"
+        headerToolbar={{
+          left: "prev,next today",
+          center: "title",
+          right: "dayGridMonth,timeGridWeek",
+        }}
+        events={events}
+        height="auto"
+        eventClick={(info) => {
+          const opp = info.event.extendedProps.opportunity as VolunteerOpportunity;
+          window.location.href = `/admin/opportunities/${opp.id}/edit`;
+        }}
+      />
+      <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        {Object.entries(statusColors).map(([status, colors]) => (
+          <div key={status} className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: colors.bg }}
+            />
+            <span className="capitalize">{status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
