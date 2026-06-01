@@ -16,22 +16,32 @@ import {
   assignVolunteerToOpportunity,
   unassignVolunteerFromOpportunity,
 } from "@/lib/actions";
-import type { Profile, VolunteerOpportunity } from "@/types/database";
+import type { VolunteerOpportunity } from "@/types/database";
+
+interface VolunteerOption {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  role?: string | null;
+  status?: string | null;
+}
 
 interface AssignedBooking {
   id: string;
   status: string;
-  profiles: Profile;
+  profiles: VolunteerOption;
 }
 
 interface AssignVolunteersProps {
   opportunity: VolunteerOpportunity;
-  volunteers: Profile[];
+  volunteers: VolunteerOption[];
   assignedBookings: AssignedBooking[];
-  approvedCount: number;
+  approvedCount?: number;
 }
 
-function getVolunteerName(volunteer?: Profile) {
+function getVolunteerName(volunteer?: VolunteerOption) {
   if (!volunteer) return "Unknown volunteer";
 
   const name = [volunteer.first_name, volunteer.last_name]
@@ -42,7 +52,7 @@ function getVolunteerName(volunteer?: Profile) {
   return name || volunteer.email || "Volunteer account";
 }
 
-function getVolunteerSelectLabel(volunteer?: Profile) {
+function getVolunteerSelectLabel(volunteer?: VolunteerOption) {
   if (!volunteer) return "Select a volunteer";
 
   const name = [volunteer.first_name, volunteer.last_name]
@@ -54,13 +64,8 @@ function getVolunteerSelectLabel(volunteer?: Profile) {
     return `${name} (${volunteer.email})`;
   }
 
-  if (name) {
-    return name;
-  }
-
-  if (volunteer.email) {
-    return volunteer.email;
-  }
+  if (name) return name;
+  if (volunteer.email) return volunteer.email;
 
   return "Volunteer account";
 }
@@ -73,7 +78,6 @@ export function AssignVolunteers({
   const [selectedVolunteerId, setSelectedVolunteerId] = useState("");
   const [pending, startTransition] = useTransition();
 
-  // Used to prevent assigning someone who already has a pending or approved booking.
   const bookedVolunteerIds = new Set(
     assignedBookings
       .filter((booking) => ["pending", "approved"].includes(booking.status))
@@ -85,7 +89,6 @@ export function AssignVolunteers({
     (volunteer) => !bookedVolunteerIds.has(volunteer.id)
   );
 
-  // These are the only volunteers that should display in Assigned Volunteers.
   const approvedBookings = assignedBookings.filter(
     (booking) => booking.status === "approved"
   );
@@ -207,7 +210,9 @@ export function AssignVolunteers({
 
                 <Select
                   value={selectedVolunteerId}
-                  onValueChange={(value) => setSelectedVolunteerId(value)}
+                  onValueChange={(value) =>
+                    setSelectedVolunteerId(value ?? "")
+                  }
                 >
                   <SelectTrigger className="w-full min-w-[320px]">
                     <span
@@ -221,7 +226,7 @@ export function AssignVolunteers({
                     </span>
                   </SelectTrigger>
 
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] min-w-[320px]">
+                  <SelectContent className="w-(--radix-select-trigger-width) min-w-[320px]">
                     {availableVolunteers.map((volunteer) => (
                       <SelectItem key={volunteer.id} value={volunteer.id}>
                         {getVolunteerSelectLabel(volunteer)}
