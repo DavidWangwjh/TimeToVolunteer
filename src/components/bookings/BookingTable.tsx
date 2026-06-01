@@ -42,7 +42,6 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
       toast.error(result.error);
     } else {
       toast.success("Booking approved");
-      if (result.emailWarning) toast.warning(result.emailWarning);
     }
   }
 

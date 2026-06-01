@@ -6,10 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, getCurrentUserProfile } from "@/lib/auth";
 import {
-  sendBookingApprovedEmail,
-  sendBookingRejectedEmail,
-} from "@/lib/email";
-import {
   volunteerApplicationSchema,
   opportunityCreateSchema,
   opportunityUpdateSchema,
@@ -42,13 +38,32 @@ function normalizeOpportunityFields(
   };
 }
 
-export async function submitVolunteerApplication(data: VolunteerApplicationInput) {
+function getAppUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(
+    /\/$/,
+    ""
+  );
+}
+
+function getPasswordSetupRedirectUrl() {
+  const appUrl = getAppUrl();
+
+  return `${appUrl}/auth/callback?next=${encodeURIComponent(
+    "/reset-password"
+  )}`;
+}
+
+export async function submitVolunteerApplication(
+  data: VolunteerApplicationInput
+) {
   const parsed = volunteerApplicationSchema.safeParse(data);
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
   const supabase = await createClient();
+
   const { error } = await supabase.from("volunteer_applications").insert({
     ...parsed.data,
     status: "pending",
@@ -66,9 +81,7 @@ export async function acceptVolunteerApplication(applicationId: string) {
 
   const adminClient = createAdminClient();
   const supabase = await createClient();
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent("/reset-password")}`;
+  const redirectTo = getPasswordSetupRedirectUrl();
 
   const { data: application, error: fetchError } = await supabase
     .from("volunteer_applications")
@@ -174,8 +187,12 @@ export async function acceptVolunteerApplication(applicationId: string) {
   };
 }
 
-export async function rejectVolunteerApplication(applicationId: string, adminNotes?: string) {
+export async function rejectVolunteerApplication(
+  applicationId: string,
+  adminNotes?: string
+) {
   await requireAdmin();
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -187,10 +204,13 @@ export async function rejectVolunteerApplication(applicationId: string, adminNot
     })
     .eq("id", applicationId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${applicationId}`);
+
   return { success: true };
 }
 
@@ -200,6 +220,7 @@ export async function updateApplicationStatus(
   adminNotes?: string
 ) {
   await requireAdmin();
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -211,10 +232,13 @@ export async function updateApplicationStatus(
     })
     .eq("id", applicationId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${applicationId}`);
+
   return { success: true };
 }
 
@@ -223,33 +247,45 @@ export async function createOpportunity(
   status: "draft" | "published"
 ) {
   const admin = await requireAdmin();
+
   const parsed = opportunityCreateSchema.safeParse(data);
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
   const supabase = await createClient();
+
   const { error } = await supabase.from("volunteer_opportunities").insert({
     ...normalizeOpportunityFields(parsed.data),
     status,
     created_by: admin.id,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/opportunities");
   revalidatePath("/admin/calendar");
+
   redirect("/admin/opportunities");
 }
 
-export async function updateOpportunity(id: string, data: OpportunityUpdateInput) {
+export async function updateOpportunity(
+  id: string,
+  data: OpportunityUpdateInput
+) {
   await requireAdmin();
+
   const parsed = opportunityUpdateSchema.safeParse(data);
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
   const supabase = await createClient();
+
   const { error } = await supabase
     .from("volunteer_opportunities")
     .update({
@@ -259,12 +295,15 @@ export async function updateOpportunity(id: string, data: OpportunityUpdateInput
     })
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${id}/edit`);
   revalidatePath("/admin/calendar");
   revalidatePath("/dashboard/calendar");
+
   redirect("/admin/opportunities");
 }
 
@@ -273,10 +312,12 @@ export async function assignVolunteerToOpportunity(
   volunteerId: string
 ) {
   const admin = await requireAdmin();
+
   const parsed = assignVolunteerSchema.safeParse({
     opportunity_id: opportunityId,
     volunteer_id: volunteerId,
   });
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
@@ -344,6 +385,7 @@ export async function assignVolunteerToOpportunity(
     if (insertError.code === "23505") {
       return { error: "This volunteer is already assigned to this session" };
     }
+
     return { error: insertError.message };
   }
 
@@ -358,6 +400,7 @@ export async function assignVolunteerToOpportunity(
 
 export async function unassignVolunteerFromOpportunity(bookingId: string) {
   await requireAdmin();
+
   const supabase = await createClient();
 
   const { data: booking, error: fetchError } = await supabase
@@ -384,18 +427,22 @@ export async function unassignVolunteerFromOpportunity(bookingId: string) {
     })
     .eq("id", bookingId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/calendar");
   revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard/bookings");
 
   return { success: true };
 }
 
 export async function deleteOpportunity(id: string) {
   await requireAdmin();
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -403,19 +450,27 @@ export async function deleteOpportunity(id: string) {
     .delete()
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/opportunities");
+
   return { success: true };
 }
 
-export async function requestBooking(data: { opportunity_id: string; volunteer_note?: string }) {
+export async function requestBooking(data: {
+  opportunity_id: string;
+  volunteer_note?: string;
+}) {
   const profile = await getCurrentUserProfile();
+
   if (!profile || profile.role !== "volunteer" || profile.status !== "active") {
     return { error: "You must be an active volunteer to book sessions" };
   }
 
   const parsed = bookingRequestSchema.safeParse(data);
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
@@ -436,7 +491,10 @@ export async function requestBooking(data: { opportunity_id: string; volunteer_n
     return { error: "This opportunity is not available for booking" };
   }
 
-  const sessionDateTime = new Date(`${opportunity.date}T${opportunity.start_time}`);
+  const sessionDateTime = new Date(
+    `${opportunity.date}T${opportunity.start_time}`
+  );
+
   if (sessionDateTime < new Date()) {
     return { error: "This opportunity has already passed" };
   }
@@ -474,22 +532,25 @@ export async function requestBooking(data: { opportunity_id: string; volunteer_n
     if (error.code === "23505") {
       return { error: "You already have a booking for this session" };
     }
+
     return { error: error.message };
   }
 
   revalidatePath("/dashboard/bookings");
   revalidatePath("/dashboard/calendar");
   revalidatePath("/admin/bookings");
+
   return { success: true };
 }
 
 export async function approveBooking(bookingId: string, adminNote?: string) {
   const admin = await requireAdmin();
+
   const supabase = await createClient();
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*), profiles(*)")
+    .select("*, volunteer_opportunities(*)")
     .eq("id", bookingId)
     .single();
 
@@ -502,6 +563,7 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
   }
 
   const opportunity = booking.volunteer_opportunities;
+
   const { count: approvedCount } = await supabase
     .from("bookings")
     .select("*", { count: "exact", head: true })
@@ -523,36 +585,27 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     })
     .eq("id", bookingId);
 
-  if (error) return { error: error.message };
-
-  const volunteer = booking.profiles;
-  const emailResult = await sendBookingApprovedEmail({
-    email: volunteer.email,
-    volunteerName: `${volunteer.first_name} ${volunteer.last_name}`,
-    opportunityTitle: opportunity.title,
-    date: opportunity.date,
-    startTime: opportunity.start_time,
-    endTime: opportunity.end_time,
-    location: opportunity.location,
-    notes: adminNote,
-  });
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/bookings");
+  revalidatePath("/admin/calendar");
+  revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
+  revalidatePath("/dashboard/calendar");
 
-  return {
-    success: true,
-    emailWarning: emailResult.success ? undefined : "Booking approved but email failed to send",
-  };
+  return { success: true };
 }
 
 export async function rejectBooking(bookingId: string, adminNote?: string) {
   await requireAdmin();
+
   const supabase = await createClient();
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*), profiles(*)")
+    .select("id, status, opportunity_id")
     .eq("id", bookingId)
     .single();
 
@@ -574,25 +627,25 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
     })
     .eq("id", bookingId);
 
-  if (error) return { error: error.message };
-
-  const volunteer = booking.profiles;
-  const opportunity = booking.volunteer_opportunities;
-  await sendBookingRejectedEmail({
-    email: volunteer.email,
-    volunteerName: `${volunteer.first_name} ${volunteer.last_name}`,
-    opportunityTitle: opportunity.title,
-    adminNote,
-  });
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/bookings");
+  revalidatePath("/admin/calendar");
+  revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
+  revalidatePath("/dashboard/calendar");
+
   return { success: true };
 }
 
 export async function cancelBooking(bookingId: string) {
   const profile = await getCurrentUserProfile();
-  if (!profile) return { error: "Not authenticated" };
+
+  if (!profile) {
+    return { error: "Not authenticated" };
+  }
 
   const supabase = await createClient();
 
@@ -619,10 +672,16 @@ export async function cancelBooking(bookingId: string) {
 
   if (isOwner && !isAdminUser) {
     const opportunity = booking.volunteer_opportunities;
-    const sessionStart = new Date(`${opportunity.date}T${opportunity.start_time}`);
+    const sessionStart = new Date(
+      `${opportunity.date}T${opportunity.start_time}`
+    );
+
     const hoursUntil = (sessionStart.getTime() - Date.now()) / (1000 * 60 * 60);
+
     if (hoursUntil < 24) {
-      return { error: "Bookings can only be cancelled up to 24 hours before the session" };
+      return {
+        error: "Bookings can only be cancelled up to 24 hours before the session",
+      };
     }
   }
 
@@ -635,31 +694,48 @@ export async function cancelBooking(bookingId: string) {
     })
     .eq("id", bookingId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/dashboard/bookings");
+  revalidatePath("/dashboard/calendar");
   revalidatePath("/admin/bookings");
+  revalidatePath("/admin/calendar");
+  revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
+
   return { success: true };
 }
 
 export async function updateProfile(data: ProfileUpdateInput) {
   const profile = await getCurrentUserProfile();
-  if (!profile) return { error: "Not authenticated" };
+
+  if (!profile) {
+    return { error: "Not authenticated" };
+  }
 
   const parsed = profileUpdateSchema.safeParse(data);
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
   const supabase = await createClient();
+
   const { error } = await supabase
     .from("profiles")
-    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .update({
+      ...parsed.data,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", profile.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/dashboard/profile");
+
   return { success: true };
 }
 
@@ -668,17 +744,24 @@ export async function updateVolunteerStatus(
   status: "active" | "inactive" | "suspended"
 ) {
   await requireAdmin();
+
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("profiles")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", volunteerId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return { error: error.message };
+  }
 
   revalidatePath("/admin/volunteers");
   revalidatePath(`/admin/volunteers/${volunteerId}`);
+
   return { success: true };
 }
 
@@ -686,28 +769,33 @@ function redirectAfterLogin(profile: Profile) {
   if (profile.must_reset_password) {
     redirect("/reset-password");
   }
+
   if (profile.role === "admin") {
     redirect("/admin");
   }
+
   redirect("/dashboard");
 }
 
 export async function requestPasswordReset(email: string) {
   const parsed = forgotPasswordSchema.safeParse({ email });
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
   const supabase = await createClient();
-  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent("/reset-password")}`;
+  const redirectTo = getPasswordSetupRedirectUrl();
 
   let error;
+
   try {
     ({ error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
       redirectTo,
     }));
   } catch (err) {
     console.error("Password reset request failed:", err);
+
     return {
       error: "Unable to send reset email. Please try again later.",
     };
@@ -725,11 +813,13 @@ export async function updatePassword(password: string, confirmPassword: string) 
     password,
     confirm_password: confirmPassword,
   });
+
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
   const supabase = await createClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -755,8 +845,12 @@ export async function updatePassword(password: string, confirmPassword: string) 
     .eq("id", user.id);
 
   const profile = await getCurrentUserProfile();
+
   if (profile) {
-    redirectAfterLogin({ ...profile, must_reset_password: false });
+    redirectAfterLogin({
+      ...profile,
+      must_reset_password: false,
+    });
   }
 
   redirect("/login");
@@ -764,7 +858,9 @@ export async function updatePassword(password: string, confirmPassword: string) 
 
 export async function signOut() {
   const supabase = await createClient();
+
   await supabase.auth.signOut();
+
   redirect("/");
 }
 
@@ -772,14 +868,20 @@ export async function signIn(email: string, password: string) {
   const supabase = await createClient();
 
   let error;
+
   try {
-    ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+    ({ error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    }));
   } catch (err) {
     console.error("Supabase auth request failed:", err);
+
     const message =
       err instanceof Error && err.message.includes("fetch failed")
-        ? "Cannot reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL in .env.local matches your project URL exactly (Settings → API in the Supabase dashboard), then restart the dev server."
+        ? "Cannot reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL in .env.local matches your project URL exactly, then restart the dev server."
         : "Unable to connect to the authentication service. Please try again.";
+
     return { error: message };
   }
 
@@ -788,12 +890,17 @@ export async function signIn(email: string, password: string) {
   }
 
   const profile = await getCurrentUserProfile();
+
   if (!profile) {
-    return { error: "Your account is not active yet. Please contact an administrator." };
+    return {
+      error: "Your account is not active yet. Please contact an administrator.",
+    };
   }
 
   if (profile.role !== "admin" && profile.status !== "active") {
-    return { error: "Your account is not active yet. Please contact an administrator." };
+    return {
+      error: "Your account is not active yet. Please contact an administrator.",
+    };
   }
 
   redirectAfterLogin(profile);
