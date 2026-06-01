@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, getCurrentUserProfile } from "@/lib/auth";
 import {
-  volunteerApplicationSchema,
+  organizationApplicationSchema,
+  volunteerSignupSchema,
   opportunityCreateSchema,
   opportunityUpdateSchema,
   assignVolunteerSchema,
@@ -16,7 +17,8 @@ import {
   resetPasswordSchema,
 } from "@/lib/validators";
 import type {
-  VolunteerApplicationInput,
+  OrganizationApplicationInput,
+  VolunteerSignupInput,
   OpportunityCreateInput,
   OpportunityUpdateInput,
   ProfileUpdateInput,
@@ -35,6 +37,8 @@ function normalizeOpportunityFields(
     location: data.location,
     experience_required: data.experience_required?.trim() || null,
     max_volunteers: data.max_volunteers,
+    visibility: data.visibility,
+    signup_mode: data.signup_mode,
   };
 }
 
@@ -53,10 +57,56 @@ function getPasswordSetupRedirectUrl() {
   )}`;
 }
 
-export async function submitVolunteerApplication(
-  data: VolunteerApplicationInput
+async function findAuthUserByEmail(
+  adminClient: ReturnType<typeof createAdminClient>,
+  email: string
 ) {
-  const parsed = volunteerApplicationSchema.safeParse(data);
+  const normalizedEmail = email.toLowerCase();
+  let page = 1;
+  const perPage = 100;
+
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      return { user: null, error };
+    }
+
+    const user = data.users.find(
+      (candidate) => candidate.email?.toLowerCase() === normalizedEmail
+    );
+
+    if (user || data.users.length < perPage) {
+      return { user: user ?? null, error: null };
+    }
+
+    page += 1;
+  }
+}
+
+async function getOwnedOrganization(profileId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("*")
+    .eq("owner_id", profileId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (error) {
+    return { organization: null, error };
+  }
+
+  return { organization: data, error: null };
+}
+
+export async function submitOrganizationApplication(
+  data: OrganizationApplicationInput
+) {
+  const parsed = organizationApplicationSchema.safeParse(data);
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -64,8 +114,9 @@ export async function submitVolunteerApplication(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.from("volunteer_applications").insert({
+  const { error } = await supabase.from("organization_applications").insert({
     ...parsed.data,
+    website: parsed.data.website?.trim() || null,
     status: "pending",
   });
 
@@ -76,15 +127,79 @@ export async function submitVolunteerApplication(
   redirect("/application-submitted");
 }
 
-export async function acceptVolunteerApplication(applicationId: string) {
-  await requireAdmin();
+export async function signUpVolunteer(data: VolunteerSignupInput) {
+  const parsed = volunteerSignupSchema.safeParse(data);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const adminClient = createAdminClient();
+  const supabase = await createClient();
+
+  const { data: userData, error: createError } =
+    await adminClient.auth.admin.createUser({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: parsed.data.first_name,
+        last_name: parsed.data.last_name,
+        role: "volunteer",
+      },
+    });
+
+  if (createError) {
+    return { error: createError.message };
+  }
+
+  const userId = userData.user?.id;
+
+  if (!userId) {
+    return { error: "Unable to create volunteer account" };
+  }
+
+  const { error: profileError } = await adminClient.from("profiles").upsert({
+    id: userId,
+    first_name: parsed.data.first_name,
+    last_name: parsed.data.last_name,
+    email: parsed.data.email,
+    phone: parsed.data.phone?.trim() || null,
+    role: "volunteer",
+    status: "active",
+    must_reset_password: false,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (profileError) {
+    return { error: profileError.message };
+  }
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
+
+  if (signInError) {
+    return { error: signInError.message };
+  }
+
+  redirect("/dashboard/profile");
+}
+
+export async function acceptOrganizationApplication(applicationId: string) {
+  const reviewer = await requireAdmin();
+
+  if (reviewer.role !== "admin") {
+    return { error: "Only platform admins can approve organization accounts" };
+  }
 
   const adminClient = createAdminClient();
   const supabase = await createClient();
   const redirectTo = getPasswordSetupRedirectUrl();
 
   const { data: application, error: fetchError } = await supabase
-    .from("volunteer_applications")
+    .from("organization_applications")
     .select("*")
     .eq("id", applicationId)
     .single();
@@ -94,69 +209,58 @@ export async function acceptVolunteerApplication(applicationId: string) {
   }
 
   let userId: string | undefined;
-  let emailWarning: string | undefined;
 
-  const { data: inviteData, error: inviteError } =
-    await adminClient.auth.admin.inviteUserByEmail(application.email, {
-      redirectTo,
-      data: {
-        first_name: application.first_name,
-        last_name: application.last_name,
-        role: "volunteer",
+  const { data: createData, error: createError } =
+    await adminClient.auth.admin.createUser({
+      email: application.email,
+      email_confirm: true,
+      user_metadata: {
+        first_name: application.contact_first_name,
+        last_name: application.contact_last_name,
+        role: "organization",
+        organization_name: application.organization_name,
       },
     });
 
-  if (inviteError) {
+  if (createError) {
     const isDuplicate =
-      inviteError.message.toLowerCase().includes("already") ||
-      inviteError.message.toLowerCase().includes("registered") ||
-      inviteError.message.toLowerCase().includes("exists");
+      createError.message.toLowerCase().includes("already") ||
+      createError.message.toLowerCase().includes("registered") ||
+      createError.message.toLowerCase().includes("exists");
 
     if (!isDuplicate) {
-      return { error: inviteError.message };
+      return { error: createError.message };
     }
 
-    const { data: listData, error: listError } =
-      await adminClient.auth.admin.listUsers();
+    const { user: existingUser, error: listError } = await findAuthUserByEmail(
+      adminClient,
+      application.email
+    );
 
     if (listError) {
       return { error: listError.message };
     }
 
-    const existingUser = listData.users.find(
-      (user) => user.email?.toLowerCase() === application.email.toLowerCase()
-    );
-
     if (!existingUser) {
-      return { error: inviteError.message };
+      return { error: createError.message };
     }
 
     userId = existingUser.id;
-
-    const { error: resetEmailError } =
-      await adminClient.auth.resetPasswordForEmail(application.email, {
-        redirectTo,
-      });
-
-    if (resetEmailError) {
-      emailWarning =
-        "Volunteer was accepted, but the password setup email failed to send.";
-    }
   } else {
-    userId = inviteData.user?.id;
+    userId = createData.user?.id;
   }
 
   if (!userId) {
-    return { error: "Failed to create or invite user account" };
+    return { error: "Failed to create organization account" };
   }
 
   const { error: profileError } = await adminClient.from("profiles").upsert({
     id: userId,
-    first_name: application.first_name,
-    last_name: application.last_name,
+    first_name: application.contact_first_name,
+    last_name: application.contact_last_name,
     email: application.email,
     phone: application.phone,
-    role: "volunteer",
+    role: "organization",
     status: "active",
     must_reset_password: true,
     updated_at: new Date().toISOString(),
@@ -166,8 +270,40 @@ export async function acceptVolunteerApplication(applicationId: string) {
     return { error: profileError.message };
   }
 
+  const { error: organizationError } = await adminClient
+    .from("organizations")
+    .upsert(
+      {
+        owner_id: userId,
+        name: application.organization_name,
+        description: application.mission,
+        website: application.website,
+        contact_email: application.email,
+        contact_phone: application.phone,
+        status: "active",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "owner_id" }
+    );
+
+  if (organizationError) {
+    return { error: organizationError.message };
+  }
+
+  const { error: resetEmailError } =
+    await adminClient.auth.resetPasswordForEmail(application.email, {
+      redirectTo,
+    });
+
+  if (resetEmailError) {
+    return {
+      error:
+        "Organization account was created, but the password setup email failed to send. Please try accepting the application again.",
+    };
+  }
+
   const { error: updateError } = await supabase
-    .from("volunteer_applications")
+    .from("organization_applications")
     .update({
       status: "accepted",
       updated_at: new Date().toISOString(),
@@ -181,22 +317,23 @@ export async function acceptVolunteerApplication(applicationId: string) {
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${applicationId}`);
 
-  return {
-    success: true,
-    emailWarning,
-  };
+  return { success: true };
 }
 
-export async function rejectVolunteerApplication(
+export async function rejectOrganizationApplication(
   applicationId: string,
   adminNotes?: string
 ) {
-  await requireAdmin();
+  const reviewer = await requireAdmin();
+
+  if (reviewer.role !== "admin") {
+    return { error: "Only platform admins can reject organization accounts" };
+  }
 
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from("volunteer_applications")
+    .from("organization_applications")
     .update({
       status: "rejected",
       admin_notes: adminNotes,
@@ -214,17 +351,21 @@ export async function rejectVolunteerApplication(
   return { success: true };
 }
 
-export async function updateApplicationStatus(
+export async function updateOrganizationApplicationStatus(
   applicationId: string,
   status: "contacted" | "pending",
   adminNotes?: string
 ) {
-  await requireAdmin();
+  const reviewer = await requireAdmin();
+
+  if (reviewer.role !== "admin") {
+    return { error: "Only platform admins can update organization applications" };
+  }
 
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from("volunteer_applications")
+    .from("organization_applications")
     .update({
       status,
       admin_notes: adminNotes,
@@ -255,11 +396,27 @@ export async function createOpportunity(
   }
 
   const supabase = await createClient();
+  const { organization, error: organizationError } = await getOwnedOrganization(
+    admin.id
+  );
+
+  if (organizationError) {
+    return { error: organizationError.message };
+  }
+
+  if (!organization && admin.role === "organization") {
+    return { error: "Create or activate your organization before posting opportunities" };
+  }
+
+  if (!organization && parsed.data.visibility === "private") {
+    return { error: "Private opportunities must belong to an active organization" };
+  }
 
   const { error } = await supabase.from("volunteer_opportunities").insert({
     ...normalizeOpportunityFields(parsed.data),
     status,
     created_by: admin.id,
+    organization_id: organization?.id ?? null,
   });
 
   if (error) {
@@ -276,7 +433,7 @@ export async function updateOpportunity(
   id: string,
   data: OpportunityUpdateInput
 ) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = opportunityUpdateSchema.safeParse(data);
 
@@ -285,6 +442,13 @@ export async function updateOpportunity(
   }
 
   const supabase = await createClient();
+  const { organization, error: organizationError } = await getOwnedOrganization(
+    admin.id
+  );
+
+  if (organizationError) {
+    return { error: organizationError.message };
+  }
 
   const { error } = await supabase
     .from("volunteer_opportunities")
@@ -293,7 +457,12 @@ export async function updateOpportunity(
       status: parsed.data.status,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .or(
+      organization
+        ? `organization_id.eq.${organization.id},created_by.eq.${admin.id}`
+        : `created_by.eq.${admin.id}`
+    );
 
   if (error) {
     return { error: error.message };
@@ -459,6 +628,136 @@ export async function deleteOpportunity(id: string) {
   return { success: true };
 }
 
+export async function requestOrganizationMembership(
+  organizationId: string,
+  volunteerNote?: string
+) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile || profile.role !== "volunteer" || profile.status !== "active") {
+    return { error: "You must be an active volunteer to request access" };
+  }
+
+  const supabase = await createClient();
+  const adminClient = createAdminClient();
+
+  const { data: organization, error: organizationError } = await supabase
+    .from("organizations")
+    .select("id, status")
+    .eq("id", organizationId)
+    .eq("status", "active")
+    .single();
+
+  if (organizationError || !organization) {
+    return { error: "Organization not found" };
+  }
+
+  const { data: existingMembership, error: membershipLookupError } =
+    await adminClient
+    .from("organization_memberships")
+    .select("id, status")
+    .eq("organization_id", organization.id)
+    .eq("volunteer_id", profile.id)
+    .maybeSingle();
+
+  if (membershipLookupError) {
+    return { error: membershipLookupError.message };
+  }
+
+  if (
+    existingMembership &&
+    ["pending", "accepted"].includes(existingMembership.status)
+  ) {
+    return { error: "You already requested access to this organization" };
+  }
+
+  const membershipPayload = {
+    volunteer_note: volunteerNote?.trim() || null,
+    status: "pending",
+    admin_note: null,
+    reviewed_by: null,
+    reviewed_at: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = existingMembership
+    ? await adminClient
+        .from("organization_memberships")
+        .update(membershipPayload)
+        .eq("id", existingMembership.id)
+    : await adminClient.from("organization_memberships").insert({
+        ...membershipPayload,
+        organization_id: organization.id,
+        volunteer_id: profile.id,
+      });
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "You already requested access to this organization" };
+    }
+
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard/organizations");
+  revalidatePath("/admin/memberships");
+
+  return { success: true };
+}
+
+export async function approveOrganizationMembership(membershipId: string) {
+  const reviewer = await requireAdmin();
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("organization_memberships")
+    .update({
+      status: "accepted",
+      reviewed_by: reviewer.id,
+      reviewed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", membershipId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin/memberships");
+  revalidatePath("/dashboard/organizations");
+  revalidatePath("/dashboard/calendar");
+
+  return { success: true };
+}
+
+export async function rejectOrganizationMembership(
+  membershipId: string,
+  adminNote?: string
+) {
+  const reviewer = await requireAdmin();
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("organization_memberships")
+    .update({
+      status: "rejected",
+      admin_note: adminNote?.trim() || null,
+      reviewed_by: reviewer.id,
+      reviewed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", membershipId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin/memberships");
+  revalidatePath("/dashboard/organizations");
+
+  return { success: true };
+}
+
 export async function requestBooking(data: {
   opportunity_id: string;
   volunteer_note?: string;
@@ -489,6 +788,27 @@ export async function requestBooking(data: {
 
   if (opportunity.status !== "published") {
     return { error: "This opportunity is not available for booking" };
+  }
+
+  if (opportunity.visibility === "private") {
+    if (!opportunity.organization_id) {
+      return { error: "This private opportunity is not available yet" };
+    }
+
+    const { data: membership } = await supabase
+      .from("organization_memberships")
+      .select("id")
+      .eq("organization_id", opportunity.organization_id)
+      .eq("volunteer_id", profile.id)
+      .eq("status", "accepted")
+      .maybeSingle();
+
+    if (!membership) {
+      return {
+        error:
+          "You need to be accepted by this organization before applying to this opportunity",
+      };
+    }
   }
 
   const sessionDateTime = new Date(
@@ -525,7 +845,9 @@ export async function requestBooking(data: {
     opportunity_id: parsed.data.opportunity_id,
     volunteer_id: profile.id,
     volunteer_note: parsed.data.volunteer_note,
-    status: "pending",
+    status: opportunity.signup_mode === "open" ? "approved" : "pending",
+    approved_at:
+      opportunity.signup_mode === "open" ? new Date().toISOString() : null,
   });
 
   if (error) {
@@ -660,7 +982,8 @@ export async function cancelBooking(bookingId: string) {
   }
 
   const isOwner = booking.volunteer_id === profile.id;
-  const isAdminUser = profile.role === "admin";
+  const isAdminUser =
+    profile.role === "organization" || profile.role === "admin";
 
   if (!isOwner && !isAdminUser) {
     return { error: "Not authorized" };
@@ -765,13 +1088,31 @@ export async function updateVolunteerStatus(
   return { success: true };
 }
 
-function redirectAfterLogin(profile: Profile) {
+function getSafeRedirectPath(path?: string | null) {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return null;
+  }
+
+  return path;
+}
+
+function redirectAfterLogin(profile: Profile, requestedPath?: string | null) {
   if (profile.must_reset_password) {
     redirect("/reset-password");
   }
 
-  if (profile.role === "admin") {
+  const safePath = getSafeRedirectPath(requestedPath);
+
+  if (profile.role === "organization" || profile.role === "admin") {
+    if (safePath?.startsWith("/admin")) {
+      redirect(safePath);
+    }
+
     redirect("/admin");
+  }
+
+  if (safePath?.startsWith("/dashboard")) {
+    redirect(safePath);
   }
 
   redirect("/dashboard");
@@ -836,13 +1177,20 @@ export async function updatePassword(password: string, confirmPassword: string) 
     return { error: error.message };
   }
 
-  await supabase
+  const { error: profileUpdateError } = await supabase
     .from("profiles")
     .update({
       must_reset_password: false,
       updated_at: new Date().toISOString(),
     })
     .eq("id", user.id);
+
+  if (profileUpdateError) {
+    return {
+      error:
+        "Your password was updated, but we could not finish activating your profile. Please contact an administrator.",
+    };
+  }
 
   const profile = await getCurrentUserProfile();
 
@@ -864,7 +1212,11 @@ export async function signOut() {
   redirect("/");
 }
 
-export async function signIn(email: string, password: string) {
+export async function signIn(
+  email: string,
+  password: string,
+  redirectTo?: string | null
+) {
   const supabase = await createClient();
 
   let error;
@@ -903,5 +1255,5 @@ export async function signIn(email: string, password: string) {
     };
   }
 
-  redirectAfterLogin(profile);
+  redirectAfterLogin(profile, redirectTo);
 }

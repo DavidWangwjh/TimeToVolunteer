@@ -12,7 +12,7 @@ export default async function ApplicationsPage({ searchParams }: Props) {
   const supabase = await createClient();
 
   let query = supabase
-    .from("volunteer_applications")
+    .from("organization_applications")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -25,8 +25,8 @@ export default async function ApplicationsPage({ searchParams }: Props) {
   return (
     <div>
       <PageHeader
-        title="Volunteer Applications"
-        description="Review and manage volunteer applications."
+        title="Organization Applications"
+        description="Review and manage organization account applications."
       />
       <ApplicationFilters currentStatus={status ?? "all"} />
       <div className="mt-4">

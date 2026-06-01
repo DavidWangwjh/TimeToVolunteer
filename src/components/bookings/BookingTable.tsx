@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Table,
@@ -81,7 +82,12 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
             <TableRow key={booking.id} className="hover:bg-emerald-50/40">
               {variant === "admin" && volunteer && (
                 <TableCell className="font-medium text-slate-800">
-                  {volunteer.first_name} {volunteer.last_name}
+                  <Link
+                    href={`/admin/volunteers/${volunteer.id}`}
+                    className="hover:text-emerald-800 hover:underline"
+                  >
+                    {volunteer.first_name} {volunteer.last_name}
+                  </Link>
                 </TableCell>
               )}
               <TableCell className="font-semibold text-slate-950">

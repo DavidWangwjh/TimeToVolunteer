@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { createOpportunity } from "@/lib/actions";
 import {
@@ -20,6 +27,10 @@ import {
   saveOpportunityDraft,
   type OpportunityDraft,
 } from "@/lib/opportunity-draft";
+import {
+  opportunitySignupModeLabels,
+  opportunityVisibilityLabels,
+} from "@/lib/opportunity-labels";
 
 const defaultValues: OpportunityCreateInput = {
   title: "",
@@ -30,6 +41,8 @@ const defaultValues: OpportunityCreateInput = {
   location: "",
   experience_required: "",
   max_volunteers: 1,
+  visibility: "public",
+  signup_mode: "application",
 };
 
 function toDraft(values: OpportunityCreateInput): OpportunityDraft {
@@ -42,6 +55,8 @@ function toDraft(values: OpportunityCreateInput): OpportunityDraft {
     location: values.location ?? "",
     experience_required: values.experience_required ?? "",
     max_volunteers: values.max_volunteers ?? 1,
+    visibility: values.visibility ?? "public",
+    signup_mode: values.signup_mode ?? "application",
   };
 }
 
@@ -55,6 +70,7 @@ export function CreateOpportunityForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     reset,
     formState: { errors },
@@ -64,6 +80,8 @@ export function CreateOpportunityForm() {
   });
 
   const values = watch();
+  const visibility = watch("visibility");
+  const signupMode = watch("signup_mode");
 
   useEffect(() => {
     const draft = loadOpportunityDraft();
@@ -181,6 +199,61 @@ export function CreateOpportunityForm() {
                   {errors.max_volunteers.message}
                 </p>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <Select
+                value={visibility}
+                onValueChange={(val) =>
+                  setValue("visibility", val as OpportunityCreateInput["visibility"])
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(value: OpportunityCreateInput["visibility"]) =>
+                      opportunityVisibilityLabels[value] ?? "Select visibility"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(opportunityVisibilityLabels).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Signup Mode</Label>
+              <Select
+                value={signupMode}
+                onValueChange={(val) =>
+                  setValue("signup_mode", val as OpportunityCreateInput["signup_mode"])
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(value: OpportunityCreateInput["signup_mode"]) =>
+                      opportunitySignupModeLabels[value] ?? "Select signup mode"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(opportunitySignupModeLabels).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

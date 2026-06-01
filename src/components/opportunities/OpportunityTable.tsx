@@ -14,9 +14,13 @@ import type { VolunteerOpportunity } from "@/types/database";
 
 interface OpportunityTableProps {
   opportunities: VolunteerOpportunity[];
+  registeredCounts: Record<string, number>;
 }
 
-export function OpportunityTable({ opportunities }: OpportunityTableProps) {
+export function OpportunityTable({
+  opportunities,
+  registeredCounts,
+}: OpportunityTableProps) {
   if (opportunities.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-white/70 py-12 text-center text-sm text-slate-500">
@@ -34,7 +38,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
             <TableHead>Date</TableHead>
             <TableHead>Time</TableHead>
             <TableHead>Location</TableHead>
-            <TableHead>Spots</TableHead>
+            <TableHead>Registered</TableHead>
             <TableHead>Status</TableHead>
             <TableHead></TableHead>
           </TableRow>
@@ -49,7 +53,7 @@ export function OpportunityTable({ opportunities }: OpportunityTableProps) {
               </TableCell>
               <TableCell className="text-slate-600">{opp.location}</TableCell>
               <TableCell className="font-semibold text-slate-800">
-                {opp.max_volunteers}
+                {registeredCounts[opp.id] ?? 0}/{opp.max_volunteers}
               </TableCell>
               <TableCell>
                 <StatusBadge status={opp.status} />

@@ -15,6 +15,7 @@ import { loginSchema } from "@/lib/validators";
 export function LoginForm() {
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
+  const redirectTo = searchParams.get("redirect");
 
   const {
     register,
@@ -25,7 +26,7 @@ export function LoginForm() {
   });
 
   async function onSubmit(data: { email: string; password: string }) {
-    const result = await signIn(data.email, data.password);
+    const result = await signIn(data.email, data.password, redirectTo);
     if (result?.error) {
       toast.error(result.error);
     }
@@ -68,6 +69,12 @@ export function LoginForm() {
         </p>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           Not a volunteer yet?{" "}
+          <Link href="/signup" className="text-emerald-700 hover:underline">
+            Create an account
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          Creating an organization?{" "}
           <Link href="/apply" className="text-emerald-700 hover:underline">
             Apply here
           </Link>

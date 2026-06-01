@@ -9,6 +9,8 @@ export interface OpportunityDraft {
   location: string;
   experience_required: string;
   max_volunteers: number;
+  visibility: "public" | "private";
+  signup_mode: "open" | "application";
 }
 
 export function loadOpportunityDraft(): OpportunityDraft | null {

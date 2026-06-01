@@ -69,10 +69,8 @@ export function VolunteerCalendar({
           .join(" ")}
       >
         <div className="fc-opportunity-event__topline">
-          <span>
-            {isTimeGrid
-              ? `${formatTime(opp.start_time)} - ${formatTime(opp.end_time)}`
-              : formatTime(opp.start_time)}
+          <span title={`${formatTime(opp.start_time)} - ${formatTime(opp.end_time)}`}>
+            {formatTime(opp.start_time)}
           </span>
           <span>
             {approved}/{opp.max_volunteers}

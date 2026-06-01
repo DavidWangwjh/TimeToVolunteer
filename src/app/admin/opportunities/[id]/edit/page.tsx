@@ -41,7 +41,7 @@ export default async function EditOpportunityPage({ params }: Props) {
         id,
         status,
         volunteer_id,
-        profiles:volunteer_id (
+        profiles:profiles!bookings_volunteer_id_fkey (
           id,
           first_name,
           last_name,

@@ -17,7 +17,7 @@ export default async function ApplicationDetailPage({ params }: Props) {
   const supabase = await createClient();
 
   const { data: application } = await supabase
-    .from("volunteer_applications")
+    .from("organization_applications")
     .select("*")
     .eq("id", id)
     .single();
@@ -27,7 +27,7 @@ export default async function ApplicationDetailPage({ params }: Props) {
   return (
     <div>
       <PageHeader
-        title={`${application.first_name} ${application.last_name}`}
+        title={application.organization_name}
         description="Application details"
         action={
           <Button asChild variant="outline" size="sm">
@@ -49,25 +49,22 @@ export default async function ApplicationDetailPage({ params }: Props) {
             <CardTitle className="text-base">Contact Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            <p>
+              <span className="text-muted-foreground">Contact:</span>{" "}
+              {application.contact_first_name} {application.contact_last_name}
+            </p>
             <p><span className="text-muted-foreground">Email:</span> {application.email}</p>
             <p><span className="text-muted-foreground">Phone:</span> {application.phone ?? "—"}</p>
-            <p><span className="text-muted-foreground">Age:</span> {application.age ?? "—"}</p>
+            <p><span className="text-muted-foreground">Website:</span> {application.website ?? "—"}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Emergency Contact</CardTitle>
+            <CardTitle className="text-base">Organization Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>
-              <span className="text-muted-foreground">Name:</span>{" "}
-              {application.emergency_contact_name ?? "—"}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Phone:</span>{" "}
-              {application.emergency_contact_phone ?? "—"}
-            </p>
+            <p>{application.mission ?? "—"}</p>
           </CardContent>
         </Card>
 
@@ -77,19 +74,7 @@ export default async function ApplicationDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div>
-              <p className="text-muted-foreground mb-1">Availability</p>
-              <p>{application.availability ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Experience</p>
-              <p>{application.experience ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Preferred Areas</p>
-              <p>{application.preferred_areas ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Reason for Volunteering</p>
+              <p className="text-muted-foreground mb-1">Reason for Joining</p>
               <p>{application.reason ?? "—"}</p>
             </div>
             {application.admin_notes && (

@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ type StatItem = {
 
 export default async function AdminOverviewPage() {
   const supabase = await createClient();
+  const profile = await getCurrentUserProfile();
+  const isPlatformAdmin = profile?.role === "admin";
 
   const now = new Date();
   const monthStart = new Date(
@@ -53,17 +56,25 @@ export default async function AdminOverviewPage() {
     { count: upcomingSessions },
     { count: approvedBookingsThisMonth },
     { count: availableSessionsThisWeek },
+    { count: pendingMemberships },
   ] = await Promise.all([
-    supabase
-      .from("volunteer_applications")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending"),
+    isPlatformAdmin
+      ? supabase
+          .from("organization_applications")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending")
+      : Promise.resolve({ count: 0 }),
 
-    supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("role", "volunteer")
-      .eq("status", "active"),
+    isPlatformAdmin
+      ? supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "volunteer")
+          .eq("status", "active")
+      : supabase
+          .from("organization_memberships")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "accepted"),
 
     supabase
       .from("bookings")
@@ -88,14 +99,29 @@ export default async function AdminOverviewPage() {
       .eq("status", "published")
       .gte("date", today)
       .lte("date", weekEnd),
+    supabase
+      .from("organization_memberships")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
   ]);
 
   const reviewItems: ReviewItem[] = [
+    ...(isPlatformAdmin
+      ? [
+          {
+            label: "Organizations waiting",
+            value: pendingApplications ?? 0,
+            href: "/admin/applications",
+            icon: FileText,
+            tone: "amber" as const,
+          },
+        ]
+      : []),
     {
-      label: "Applications waiting",
-      value: pendingApplications ?? 0,
-      href: "/admin/applications",
-      icon: FileText,
+      label: "Membership requests",
+      value: pendingMemberships ?? 0,
+      href: "/admin/memberships",
+      icon: Users,
       tone: "amber",
     },
     {
@@ -113,7 +139,9 @@ export default async function AdminOverviewPage() {
       value: acceptedVolunteers ?? 0,
       href: "/admin/volunteers",
       icon: Users,
-      description: "Approved people in the program",
+      description: isPlatformAdmin
+        ? "Approved people in the program"
+        : "Accepted members in your organization",
     },
     {
       label: "Upcoming sessions",
@@ -163,7 +191,9 @@ export default async function AdminOverviewPage() {
                   Needs review
                 </p>
                 <h2 className="mt-2 text-3xl font-bold">
-                  {(pendingApplications ?? 0) + (pendingBookings ?? 0)}
+                  {(pendingApplications ?? 0) +
+                    (pendingMemberships ?? 0) +
+                    (pendingBookings ?? 0)}
                 </h2>
               </div>
 
@@ -173,8 +203,8 @@ export default async function AdminOverviewPage() {
             </div>
 
             <p className="mt-5 max-w-xl text-sm leading-6 text-slate-300">
-              Prioritize pending applications and booking requests so volunteers
-              can move from interest to confirmed impact quickly.
+              Prioritize pending requests so volunteers can move from interest
+              to confirmed impact quickly.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -194,10 +224,14 @@ export default async function AdminOverviewPage() {
 
       <section className="mt-6 grid gap-4 md:grid-cols-3">
         <ActionCard
-          icon={FileText}
-          title="Review applications"
-          description="Move applicants through the queue and keep decisions visible."
-          href="/admin/applications"
+          icon={isPlatformAdmin ? FileText : Users}
+          title={isPlatformAdmin ? "Review organizations" : "Review members"}
+          description={
+            isPlatformAdmin
+              ? "Move organization applicants through the queue and keep decisions visible."
+              : "Accept volunteers into your private organization network."
+          }
+          href={isPlatformAdmin ? "/admin/applications" : "/admin/memberships"}
         />
 
         <ActionCard

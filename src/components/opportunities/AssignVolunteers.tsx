@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -143,20 +144,15 @@ export function AssignVolunteers({
   return (
     <Card className="mt-8">
       <CardHeader>
-        <CardTitle className="text-base">Assigned Volunteers</CardTitle>
+        <CardTitle className="text-base">Registered Volunteers</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <p className="text-sm text-muted-foreground">
           {approvedBookings.length} of {opportunity.max_volunteers} registered
-          {spotsRemaining > 0 && ` · ${spotsRemaining} remaining`}
         </p>
 
-        {approvedBookings.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No volunteers assigned yet.
-          </p>
-        ) : (
+        {approvedBookings.length > 0 && (
           <ul className="divide-y rounded-lg border">
             {approvedBookings.map((booking) => {
               const volunteer = booking.profiles;
@@ -167,9 +163,12 @@ export function AssignVolunteers({
                   className="flex items-center justify-between gap-4 px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium text-sm">
+                    <Link
+                      href={`/admin/volunteers/${volunteer.id}`}
+                      className="text-sm font-medium text-slate-950 hover:text-emerald-800 hover:underline"
+                    >
                       {getVolunteerName(volunteer)}
-                    </p>
+                    </Link>
 
                     {volunteer?.email && (
                       <p className="text-xs text-muted-foreground">
@@ -204,8 +203,8 @@ export function AssignVolunteers({
 
         {canAssign && (
           <div className="border-t pt-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-              <div className="w-full sm:max-w-lg space-y-2">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <div className="w-full space-y-2">
                 <Label>Assign volunteer</Label>
 
                 <Select
@@ -214,7 +213,7 @@ export function AssignVolunteers({
                     setSelectedVolunteerId(value ?? "")
                   }
                 >
-                  <SelectTrigger className="w-full min-w-[320px]">
+                  <SelectTrigger className="h-12 w-full min-w-[320px]">
                     <span
                       className={
                         selectedVolunteer
@@ -236,7 +235,11 @@ export function AssignVolunteers({
                 </Select>
               </div>
 
-              <Button onClick={handleAssign} disabled={pending}>
+              <Button
+                className="h-12 px-5 sm:mb-0"
+                onClick={handleAssign}
+                disabled={pending}
+              >
                 {pending ? "Assigning..." : "Assign"}
               </Button>
             </div>

@@ -8,7 +8,9 @@ export default async function AdminBookingsPage() {
 
   const { data: allBookings } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*), profiles(*)")
+    .select(
+      "*, volunteer_opportunities(*), profiles:profiles!bookings_volunteer_id_fkey(*)"
+    )
     .order("created_at", { ascending: false });
 
   const pending = (allBookings ?? []).filter((b) => b.status === "pending");

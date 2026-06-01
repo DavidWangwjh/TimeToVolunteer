@@ -59,10 +59,10 @@ export default async function HomePage() {
                 {auth.isSignedIn
                   ? auth.mustResetPassword
                     ? "Please set a new password to continue using your account."
-                    : auth.role === "admin"
-                      ? "Manage volunteer applications, opportunities, and bookings from your admin dashboard."
+                    : auth.role === "organization" || auth.role === "admin"
+                      ? "Manage organization opportunities, membership requests, and bookings from your dashboard."
                       : "Continue browsing sessions and managing your volunteer bookings."
-                  : "Find meaningful volunteer opportunities that fit your interests and availability. Give back, connect, and create impact one hour at a time."}
+                  : "Create a volunteer profile, join trusted organizations, and find meaningful opportunities that fit your schedule."}
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center xl:justify-start">
@@ -84,8 +84,8 @@ export default async function HomePage() {
                       size="lg"
                       className="h-12 w-full bg-emerald-800 px-7 text-base shadow-lg shadow-emerald-950/15 hover:bg-emerald-700 sm:w-auto"
                     >
-                      <Link href="/apply">
-                        Apply to Volunteer
+                      <Link href="/signup">
+                        Create Volunteer Account
                         <ArrowRight className="ml-2 size-5" />
                       </Link>
                     </Button>
@@ -95,7 +95,7 @@ export default async function HomePage() {
                       size="lg"
                       className="h-12 w-full border-slate-200 bg-white px-7 text-base text-slate-900 shadow-sm hover:bg-slate-50 sm:w-auto"
                     >
-                      <Link href="/login">Browse Opportunities</Link>
+                      <Link href="/apply">Apply as Organization</Link>
                     </Button>
                   </>
                 )}
@@ -128,21 +128,21 @@ export default async function HomePage() {
               {[
                 {
                   icon: Compass,
-                  title: "Apply",
+                  title: "Create Profile",
                   description:
-                    "Tell us about yourself, your interests, and how you'd like to help.",
+                    "Sign up as a volunteer and keep your interests and contact details current.",
                 },
                 {
                   icon: CheckCircle2,
-                  title: "Get Approved",
+                  title: "Join Organizations",
                   description:
-                    "Our team reviews your application and sets up your account.",
+                    "Request access to private organizations or browse public opportunities.",
                 },
                 {
                   icon: Calendar,
                   title: "Book & Volunteer",
                   description:
-                    "Browse opportunities and book sessions that fit your schedule.",
+                    "Apply for sessions, track approvals, and show up ready to help.",
                 },
               ].map((item, index) => (
                 <div

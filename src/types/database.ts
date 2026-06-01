@@ -1,8 +1,12 @@
-export type ProfileRole = "volunteer" | "admin";
+export type ProfileRole = "volunteer" | "organization" | "admin";
 export type ProfileStatus = "active" | "inactive" | "suspended";
 export type ApplicationStatus = "pending" | "contacted" | "accepted" | "rejected";
 export type OpportunityStatus = "draft" | "published" | "cancelled" | "completed";
+export type OpportunityVisibility = "public" | "private";
+export type OpportunitySignupMode = "open" | "application";
 export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
+export type OrganizationStatus = "active" | "inactive" | "suspended";
+export type MembershipStatus = "pending" | "accepted" | "rejected";
 
 export interface Profile {
   id: string;
@@ -17,28 +21,51 @@ export interface Profile {
   updated_at: string;
 }
 
-export interface VolunteerApplication {
+export interface Organization {
   id: string;
-  first_name: string;
-  last_name: string;
+  owner_id: string;
+  name: string;
+  description: string | null;
+  website: string | null;
+  contact_email: string;
+  contact_phone: string | null;
+  status: OrganizationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationApplication {
+  id: string;
+  organization_name: string;
+  contact_first_name: string;
+  contact_last_name: string;
   email: string;
   phone: string | null;
-  age: string | null;
-  availability: string | null;
-  experience: string | null;
-  preferred_areas: string | null;
+  website: string | null;
+  mission: string | null;
   reason: string | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  agreement_accepted: boolean;
   status: ApplicationStatus;
   admin_notes: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export interface OrganizationMembership {
+  id: string;
+  organization_id: string;
+  volunteer_id: string;
+  status: MembershipStatus;
+  volunteer_note: string | null;
+  admin_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface VolunteerOpportunity {
   id: string;
+  organization_id: string | null;
   title: string;
   description: string | null;
   date: string;
@@ -48,6 +75,8 @@ export interface VolunteerOpportunity {
   experience_required: string | null;
   max_volunteers: number;
   status: OpportunityStatus;
+  visibility: OpportunityVisibility;
+  signup_mode: OpportunitySignupMode;
   created_by: string | null;
   created_at: string;
   updated_at: string;

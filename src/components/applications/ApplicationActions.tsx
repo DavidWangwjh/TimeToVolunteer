@@ -3,29 +3,28 @@
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  acceptVolunteerApplication,
-  rejectVolunteerApplication,
-  updateApplicationStatus,
+  acceptOrganizationApplication,
+  rejectOrganizationApplication,
+  updateOrganizationApplicationStatus,
 } from "@/lib/actions";
-import type { VolunteerApplication } from "@/types/database";
+import type { OrganizationApplication } from "@/types/database";
 
 interface ApplicationActionsProps {
-  application: VolunteerApplication;
+  application: OrganizationApplication;
 }
 
 export function ApplicationActions({ application }: ApplicationActionsProps) {
   async function handleAccept() {
-    const result = await acceptVolunteerApplication(application.id);
+    const result = await acceptOrganizationApplication(application.id);
     if (result.error) {
       toast.error(result.error);
     } else {
       toast.success("Application accepted");
-      if (result.emailWarning) toast.warning(result.emailWarning);
     }
   }
 
   async function handleReject() {
-    const result = await rejectVolunteerApplication(application.id);
+    const result = await rejectOrganizationApplication(application.id);
     if (result.error) {
       toast.error(result.error);
     } else {
@@ -34,7 +33,10 @@ export function ApplicationActions({ application }: ApplicationActionsProps) {
   }
 
   async function handleMarkContacted() {
-    const result = await updateApplicationStatus(application.id, "contacted");
+    const result = await updateOrganizationApplicationStatus(
+      application.id,
+      "contacted"
+    );
     if (result.error) {
       toast.error(result.error);
     } else {

@@ -48,7 +48,7 @@ export async function getAuthNavState(): Promise<AuthNavState> {
       isSignedIn: true,
       firstName: profile.first_name,
       dashboardHref: "/admin",
-      dashboardLabel: "Admin Dashboard",
+      dashboardLabel: "Organization Dashboard",
       role: profile.role,
       mustResetPassword: false,
     };

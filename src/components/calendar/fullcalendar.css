@@ -148,6 +148,15 @@
     padding-bottom: 0.25rem;
   }
 
+  .fc .fc-toolbar {
+    background: #fff;
+    left: 0;
+    max-width: calc(100vw - 4rem);
+    position: sticky;
+    width: calc(100vw - 4rem);
+    z-index: 4;
+  }
+
   .fc .fc-view-harness,
   .fc .fc-scrollgrid {
     min-width: 760px;

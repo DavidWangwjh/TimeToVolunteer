@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { formatDate } from "@/lib/dates";
-import type { VolunteerApplication } from "@/types/database";
+import type { OrganizationApplication } from "@/types/database";
 
 interface ApplicationTableProps {
-  applications: VolunteerApplication[];
+  applications: OrganizationApplication[];
 }
 
 export function ApplicationTable({ applications }: ApplicationTableProps) {
@@ -30,7 +30,8 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
       <Table>
         <TableHeader className="bg-slate-50">
           <TableRow>
-            <TableHead>Name</TableHead>
+            <TableHead>Organization</TableHead>
+            <TableHead>Contact</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Submitted</TableHead>
@@ -41,7 +42,10 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
           {applications.map((app) => (
             <TableRow key={app.id} className="hover:bg-emerald-50/40">
               <TableCell className="font-semibold text-slate-950">
-                {app.first_name} {app.last_name}
+                {app.organization_name}
+              </TableCell>
+              <TableCell className="text-slate-600">
+                {app.contact_first_name} {app.contact_last_name}
               </TableCell>
               <TableCell className="text-slate-600">{app.email}</TableCell>
               <TableCell>

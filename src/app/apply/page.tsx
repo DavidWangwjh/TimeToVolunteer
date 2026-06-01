@@ -1,18 +1,18 @@
 import { Navbar } from "@/components/layout/Navbar";
-import { ApplicationForm } from "@/components/applications/ApplicationForm";
+import { OrganizationApplicationForm } from "@/components/applications/OrganizationApplicationForm";
 
 export default function ApplyPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <main className="container mx-auto px-4 py-12 max-w-2xl">
+      <main className="container mx-auto max-w-2xl px-4 py-12">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">Volunteer Application</h1>
+          <h1 className="mb-2 text-3xl font-bold">Organization Application</h1>
           <p className="text-muted-foreground">
-            Tell us about yourself and why you&apos;d like to volunteer with us.
+            Apply to create an organization account and publish volunteer opportunities.
           </p>
         </div>
-        <ApplicationForm />
+        <OrganizationApplicationForm />
       </main>
     </div>
   );

@@ -7,10 +7,24 @@ import { Button } from "@/components/ui/button";
 export default async function OpportunitiesPage() {
   const supabase = await createClient();
 
-  const { data: opportunities } = await supabase
-    .from("volunteer_opportunities")
-    .select("*")
-    .order("date", { ascending: false });
+  const [{ data: opportunities }, { data: bookings }] = await Promise.all([
+    supabase
+      .from("volunteer_opportunities")
+      .select("*")
+      .order("date", { ascending: false }),
+    supabase
+      .from("bookings")
+      .select("opportunity_id")
+      .eq("status", "approved"),
+  ]);
+
+  const registeredCounts = (bookings ?? []).reduce<Record<string, number>>(
+    (counts, booking) => {
+      counts[booking.opportunity_id] = (counts[booking.opportunity_id] ?? 0) + 1;
+      return counts;
+    },
+    {}
+  );
 
   return (
     <div>
@@ -23,7 +37,10 @@ export default async function OpportunitiesPage() {
           </Button>
         }
       />
-      <OpportunityTable opportunities={opportunities ?? []} />
+      <OpportunityTable
+        opportunities={opportunities ?? []}
+        registeredCounts={registeredCounts}
+      />
     </div>
   );
 }

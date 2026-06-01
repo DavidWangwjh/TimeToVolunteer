@@ -9,20 +9,31 @@ import {
   FileText,
   Briefcase,
   CalendarDays,
+  Building2,
 } from "lucide-react";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 
 const volunteerLinks = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/organizations", label: "Organizations", icon: Building2 },
   { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
   { href: "/dashboard/bookings", label: "My Bookings", icon: ClipboardList },
   { href: "/dashboard/profile", label: "Profile", icon: User },
 ];
 
-const adminLinks = [
+const platformAdminLinks = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/applications", label: "Applications", icon: FileText },
+  { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/volunteers", label: "Volunteers", icon: Users },
+  { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
+  { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
+  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
+];
+
+const organizationAdminLinks = [
+  { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
   { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
@@ -31,16 +42,49 @@ const adminLinks = [
 interface SidebarProps {
   variant: "volunteer" | "admin";
   currentPath: string;
+  navCounts?: Record<string, number>;
+  adminKind?: "platform" | "organization";
 }
 
-export function Sidebar({ variant, currentPath }: SidebarProps) {
-  const links = variant === "admin" ? adminLinks : volunteerLinks;
-  const label = variant === "admin" ? "Program ops" : "Volunteer hub";
+export function Sidebar({
+  variant,
+  currentPath,
+  navCounts = {},
+  adminKind = "platform",
+}: SidebarProps) {
+  const links =
+    variant === "admin"
+      ? adminKind === "platform"
+        ? platformAdminLinks
+        : organizationAdminLinks
+      : volunteerLinks;
+  const label = variant === "admin" ? "Organization ops" : "Volunteer hub";
 
   function isActive(href: string) {
     return (
       currentPath === href ||
       (href !== "/dashboard" && href !== "/admin" && currentPath.startsWith(href))
+    );
+  }
+
+  function countFor(href: string) {
+    return navCounts[href];
+  }
+
+  function CountBadge({ count, active }: { count: number; active: boolean }) {
+    return (
+      <span
+        className={cn(
+          "ml-auto inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums",
+          active
+            ? "bg-white text-emerald-900 ring-1 ring-emerald-950/10"
+            : count > 0
+            ? "bg-emerald-100 text-emerald-800"
+            : "bg-slate-100 text-slate-500"
+        )}
+      >
+        {count}
+      </span>
     );
   }
 
@@ -57,21 +101,27 @@ export function Sidebar({ variant, currentPath }: SidebarProps) {
           <SignOutButton />
         </div>
         <nav className="flex gap-2 overflow-x-auto px-4 pb-3">
-          {links.map(({ href, label: itemLabel, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-                isActive(href)
-                  ? "bg-emerald-800 text-white shadow-sm shadow-emerald-950/20"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
-              )}
-            >
-              <Icon className="size-4" />
-              {itemLabel}
-            </Link>
-          ))}
+          {links.map(({ href, label: itemLabel, icon: Icon }) => {
+            const active = isActive(href);
+            const count = countFor(href);
+
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                  active
+                    ? "bg-emerald-800 text-white shadow-sm shadow-emerald-950/20"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
+                )}
+              >
+                <Icon className="size-4" />
+                {itemLabel}
+                {count !== undefined && <CountBadge active={active} count={count} />}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
@@ -83,30 +133,36 @@ export function Sidebar({ variant, currentPath }: SidebarProps) {
         </div>
 
         <nav className="mt-5 flex-1 space-y-1">
-          {links.map(({ href, label: itemLabel, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold transition-colors",
-                isActive(href)
-                  ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
-                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"
-              )}
-            >
-              <span
+          {links.map(({ href, label: itemLabel, icon: Icon }) => {
+            const active = isActive(href);
+            const count = countFor(href);
+
+            return (
+              <Link
+                key={href}
+                href={href}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-lg transition-colors",
-                  isActive(href)
-                    ? "bg-emerald-800 text-white"
-                    : "bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800"
+                  "group flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold transition-colors",
+                  active
+                    ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"
                 )}
               >
-                <Icon className="size-4" />
-              </span>
-              {itemLabel}
-            </Link>
-          ))}
+                <span
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-lg transition-colors",
+                    active
+                      ? "bg-emerald-800 text-white"
+                      : "bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-800"
+                  )}
+                >
+                  <Icon className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1 truncate">{itemLabel}</span>
+                {count !== undefined && <CountBadge active={active} count={count} />}
+              </Link>
+            );
+          })}
         </nav>
         <div className="border-t border-slate-200 pt-4">
           <SignOutButton className="w-full justify-center" />
