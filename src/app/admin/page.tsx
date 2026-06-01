@@ -14,14 +14,36 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+type ReviewItem = {
+  label: string;
+  value: number;
+  href: string;
+  icon: React.ElementType;
+  tone: "amber" | "emerald";
+};
+
+type StatItem = {
+  label: string;
+  value: number;
+  href: string;
+  icon: React.ElementType;
+  description: string;
+};
+
 export default async function AdminOverviewPage() {
   const supabase = await createClient();
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  ).toISOString();
+
   const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
+
   const today = now.toISOString().split("T")[0];
 
   const [
@@ -36,25 +58,30 @@ export default async function AdminOverviewPage() {
       .from("volunteer_applications")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
+
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("role", "volunteer")
       .eq("status", "active"),
+
     supabase
       .from("bookings")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
+
     supabase
       .from("volunteer_opportunities")
       .select("*", { count: "exact", head: true })
       .eq("status", "published")
       .gte("date", today),
+
     supabase
       .from("bookings")
       .select("*", { count: "exact", head: true })
       .eq("status", "approved")
       .gte("approved_at", monthStart),
+
     supabase
       .from("volunteer_opportunities")
       .select("*", { count: "exact", head: true })
@@ -63,7 +90,7 @@ export default async function AdminOverviewPage() {
       .lte("date", weekEnd),
   ]);
 
-  const reviewItems = [
+  const reviewItems: ReviewItem[] = [
     {
       label: "Applications waiting",
       value: pendingApplications ?? 0,
@@ -80,7 +107,7 @@ export default async function AdminOverviewPage() {
     },
   ];
 
-  const stats = [
+  const stats: StatItem[] = [
     {
       label: "Active volunteers",
       value: acceptedVolunteers ?? 0,
@@ -139,14 +166,17 @@ export default async function AdminOverviewPage() {
                   {(pendingApplications ?? 0) + (pendingBookings ?? 0)}
                 </h2>
               </div>
+
               <div className="flex size-12 items-center justify-center rounded-lg bg-white/10">
                 <ClipboardList className="size-6" />
               </div>
             </div>
+
             <p className="mt-5 max-w-xl text-sm leading-6 text-slate-300">
               Prioritize pending applications and booking requests so volunteers
               can move from interest to confirmed impact quickly.
             </p>
+
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {reviewItems.map((item) => (
                 <ReviewTile key={item.label} {...item} />
@@ -169,12 +199,14 @@ export default async function AdminOverviewPage() {
           description="Move applicants through the queue and keep decisions visible."
           href="/admin/applications"
         />
+
         <ActionCard
           icon={Briefcase}
           title="Manage opportunities"
           description="Create, edit, and publish sessions with the right capacity."
           href="/admin/opportunities"
         />
+
         <ActionCard
           icon={CalendarDays}
           title="Open calendar"
@@ -192,13 +224,7 @@ function ReviewTile({
   href,
   icon: Icon,
   tone,
-}: {
-  label: string;
-  value: number;
-  href: string;
-  icon: React.ElementType;
-  tone: "amber" | "emerald";
-}) {
+}: ReviewItem) {
   const toneClass =
     tone === "amber"
       ? "bg-amber-400/15 text-amber-100 ring-amber-300/20"
@@ -213,6 +239,7 @@ function ReviewTile({
         <Icon className="size-5" />
         <ArrowRight className="size-4 opacity-70" />
       </div>
+
       <p className="mt-4 text-2xl font-bold text-white">{value}</p>
       <p className="mt-1 text-sm font-semibold">{label}</p>
     </Link>
@@ -225,13 +252,7 @@ function MetricCard({
   href,
   icon: Icon,
   description,
-}: {
-  label: string;
-  value: number;
-  href: string;
-  icon: React.ElementType;
-  description: string;
-}) {
+}: StatItem) {
   return (
     <Link href={href}>
       <Card className="h-full border-white/70 bg-white/85 shadow-sm shadow-slate-950/5 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
@@ -241,11 +262,15 @@ function MetricCard({
               <p className="text-sm font-semibold text-slate-500">{label}</p>
               <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
             </div>
+
             <div className="flex size-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
               <Icon className="size-5" />
             </div>
           </div>
-          <p className="mt-4 text-sm leading-6 text-slate-600">{description}</p>
+
+          <p className="mt-4 text-sm leading-6 text-slate-600">
+            {description}
+          </p>
         </CardContent>
       </Card>
     </Link>
@@ -271,10 +296,15 @@ function ActionCard({
             <div className="flex size-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
               <Icon className="size-5" />
             </div>
+
             <ArrowRight className="size-4 text-slate-400" />
           </div>
+
           <h2 className="mt-4 font-semibold text-slate-950">{title}</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {description}
+          </p>
         </CardContent>
       </Card>
     </Link>
