@@ -13,6 +13,7 @@ import {
   assignVolunteerSchema,
   bookingRequestSchema,
   profileUpdateSchema,
+  organizationSettingsSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
 } from "@/lib/validators";
@@ -22,6 +23,7 @@ import type {
   OpportunityCreateInput,
   OpportunityUpdateInput,
   ProfileUpdateInput,
+  OrganizationSettingsInput,
 } from "@/lib/validators";
 import type { InboxMessageKind, Profile } from "@/types/database";
 
@@ -334,6 +336,7 @@ export async function acceptOrganizationApplication(applicationId: string) {
         website: application.website,
         contact_email: application.email,
         contact_phone: application.phone,
+        visibility: "public",
         status: "active",
         updated_at: new Date().toISOString(),
       },
@@ -916,7 +919,7 @@ export async function requestBooking(data: {
 
   const { data: opportunity, error: oppError } = await supabase
     .from("volunteer_opportunities")
-    .select("*, organizations(id, name, owner_id)")
+    .select("*, organizations(id, name, owner_id, visibility, status)")
     .eq("id", parsed.data.opportunity_id)
     .single();
 
@@ -928,11 +931,11 @@ export async function requestBooking(data: {
     return { error: "This opportunity is not available for registration" };
   }
 
-  if (opportunity.visibility === "private") {
-    if (!opportunity.organization_id) {
-      return { error: "This private opportunity is not available yet" };
-    }
+  const organization = Array.isArray(opportunity.organizations)
+    ? opportunity.organizations[0]
+    : opportunity.organizations;
 
+  if (organization?.visibility === "private") {
     const { data: membership } = await supabase
       .from("organization_memberships")
       .select("id")
@@ -944,7 +947,7 @@ export async function requestBooking(data: {
     if (!membership) {
       return {
         error:
-          "You need to be accepted by this organization before applying to this opportunity",
+          "You need to be accepted by this organization before registering for this opportunity",
       };
     }
   }
@@ -1002,10 +1005,6 @@ export async function requestBooking(data: {
 
     return { error: error.message };
   }
-
-  const organization = Array.isArray(opportunity.organizations)
-    ? opportunity.organizations[0]
-    : opportunity.organizations;
 
   if (requestedStatus === "pending" && organization?.owner_id && newBooking) {
     await createInboxMessage({
@@ -1357,6 +1356,39 @@ export async function updateProfile(data: ProfileUpdateInput) {
   }
 
   revalidatePath("/dashboard/profile");
+
+  return { success: true };
+}
+
+export async function updateOrganizationSettings(data: OrganizationSettingsInput) {
+  const admin = await requireAdmin();
+
+  if (admin.role !== "organization") {
+    return { error: "Only organization accounts can update organization settings" };
+  }
+
+  const parsed = organizationSettingsSchema.safeParse(data);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organizations")
+    .update({
+      visibility: parsed.data.visibility,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("owner_id", admin.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin/profile");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/organizations");
 
   return { success: true };
 }

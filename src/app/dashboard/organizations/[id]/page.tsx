@@ -65,7 +65,12 @@ export default async function OrganizationDetailPage({ params }: Props) {
 
   const organizationRecord = organization as Organization;
   const membershipStatus = membership?.status as MembershipStatus | undefined;
-  const visibleOpportunities = (opportunities ?? []) as VolunteerOpportunity[];
+  const organizationVisibility = organizationRecord.visibility ?? "public";
+  const canViewOpportunities =
+    organizationVisibility === "public" || membershipStatus === "accepted";
+  const visibleOpportunities = canViewOpportunities
+    ? ((opportunities ?? []) as VolunteerOpportunity[])
+    : [];
 
   return (
     <div>

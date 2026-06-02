@@ -86,14 +86,18 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
         <TableBody>
           {bookings.map(({ booking, opportunity, volunteer }) => (
             <TableRow key={booking.id} className="hover:bg-emerald-50/40">
-              {variant === "admin" && volunteer && (
+              {variant === "admin" && (
                 <TableCell className="font-medium text-slate-800">
-                  <Link
-                    href={`/admin/volunteers/${volunteer.id}`}
-                    className="hover:text-emerald-800 hover:underline"
-                  >
-                    {volunteer.first_name} {volunteer.last_name}
-                  </Link>
+                  {volunteer ? (
+                    <Link
+                      href={`/admin/volunteers/${volunteer.id}`}
+                      className="hover:text-emerald-800 hover:underline"
+                    >
+                      {volunteer.first_name} {volunteer.last_name}
+                    </Link>
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
                 </TableCell>
               )}
               <TableCell className="font-semibold text-slate-950">
@@ -120,7 +124,7 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
               </TableCell>
               {showActions && (
                 <TableCell>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {variant === "admin" && booking.status === "pending" && (
                       <>
                         <Button
@@ -142,7 +146,8 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
                     {["pending", "approved"].includes(booking.status) && (
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
+                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
                         onClick={() => handleCancel(booking.id)}
                       >
                         Cancel

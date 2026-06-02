@@ -45,9 +45,11 @@ create table organizations (
   website text,
   contact_email text not null,
   contact_phone text,
+  visibility text not null default 'public',
   status text not null default 'active',
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
+  constraint organizations_visibility_check check (visibility in ('public', 'private')),
   constraint organizations_status_check check (status in ('active', 'inactive', 'suspended'))
 );
 
@@ -303,7 +305,13 @@ on volunteer_opportunities for select
 using (
   status = 'published'
   and (
-    visibility = 'public'
+    organization_id is null
+    or exists (
+      select 1 from organizations
+      where organizations.id = volunteer_opportunities.organization_id
+      and organizations.visibility = 'public'
+      and organizations.status = 'active'
+    )
     or exists (
       select 1 from organization_memberships
       where organization_memberships.organization_id = volunteer_opportunities.organization_id

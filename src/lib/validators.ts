@@ -80,6 +80,10 @@ export const profileUpdateSchema = z.object({
   phone: z.string().optional(),
 });
 
+export const organizationSettingsSchema = z.object({
+  visibility: z.enum(["public", "private"]),
+});
+
 export const loginSchema = z.object({
   email: z.string().email("Valid email is required"),
   password: z.string().min(1, "Password is required"),
@@ -112,3 +116,6 @@ export type OpportunityCreateInput = z.infer<typeof opportunityCreateSchema>;
 export type OpportunityUpdateInput = z.infer<typeof opportunityUpdateSchema>;
 export type BookingRequestInput = z.infer<typeof bookingRequestSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+export type OrganizationSettingsInput = z.infer<
+  typeof organizationSettingsSchema
+>;

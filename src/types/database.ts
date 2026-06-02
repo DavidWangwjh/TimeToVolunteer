@@ -6,6 +6,7 @@ export type OpportunityVisibility = "public" | "private";
 export type OpportunitySignupMode = "open" | "application";
 export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
 export type OrganizationStatus = "active" | "inactive" | "suspended";
+export type OrganizationVisibility = "public" | "private";
 export type MembershipStatus = "pending" | "accepted" | "rejected";
 export type InboxMessageKind =
   | "booking_requested"
@@ -36,6 +37,7 @@ export interface Organization {
   website: string | null;
   contact_email: string;
   contact_phone: string | null;
+  visibility: OrganizationVisibility;
   status: OrganizationStatus;
   created_at: string;
   updated_at: string;

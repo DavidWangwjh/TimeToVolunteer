@@ -8,7 +8,7 @@ export default async function AdminBookingsPage() {
   const { data: allBookings } = await supabase
     .from("bookings")
     .select(
-      "*, volunteer_opportunities(*), profiles:profiles!bookings_volunteer_id_fkey(*)"
+      "*, volunteer_opportunities(*), volunteer:profiles!bookings_volunteer_id_fkey(*)"
     )
     .order("created_at", { ascending: false });
 
@@ -19,11 +19,18 @@ export default async function AdminBookingsPage() {
   );
 
   const toRows = (bookings: typeof allBookings) =>
-    (bookings ?? []).map((b) => ({
-      booking: b,
-      opportunity: b.volunteer_opportunities,
-      volunteer: b.profiles,
-    }));
+    (bookings ?? []).map((b) => {
+      const volunteer = Array.isArray(b.volunteer) ? b.volunteer[0] : b.volunteer;
+      const opportunity = Array.isArray(b.volunteer_opportunities)
+        ? b.volunteer_opportunities[0]
+        : b.volunteer_opportunities;
+
+      return {
+        booking: b,
+        opportunity,
+        volunteer,
+      };
+    });
 
   return (
     <div>
