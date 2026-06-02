@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
-  Calendar,
   ClipboardList,
   User,
   LayoutDashboard,
@@ -17,7 +16,6 @@ const volunteerLinks = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/inbox", label: "Inbox", icon: Mail },
   { href: "/dashboard/organizations", label: "Explore", icon: Building2 },
-  { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
   { href: "/dashboard/profile", label: "Profile", icon: User },
 ];
 
@@ -28,7 +26,7 @@ const platformAdminLinks = [
   { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/volunteers", label: "Volunteers", icon: Users },
   { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
-  { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
+  { href: "/admin/bookings", label: "Registrations", icon: ClipboardList },
   { href: "/admin/profile", label: "Profile", icon: User },
 ];
 
@@ -37,7 +35,7 @@ const organizationAdminLinks = [
   { href: "/admin/inbox", label: "Inbox", icon: Mail },
   { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
-  { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
+  { href: "/admin/bookings", label: "Registrations", icon: ClipboardList },
   { href: "/admin/profile", label: "Profile", icon: User },
 ];
 
@@ -60,7 +58,7 @@ export function Sidebar({
         ? platformAdminLinks
         : organizationAdminLinks
       : volunteerLinks;
-  const label = variant === "admin" ? "Organization ops" : "Volunteer Dashboard";
+  const label = variant === "admin" ? "Admin Dashboard" : "Volunteer Dashboard";
 
   function isActive(href: string) {
     return (
@@ -132,6 +130,9 @@ export function Sidebar({
           <Link href="/" className="text-xl font-bold">
             TimeToVolunteer
           </Link>
+          <p className="mt-1 text-xs font-medium text-emerald-50/70">
+            {label}
+          </p>
         </div>
 
         <nav className="mt-5 flex-1 space-y-1">

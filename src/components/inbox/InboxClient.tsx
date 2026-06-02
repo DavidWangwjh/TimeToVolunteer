@@ -25,9 +25,9 @@ import type { InboxMessage, InboxMessageKind } from "@/types/database";
 type InboxFilter = "all" | "unread" | "read";
 
 const kindLabels: Record<InboxMessageKind, string> = {
-  booking_requested: "Booking request",
-  booking_approved: "Booking accepted",
-  booking_rejected: "Booking declined",
+  booking_requested: "Registration request",
+  booking_approved: "Registration accepted",
+  booking_rejected: "Registration declined",
   membership_requested: "Organization request",
   membership_accepted: "Access accepted",
   membership_rejected: "Access declined",
@@ -236,7 +236,7 @@ export function InboxClient({
           <Inbox className="mx-auto size-9 text-slate-400" />
           <p className="mt-3 font-semibold text-slate-900">No messages here</p>
           <p className="mt-1 text-sm text-slate-500">
-            Booking and organization updates will show up in this inbox.
+            Registration and organization updates will show up in this inbox.
           </p>
         </div>
       ) : (

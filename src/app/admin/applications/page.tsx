@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { ApplicationTable } from "@/components/applications/ApplicationTable";
 import { ApplicationFilters } from "@/components/applications/ApplicationFilters";
 
@@ -24,11 +23,7 @@ export default async function ApplicationsPage({ searchParams }: Props) {
 
   return (
     <div>
-      <PageHeader
-        title="Organization Applications"
-        description="Review and manage organization account applications."
-      />
-      <ApplicationFilters currentStatus={status ?? "all"} />
+            <ApplicationFilters currentStatus={status ?? "all"} />
       <div className="mt-4">
         <ApplicationTable applications={applications ?? []} />
       </div>

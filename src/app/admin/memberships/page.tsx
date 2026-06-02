@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { MembershipActions } from "@/components/organizations/MembershipActions";
 import {
@@ -40,11 +39,7 @@ export default async function MembershipsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Membership Requests"
-        description="Review volunteers who requested access to private organization opportunities."
-      />
-
+      
       <section className="space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">
           Awaiting Review

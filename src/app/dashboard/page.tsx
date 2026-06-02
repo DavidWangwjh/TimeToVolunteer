@@ -1,7 +1,5 @@
-import Link from "next/link";
 import type React from "react";
 import {
-  ArrowRight,
   Calendar,
   CheckCircle2,
   Clock,
@@ -10,12 +8,10 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/auth";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { BookingTable } from "@/components/bookings/BookingTable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VolunteerScheduleSection } from "@/components/dashboard/VolunteerScheduleSection";
 import { formatDate, formatTime } from "@/lib/dates";
+import type { BookingStatus } from "@/types/database";
 
 function bookingHours(booking: {
   volunteer_opportunities?: {
@@ -36,11 +32,30 @@ export default async function VolunteerDashboardPage() {
   const profile = await getCurrentUserProfile();
   const supabase = await createClient();
 
-  const { data: allBookings } = await supabase
+  const [{ data: allBookings }, { data: opportunities }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("*, volunteer_opportunities(*, organizations(*))")
+      .eq("volunteer_id", profile!.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("volunteer_opportunities")
+      .select("*, organizations(*)")
+      .eq("status", "published")
+      .order("date", { ascending: true }),
+  ]);
+
+  const opportunityIds = (opportunities ?? []).map((opportunity) => opportunity.id);
+
+  const { data: calendarBookings } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*, organizations(*))")
-    .eq("volunteer_id", profile!.id)
-    .order("created_at", { ascending: false });
+    .select("opportunity_id, status, volunteer_id")
+    .in(
+      "opportunity_id",
+      opportunityIds.length
+        ? opportunityIds
+        : ["00000000-0000-0000-0000-000000000000"]
+    );
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -50,15 +65,6 @@ export default async function VolunteerDashboardPage() {
       opportunity &&
       opportunity.date >= today &&
       ["pending", "approved"].includes(booking.status)
-    );
-  });
-
-  const past = (allBookings ?? []).filter((booking) => {
-    const opportunity = booking.volunteer_opportunities;
-    return (
-      !opportunity ||
-      opportunity.date < today ||
-      ["rejected", "cancelled", "completed"].includes(booking.status)
     );
   });
 
@@ -85,39 +91,41 @@ export default async function VolunteerDashboardPage() {
   })[0];
   const nextOpportunity = nextBooking?.volunteer_opportunities;
 
-  const toRows = (bookings: typeof allBookings) =>
-    (bookings ?? []).map((booking) => ({
-      booking,
-      opportunity: booking.volunteer_opportunities,
-    }));
+  const approvedCounts: Record<string, number> = {};
+  const userBookingOpportunityIds: string[] = [];
+  const userBookingStatuses: Record<string, BookingStatus> = {};
+
+  for (const booking of calendarBookings ?? []) {
+    if (booking.status === "approved") {
+      approvedCounts[booking.opportunity_id] =
+        (approvedCounts[booking.opportunity_id] ?? 0) + 1;
+    }
+
+    if (
+      booking.volunteer_id === profile!.id &&
+      ["pending", "approved"].includes(booking.status)
+    ) {
+      userBookingOpportunityIds.push(booking.opportunity_id);
+      userBookingStatuses[booking.opportunity_id] =
+        booking.status as BookingStatus;
+    }
+  }
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Volunteer Dashboard"
-        title={`Welcome back, ${profile!.first_name}`}
-        description="A quick view of your schedule, requests, and volunteer activity."
-        action={
-          <Button asChild className="bg-emerald-800 hover:bg-emerald-700">
-            <Link href="/dashboard/calendar">
-              Find Opportunities
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-        }
-      />
-
       <section className="space-y-4">
         <Card className="border-emerald-950/10 bg-emerald-900 py-0 text-white shadow-lg shadow-emerald-950/10">
-          <CardContent className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center lg:p-6">
-            <div className="flex size-11 items-center justify-center rounded-lg bg-white/10">
+          <CardContent className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-3 p-4 sm:p-5 lg:p-6">
+            <div className="flex size-12 items-center justify-center rounded-lg bg-white/10 sm:size-11">
               <Calendar className="size-5" />
             </div>
             <div>
-              <p className="max-w-2xl text-2xl font-bold leading-tight">
-                {nextOpportunity ? "Next session ready" : "No confirmed sessions yet"}
+              <p className="max-w-2xl text-xl font-bold leading-tight sm:text-2xl">
+                {nextOpportunity ? "Next event" : "No registered events yet"}
               </p>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/75 sm:text-base">
+            </div>
+            <div className="col-span-2">
+              <p className="max-w-3xl text-sm leading-6 text-emerald-50/75">
                 {nextOpportunity
                   ? `${nextOpportunity.title} · ${
                       nextOpportunity.organizations?.name ?? "Independent"
@@ -125,19 +133,10 @@ export default async function VolunteerDashboardPage() {
                   : "Explore organizations or browse the calendar to register for a session."}
               </p>
             </div>
-            <Button
-              asChild
-              variant="outline"
-              className="w-full border-white/20 bg-white text-emerald-900 hover:bg-emerald-50 sm:w-auto"
-            >
-              <Link href={nextOpportunity ? "/dashboard/calendar" : "/dashboard/organizations"}>
-                {nextOpportunity ? "View Calendar" : "Explore"}
-              </Link>
-            </Button>
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <MetricCard
             icon={CheckCircle2}
             label="Upcoming"
@@ -165,39 +164,14 @@ export default async function VolunteerDashboardPage() {
         </div>
       </section>
 
-      <section className="mt-6 rounded-lg border border-white/70 bg-white/85 p-4 shadow-sm shadow-slate-950/5 sm:p-5">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-slate-950">Bookings</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Manage upcoming sessions and review request history in one place.
-          </p>
-        </div>
-
-        <Tabs defaultValue="upcoming">
-          <TabsList className="max-w-full overflow-x-auto">
-            <TabsTrigger value="upcoming">Upcoming ({approved.length})</TabsTrigger>
-            <TabsTrigger value="pending">Pending ({pending.length})</TabsTrigger>
-            <TabsTrigger value="history">History ({past.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="upcoming" className="mt-4">
-            <BookingTable variant="volunteer" bookings={toRows(approved)} />
-          </TabsContent>
-          <TabsContent value="pending" className="mt-4">
-            <BookingTable
-              variant="volunteer"
-              showActions={false}
-              bookings={toRows(pending)}
-            />
-          </TabsContent>
-          <TabsContent value="history" className="mt-4">
-            <BookingTable
-              variant="volunteer"
-              showActions={false}
-              bookings={toRows(past)}
-            />
-          </TabsContent>
-        </Tabs>
-      </section>
+      <div className="mt-6">
+        <VolunteerScheduleSection
+          opportunities={opportunities ?? []}
+          approvedCounts={approvedCounts}
+          userBookingOpportunityIds={userBookingOpportunityIds}
+          userBookingStatuses={userBookingStatuses}
+        />
+      </div>
     </div>
   );
 }
@@ -215,17 +189,23 @@ function MetricCard({
 }) {
   return (
     <Card className="border-white/70 bg-white/85 py-0 shadow-sm shadow-slate-950/5">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2 sm:items-center sm:gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-500">{label}</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
+            <p className="text-xs font-semibold text-slate-500 sm:text-sm">
+              {label}
+            </p>
+            <p className="mt-1 text-2xl font-bold text-slate-950 sm:mt-2 sm:text-3xl">
+              {value}
+            </p>
           </div>
-          <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-            <Icon className="size-5" />
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800 sm:size-10">
+            <Icon className="size-4 sm:size-5" />
           </div>
         </div>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+        <p className="mt-2 text-xs leading-5 text-slate-600 sm:mt-3 sm:text-sm sm:leading-6">
+          {description}
+        </p>
       </CardContent>
     </Card>
   );

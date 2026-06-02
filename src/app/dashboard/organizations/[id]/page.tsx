@@ -3,11 +3,9 @@ import { notFound } from "next/navigation";
 import { Building2, Calendar, Globe, Mail, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveVolunteer } from "@/lib/auth";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
 import { formatDate, formatTime } from "@/lib/dates";
 import type {
   MembershipStatus,
@@ -67,26 +65,11 @@ export default async function OrganizationDetailPage({ params }: Props) {
 
   const organizationRecord = organization as Organization;
   const membershipStatus = membership?.status as MembershipStatus | undefined;
-  const canRequest =
-    membershipStatus === undefined || membershipStatus === "rejected";
   const visibleOpportunities = (opportunities ?? []) as VolunteerOpportunity[];
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Organization"
-        title={organizationRecord.name}
-        description={
-          organizationRecord.description ??
-          "Review this organization and its available volunteer opportunities."
-        }
-        action={
-          canRequest ? (
-            <OrganizationRequestButton organizationId={organizationRecord.id} />
-          ) : undefined
-        }
-      />
-
+      
       <section className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm shadow-slate-950/5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -162,7 +145,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
                         </p>
                       </div>
                       <Button asChild variant="outline" size="sm">
-                        <Link href="/dashboard/calendar">View in calendar</Link>
+                        <Link href="/dashboard#calendar">View in calendar</Link>
                       </Button>
                     </div>
                   </li>

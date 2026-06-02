@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveVolunteer } from "@/lib/auth";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { ExploreOrganizations } from "@/components/organizations/ExploreOrganizations";
 import type { MembershipStatus, Organization } from "@/types/database";
 
@@ -105,11 +104,7 @@ export default async function ExplorePage() {
 
   return (
     <div>
-      <PageHeader
-        title="Explore"
-        description="Find organizations that match your interests, search by cause, and request access to private opportunities."
-      />
-
+      
       <ExploreOrganizations organizations={exploredOrganizations} />
     </div>
   );

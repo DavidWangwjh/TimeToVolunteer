@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/auth";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -122,7 +121,7 @@ export default async function AdminOverviewPage() {
       value: approvedBookingsThisMonth ?? 0,
       href: "/admin/bookings",
       icon: CheckCircle2,
-      description: "Volunteer bookings confirmed",
+      description: "Volunteer registrations confirmed",
     },
     {
       label: "Available this week",
@@ -135,20 +134,7 @@ export default async function AdminOverviewPage() {
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Admin dashboard"
-        title={`Welcome back, ${profile?.first_name ?? "Admin"}`}
-        description="Review incoming demand, keep sessions staffed, and spot the operational work that needs attention."
-        action={
-          <Button asChild className="bg-emerald-800 hover:bg-emerald-700">
-            <Link href="/admin/opportunities/new">
-              Create Opportunity
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-        }
-      />
-
+      
       <section className="space-y-4">
         <Card className="border-emerald-950/10 bg-emerald-900 py-0 text-white shadow-lg shadow-emerald-950/10">
           <CardContent className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center lg:p-6">
@@ -163,7 +149,7 @@ export default async function AdminOverviewPage() {
                 {reviewTotal > 0
                   ? `${reviewTotal} item${
                       reviewTotal === 1 ? "" : "s"
-                    } need review across applications, memberships, and bookings.`
+                    } need review across applications, memberships, and registrations.`
                   : "No pending reviews right now. Keep an eye on inbox and upcoming sessions."}
               </p>
             </div>
@@ -188,7 +174,7 @@ export default async function AdminOverviewPage() {
         <ActionCard
           icon={ClipboardList}
           title="Work the queue"
-          description="Review applications, memberships, and booking requests that need a decision."
+          description="Review applications, memberships, and registration requests that need a decision."
           href="/admin/inbox"
         />
 

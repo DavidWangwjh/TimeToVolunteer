@@ -40,7 +40,10 @@ export function ExploreOrganizations({
       .includes(normalizedQuery);
   });
   const recommended = filteredOrganizations
-    .filter((organization) => organization.matchScore > 0)
+    .filter(
+      (organization) =>
+        organization.matchScore > 0 && organization.membershipStatus !== "accepted"
+    )
     .slice(0, 3);
   const hasRecommendations = recommended.length > 0 && !normalizedQuery;
 
@@ -68,26 +71,24 @@ export function ExploreOrganizations({
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {recommended.map((organization) => (
-              <OrganizationCard
-                key={organization.id}
-                organization={organization}
-                recommended
-              />
+              <OrganizationCard key={organization.id} organization={organization} />
             ))}
           </div>
         </section>
       )}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-950">
-          {normalizedQuery ? "Search results" : "All organizations"}
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredOrganizations.map((organization) => (
-            <OrganizationCard key={organization.id} organization={organization} />
-          ))}
-        </div>
-      </section>
+      {normalizedQuery && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Search results
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredOrganizations.map((organization) => (
+              <OrganizationCard key={organization.id} organization={organization} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {filteredOrganizations.length === 0 && (
         <div className="rounded-lg border border-dashed border-slate-300 bg-white/70 py-12 text-center text-sm text-slate-500">
@@ -100,41 +101,42 @@ export function ExploreOrganizations({
 
 function OrganizationCard({
   organization,
-  recommended = false,
 }: {
   organization: ExploreOrganization;
-  recommended?: boolean;
 }) {
   const canRequest =
     organization.membershipStatus === undefined ||
     organization.membershipStatus === "rejected";
+  const membershipLabel =
+    organization.membershipStatus === "accepted"
+      ? "You are a member"
+      : organization.membershipStatus === "pending"
+      ? "Request pending"
+      : null;
 
   return (
     <Card className="border-slate-200 bg-white">
-      <CardContent className="flex h-full flex-col gap-4 p-5">
+      <CardContent className="flex h-full flex-col gap-3 px-4">
         <div>
           <Link
             href={`/dashboard/organizations/${organization.id}`}
-            className="font-bold text-slate-950 hover:text-emerald-800 hover:underline"
+            className="text-lg font-bold text-slate-950 hover:text-emerald-800 hover:underline"
           >
             {organization.name}
           </Link>
-          <p className="mt-1 break-all text-sm text-slate-500">
-            {organization.contact_email}
-          </p>
         </div>
 
         {organization.description && (
-          <p className="text-sm leading-6 text-slate-600">
+          <p className="text-sm leading-5 text-slate-600">
             {organization.description}
           </p>
         )}
 
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">{organization.opportunityCount} opportunities</Badge>
-          {recommended && (
+          {membershipLabel && (
             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-              {organization.matchReason}
+              {membershipLabel}
             </Badge>
           )}
         </div>

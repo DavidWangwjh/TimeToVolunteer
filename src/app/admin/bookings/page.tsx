@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { BookingTable } from "@/components/bookings/BookingTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -28,11 +27,7 @@ export default async function AdminBookingsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Booking Requests"
-        description="Review and manage volunteer booking requests."
-      />
-
+      
       <Tabs defaultValue="pending">
         <TabsList>
           <TabsTrigger value="pending">Pending ({pending.length})</TabsTrigger>

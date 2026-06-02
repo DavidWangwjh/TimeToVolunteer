@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { EditOpportunityForm } from "@/components/opportunities/EditOpportunityForm";
 import { AssignVolunteers } from "@/components/opportunities/AssignVolunteers";
 import type { Profile } from "@/types/database";
@@ -72,8 +71,7 @@ export default async function EditOpportunityPage({ params }: Props) {
 
   return (
     <div>
-      <PageHeader title="Edit Opportunity" description={opportunity.title} />
-
+      
       <EditOpportunityForm opportunity={opportunity} />
 
       <AssignVolunteers

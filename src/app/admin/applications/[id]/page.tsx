@@ -1,12 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { ApplicationActions } from "@/components/applications/ApplicationActions";
 import { formatDate } from "@/lib/dates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -26,16 +23,7 @@ export default async function ApplicationDetailPage({ params }: Props) {
 
   return (
     <div>
-      <PageHeader
-        title={application.organization_name}
-        description="Application details"
-        action={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/applications">Back to List</Link>
-          </Button>
-        }
-      />
-
+      
       <div className="flex items-center gap-3 mb-6">
         <StatusBadge status={application.status} />
         <span className="text-sm text-muted-foreground">

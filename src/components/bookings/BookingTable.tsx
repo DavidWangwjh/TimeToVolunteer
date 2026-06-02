@@ -32,11 +32,13 @@ interface BookingTableProps {
   showActions?: boolean;
 }
 
+export type { BookingRow };
+
 export function BookingTable({ bookings, variant, showActions = true }: BookingTableProps) {
   if (bookings.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/70 py-12 text-center text-sm text-slate-500">
-        No bookings found.
+        No registrations found.
       </div>
     );
   }
@@ -46,7 +48,7 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Booking approved");
+      toast.success("Registration approved");
     }
   }
 
@@ -55,7 +57,7 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Booking rejected");
+      toast.success("Registration rejected");
     }
   }
 
@@ -64,7 +66,7 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Booking cancelled");
+      toast.success("Registration cancelled");
     }
   }
 

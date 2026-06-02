@@ -60,8 +60,8 @@ export default async function HomePage() {
                   ? auth.mustResetPassword
                     ? "Please set a new password to continue using your account."
                     : auth.role === "organization" || auth.role === "admin"
-                      ? "Manage organization opportunities, membership requests, and bookings from your dashboard."
-                      : "Continue browsing sessions and managing your volunteer bookings."
+                      ? "Manage organization opportunities, membership requests, and registrations from your dashboard."
+                      : "Continue browsing sessions and managing your volunteer registrations."
                   : "Create a volunteer profile, join trusted organizations, and find meaningful opportunities that fit your schedule."}
               </p>
 

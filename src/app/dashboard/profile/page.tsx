@@ -1,5 +1,4 @@
 import { getCurrentUserProfile } from "@/lib/auth";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 
 export default async function ProfilePage() {
@@ -7,11 +6,7 @@ export default async function ProfilePage() {
 
   return (
     <div>
-      <PageHeader
-        title="Profile"
-        description="Manage your account information."
-      />
-      <ProfileForm profile={profile!} />
+            <ProfileForm profile={profile!} />
     </div>
   );
 }

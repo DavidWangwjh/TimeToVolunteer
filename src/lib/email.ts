@@ -18,7 +18,7 @@ export async function sendBookingApprovedEmail(params: {
   notes?: string;
 }) {
   if (!resend) {
-    console.warn("Resend not configured — skipping booking approved email");
+    console.warn("Resend not configured — skipping registration approved email");
     return { success: false, error: "Email service not configured" };
   }
 
@@ -26,11 +26,11 @@ export async function sendBookingApprovedEmail(params: {
     await resend.emails.send({
       from: fromEmail,
       to: params.email,
-      subject: "Your volunteer booking has been approved",
+      subject: "Your volunteer registration has been approved",
       html: `
-        <h1>Booking Approved</h1>
+        <h1>Registration Approved</h1>
         <p>Hi ${params.volunteerName},</p>
-        <p>Your volunteer booking has been approved!</p>
+        <p>Your volunteer registration has been approved!</p>
         <h2>${params.opportunityTitle}</h2>
         <ul>
           <li><strong>Date:</strong> ${params.date}</li>
@@ -38,12 +38,12 @@ export async function sendBookingApprovedEmail(params: {
           <li><strong>Location:</strong> ${params.location}</li>
         </ul>
         ${params.notes ? `<p><strong>Notes:</strong> ${params.notes}</p>` : ""}
-        <p>View your bookings at <a href="${appUrl}/dashboard">${appUrl}/dashboard</a></p>
+        <p>View your registrations at <a href="${appUrl}/dashboard">${appUrl}/dashboard</a></p>
       `,
     });
     return { success: true };
   } catch (error) {
-    console.error("Failed to send booking approved email:", error);
+    console.error("Failed to send registration approved email:", error);
     return { success: false, error: String(error) };
   }
 }
@@ -55,7 +55,7 @@ export async function sendBookingRejectedEmail(params: {
   adminNote?: string;
 }) {
   if (!resend) {
-    console.warn("Resend not configured — skipping booking rejected email");
+    console.warn("Resend not configured — skipping registration rejected email");
     return { success: false, error: "Email service not configured" };
   }
 
@@ -63,18 +63,18 @@ export async function sendBookingRejectedEmail(params: {
     await resend.emails.send({
       from: fromEmail,
       to: params.email,
-      subject: "Volunteer booking update",
+      subject: "Volunteer registration update",
       html: `
-        <h1>Booking Update</h1>
+        <h1>Registration Update</h1>
         <p>Hi ${params.volunteerName},</p>
-        <p>Unfortunately, your booking request for <strong>${params.opportunityTitle}</strong> was not approved.</p>
+        <p>Unfortunately, your registration request for <strong>${params.opportunityTitle}</strong> was not approved.</p>
         ${params.adminNote ? `<p><strong>Note:</strong> ${params.adminNote}</p>` : ""}
         <p>Please contact us at volunteer@timetovolunteer.org if you have questions.</p>
       `,
     });
     return { success: true };
   } catch (error) {
-    console.error("Failed to send booking rejected email:", error);
+    console.error("Failed to send registration rejected email:", error);
     return { success: false, error: String(error) };
   }
 }

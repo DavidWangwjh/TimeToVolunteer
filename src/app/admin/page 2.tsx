@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -56,7 +55,7 @@ export default async function AdminOverviewPage() {
   const stats = [
     { label: "Pending Applications", value: pendingApplications ?? 0, href: "/admin/applications" },
     { label: "Active Volunteers", value: acceptedVolunteers ?? 0, href: "/admin/volunteers" },
-    { label: "Pending Bookings", value: pendingBookings ?? 0, href: "/admin/bookings" },
+    { label: "Pending Registrations", value: pendingBookings ?? 0, href: "/admin/bookings" },
     { label: "Upcoming Sessions", value: upcomingSessions ?? 0, href: "/admin/calendar" },
     {
       label: "Approved This Month",
@@ -72,11 +71,7 @@ export default async function AdminOverviewPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Admin Overview"
-        description="Monitor volunteer program activity at a glance."
-      />
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((stat) => (
           <Link key={stat.label} href={stat.href}>

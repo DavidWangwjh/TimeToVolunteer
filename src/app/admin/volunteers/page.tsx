@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import {
   Table,
@@ -23,12 +22,7 @@ export default async function VolunteersPage() {
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Directory"
-        title="Volunteers"
-        description="Manage volunteer accounts."
-      />
-
+      
       {(volunteers ?? []).length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 bg-white/70 py-12 text-center text-sm text-slate-500">
           No volunteers yet.

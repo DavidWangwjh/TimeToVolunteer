@@ -523,7 +523,7 @@ export async function updateOpportunity(
 
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${id}/edit`);
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
 
   redirect("/admin/opportunities");
 }
@@ -621,14 +621,14 @@ export async function assignVolunteerToOpportunity(
     opportunityId: opportunity.id,
     kind: "booking_approved",
     title: "You were assigned to a session",
-    body: `${opportunity.title} was added to your volunteer bookings${organization?.name ? ` by ${organization.name}` : ""}.`,
+    body: `${opportunity.title} was added to your volunteer registrations${organization?.name ? ` by ${organization.name}` : ""}.`,
     actionHref: "/dashboard",
   });
 
   revalidatePath(`/admin/opportunities/${opportunityId}/edit`);
   revalidatePath("/admin/opportunities");
   revalidatePath("/admin/bookings");
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/bookings");
   revalidateInbox();
 
@@ -647,7 +647,7 @@ export async function unassignVolunteerFromOpportunity(bookingId: string) {
     .single();
 
   if (fetchError || !booking) {
-    return { error: "Booking not found" };
+    return { error: "Registration not found" };
   }
 
   if (booking.status !== "approved") {
@@ -671,7 +671,7 @@ export async function unassignVolunteerFromOpportunity(bookingId: string) {
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/admin/opportunities");
   revalidatePath("/admin/bookings");
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/bookings");
 
   return { success: true };
@@ -836,7 +836,7 @@ export async function approveOrganizationMembership(membershipId: string) {
 
   revalidatePath("/admin/memberships");
   revalidatePath("/dashboard/organizations");
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
   revalidateInbox();
 
   return { success: true };
@@ -903,7 +903,7 @@ export async function requestBooking(data: {
   const profile = await getCurrentUserProfile();
 
   if (!profile || profile.role !== "volunteer" || profile.status !== "active") {
-    return { error: "You must be an active volunteer to book sessions" };
+    return { error: "You must be an active volunteer to register for sessions" };
   }
 
   const parsed = bookingRequestSchema.safeParse(data);
@@ -925,7 +925,7 @@ export async function requestBooking(data: {
   }
 
   if (opportunity.status !== "published") {
-    return { error: "This opportunity is not available for booking" };
+    return { error: "This opportunity is not available for registration" };
   }
 
   if (opportunity.visibility === "private") {
@@ -976,7 +976,7 @@ export async function requestBooking(data: {
     .maybeSingle();
 
   if (existingBooking) {
-    return { error: "You already have a booking for this session" };
+    return { error: "You already have a registration for this session" };
   }
 
   const requestedStatus =
@@ -997,7 +997,7 @@ export async function requestBooking(data: {
 
   if (error) {
     if (error.code === "23505") {
-      return { error: "You already have a booking for this session" };
+      return { error: "You already have a registration for this session" };
     }
 
     return { error: error.message };
@@ -1015,7 +1015,7 @@ export async function requestBooking(data: {
       opportunityId: opportunity.id,
       bookingId: newBooking.id,
       kind: "booking_requested",
-      title: "New booking request",
+      title: "New registration request",
       body: `${profile.first_name} ${profile.last_name} requested ${opportunity.title}.`,
       actionHref: "/admin/bookings",
     });
@@ -1029,14 +1029,14 @@ export async function requestBooking(data: {
       opportunityId: opportunity.id,
       bookingId: newBooking.id,
       kind: "booking_approved",
-      title: "Booking confirmed",
+      title: "Registration confirmed",
       body: `${opportunity.title} is confirmed for you.`,
       actionHref: "/dashboard",
     });
   }
 
   revalidatePath("/dashboard/bookings");
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
   revalidatePath("/admin/bookings");
   revalidateInbox();
 
@@ -1055,11 +1055,11 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     .single();
 
   if (fetchError || !booking) {
-    return { error: "Booking not found" };
+    return { error: "Registration not found" };
   }
 
   if (booking.status !== "pending") {
-    return { error: "Only pending bookings can be approved" };
+    return { error: "Only pending registrations can be approved" };
   }
 
   const opportunity = booking.volunteer_opportunities;
@@ -1100,7 +1100,7 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     opportunityId: booking.opportunity_id,
     bookingId: booking.id,
     kind: "booking_approved",
-    title: "Booking request accepted",
+    title: "Registration request accepted",
     body: `${opportunity.title} was accepted${organization?.name ? ` by ${organization.name}` : ""}.`,
     actionHref: "/dashboard",
   });
@@ -1109,7 +1109,7 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
   revalidateInbox();
 
   return { success: true };
@@ -1127,11 +1127,11 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
     .single();
 
   if (fetchError || !booking) {
-    return { error: "Booking not found" };
+    return { error: "Registration not found" };
   }
 
   if (booking.status !== "pending") {
-    return { error: "Only pending bookings can be rejected" };
+    return { error: "Only pending registrations can be rejected" };
   }
 
   const { error } = await supabase
@@ -1162,8 +1162,8 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
     opportunityId: booking.opportunity_id,
     bookingId: booking.id,
     kind: "booking_rejected",
-    title: "Booking request declined",
-    body: `${opportunity?.title ?? "Your booking request"} was declined${organization?.name ? ` by ${organization.name}` : ""}.`,
+    title: "Registration request declined",
+    body: `${opportunity?.title ?? "Your registration request"} was declined${organization?.name ? ` by ${organization.name}` : ""}.`,
     actionHref: "/dashboard",
   });
 
@@ -1171,7 +1171,7 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
   revalidateInbox();
 
   return { success: true };
@@ -1193,7 +1193,7 @@ export async function cancelBooking(bookingId: string) {
     .single();
 
   if (fetchError || !booking) {
-    return { error: "Booking not found" };
+    return { error: "Registration not found" };
   }
 
   const isOwner = booking.volunteer_id === profile.id;
@@ -1205,7 +1205,7 @@ export async function cancelBooking(bookingId: string) {
   }
 
   if (!["pending", "approved"].includes(booking.status)) {
-    return { error: "This booking cannot be cancelled" };
+    return { error: "This registration cannot be cancelled" };
   }
 
   if (isOwner && !isAdminUser) {
@@ -1218,7 +1218,7 @@ export async function cancelBooking(bookingId: string) {
 
     if (hoursUntil < 24) {
       return {
-        error: "Bookings can only be cancelled up to 24 hours before the session",
+        error: "Registrations can only be cancelled up to 24 hours before the session",
       };
     }
   }
@@ -1237,7 +1237,7 @@ export async function cancelBooking(bookingId: string) {
   }
 
   revalidatePath("/dashboard/bookings");
-  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);

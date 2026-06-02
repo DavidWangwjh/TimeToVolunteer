@@ -1,9 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { AdminCalendar } from "@/components/calendar/AdminCalendar";
 import { OpportunityTable } from "@/components/opportunities/OpportunityTable";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function OpportunitiesPage() {
@@ -53,16 +50,7 @@ export default async function OpportunitiesPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Opportunities"
-        description="Create, review, and schedule volunteer sessions from one place."
-        action={
-          <Button asChild>
-            <Link href="/admin/opportunities/new">Create Opportunity</Link>
-          </Button>
-        }
-      />
-
+      
       <Tabs defaultValue="list">
         <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="list">

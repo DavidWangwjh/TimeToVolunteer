@@ -1,5 +1,4 @@
 import { InboxClient } from "@/components/inbox/InboxClient";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { InboxMessage } from "@/types/database";
@@ -17,11 +16,7 @@ export default async function VolunteerInboxPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Inbox"
-        description="Review booking updates and organization access decisions."
-      />
-      <InboxClient messages={(messages ?? []) as InboxMessage[]} />
+            <InboxClient messages={(messages ?? []) as InboxMessage[]} />
     </div>
   );
 }

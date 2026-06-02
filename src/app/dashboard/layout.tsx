@@ -9,11 +9,9 @@ export default async function DashboardLayout({
 }) {
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
 
   const [
     { count: pendingBookings },
-    { count: availableSessions },
     { count: acceptedOrganizations },
     { count: unreadMessages },
   ] = await Promise.all([
@@ -22,11 +20,6 @@ export default async function DashboardLayout({
       .select("*", { count: "exact", head: true })
       .eq("volunteer_id", profile.id)
       .eq("status", "pending"),
-    supabase
-      .from("volunteer_opportunities")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "published")
-      .gte("date", today),
     supabase
       .from("organization_memberships")
       .select("*", { count: "exact", head: true })
@@ -47,7 +40,6 @@ export default async function DashboardLayout({
         "/dashboard": pendingBookings ?? 0,
         "/dashboard/inbox": unreadMessages ?? 0,
         "/dashboard/organizations": acceptedOrganizations ?? 0,
-        "/dashboard/calendar": availableSessions ?? 0,
       }}
     >
       {children}

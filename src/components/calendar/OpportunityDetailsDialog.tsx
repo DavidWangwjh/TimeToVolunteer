@@ -47,10 +47,10 @@ export function OpportunityDetailsDialog({
     !hasExistingBooking && !isFull && !isPast && opportunity.status === "published";
 
   let disabledReason = "";
-  if (hasExistingBooking) disabledReason = "You already booked this session";
+  if (hasExistingBooking) disabledReason = "You already registered for this session";
   else if (isFull) disabledReason = "This session is full";
   else if (isPast) disabledReason = "This session has passed";
-  else if (opportunity.status !== "published") disabledReason = "Not available for booking";
+  else if (opportunity.status !== "published") disabledReason = "Not available for registration";
 
   async function handleRequestBooking() {
     setLoading(true);

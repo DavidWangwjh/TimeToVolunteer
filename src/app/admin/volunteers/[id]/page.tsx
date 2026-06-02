@@ -1,12 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { BookingTable } from "@/components/bookings/BookingTable";
 import { VolunteerStatusActions } from "@/components/volunteers/VolunteerStatusActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -32,16 +29,7 @@ export default async function VolunteerDetailPage({ params }: Props) {
 
   return (
     <div>
-      <PageHeader
-        title={`${volunteer.first_name} ${volunteer.last_name}`}
-        description="Volunteer profile and booking history"
-        action={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/volunteers">Back to List</Link>
-          </Button>
-        }
-      />
-
+      
       <div className="flex items-center gap-3 mb-6">
         <StatusBadge status={volunteer.status} />
       </div>
@@ -59,7 +47,7 @@ export default async function VolunteerDetailPage({ params }: Props) {
       <VolunteerStatusActions volunteerId={volunteer.id} currentStatus={volunteer.status} />
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">Booking History</h2>
+        <h2 className="text-lg font-semibold mb-4">Registration History</h2>
         <BookingTable
           variant="admin"
           showActions={false}
