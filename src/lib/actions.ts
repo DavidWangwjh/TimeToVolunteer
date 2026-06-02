@@ -23,7 +23,20 @@ import type {
   OpportunityUpdateInput,
   ProfileUpdateInput,
 } from "@/lib/validators";
-import type { Profile } from "@/types/database";
+import type { InboxMessageKind, Profile } from "@/types/database";
+
+interface InboxMessageInput {
+  recipientId: string;
+  actorId?: string | null;
+  organizationId?: string | null;
+  opportunityId?: string | null;
+  bookingId?: string | null;
+  membershipId?: string | null;
+  kind: InboxMessageKind;
+  title: string;
+  body: string;
+  actionHref?: string | null;
+}
 
 function normalizeOpportunityFields(
   data: OpportunityCreateInput | OpportunityUpdateInput
@@ -101,6 +114,44 @@ async function getOwnedOrganization(profileId: string) {
   }
 
   return { organization: data, error: null };
+}
+
+async function createInboxMessage({
+  recipientId,
+  actorId = null,
+  organizationId = null,
+  opportunityId = null,
+  bookingId = null,
+  membershipId = null,
+  kind,
+  title,
+  body,
+  actionHref = null,
+}: InboxMessageInput) {
+  const adminClient = createAdminClient();
+  const { error } = await adminClient.from("inbox_messages").insert({
+    recipient_id: recipientId,
+    actor_id: actorId,
+    organization_id: organizationId,
+    opportunity_id: opportunityId,
+    booking_id: bookingId,
+    membership_id: membershipId,
+    kind,
+    title,
+    body,
+    action_href: actionHref,
+  });
+
+  if (error) {
+    console.error("Failed to create inbox message:", error.message);
+  }
+}
+
+function revalidateInbox() {
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/dashboard/inbox");
+  revalidatePath("/admin/inbox");
 }
 
 export async function submitOrganizationApplication(
@@ -495,7 +546,7 @@ export async function assignVolunteerToOpportunity(
 
   const { data: opportunity, error: oppError } = await supabase
     .from("volunteer_opportunities")
-    .select("*")
+    .select("*, organizations(id, name, owner_id)")
     .eq("id", opportunityId)
     .single();
 
@@ -558,11 +609,27 @@ export async function assignVolunteerToOpportunity(
     return { error: insertError.message };
   }
 
+  const organization = Array.isArray(opportunity.organizations)
+    ? opportunity.organizations[0]
+    : opportunity.organizations;
+
+  await createInboxMessage({
+    recipientId: volunteer.id,
+    actorId: admin.id,
+    organizationId: opportunity.organization_id,
+    opportunityId: opportunity.id,
+    kind: "booking_approved",
+    title: "You were assigned to a session",
+    body: `${opportunity.title} was added to your volunteer bookings${organization?.name ? ` by ${organization.name}` : ""}.`,
+    actionHref: "/dashboard/bookings",
+  });
+
   revalidatePath(`/admin/opportunities/${opportunityId}/edit`);
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/calendar");
   revalidatePath("/dashboard/calendar");
   revalidatePath("/dashboard/bookings");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -574,7 +641,7 @@ export async function unassignVolunteerFromOpportunity(bookingId: string) {
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*)")
+    .select("*, volunteer_opportunities(*, organizations(id, name, owner_id))")
     .eq("id", bookingId)
     .single();
 
@@ -643,7 +710,7 @@ export async function requestOrganizationMembership(
 
   const { data: organization, error: organizationError } = await supabase
     .from("organizations")
-    .select("id, status")
+    .select("id, name, owner_id, status")
     .eq("id", organizationId)
     .eq("status", "active")
     .single();
@@ -680,16 +747,22 @@ export async function requestOrganizationMembership(
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = existingMembership
+  const membershipMutation = existingMembership
     ? await adminClient
         .from("organization_memberships")
         .update(membershipPayload)
         .eq("id", existingMembership.id)
+        .select("id")
+        .single()
     : await adminClient.from("organization_memberships").insert({
         ...membershipPayload,
         organization_id: organization.id,
         volunteer_id: profile.id,
-      });
+      })
+        .select("id")
+        .single();
+
+  const { data: savedMembership, error } = membershipMutation;
 
   if (error) {
     if (error.code === "23505") {
@@ -699,8 +772,20 @@ export async function requestOrganizationMembership(
     return { error: error.message };
   }
 
+  await createInboxMessage({
+    recipientId: organization.owner_id,
+    actorId: profile.id,
+    organizationId: organization.id,
+    membershipId: savedMembership?.id ?? existingMembership?.id ?? null,
+    kind: "membership_requested",
+    title: "New organization access request",
+    body: `${profile.first_name} ${profile.last_name} requested access to ${organization.name}.`,
+    actionHref: "/admin/memberships",
+  });
+
   revalidatePath("/dashboard/organizations");
   revalidatePath("/admin/memberships");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -708,6 +793,16 @@ export async function requestOrganizationMembership(
 export async function approveOrganizationMembership(membershipId: string) {
   const reviewer = await requireAdmin();
   const supabase = createAdminClient();
+
+  const { data: membership, error: fetchError } = await supabase
+    .from("organization_memberships")
+    .select("id, volunteer_id, organization_id, organizations(name)")
+    .eq("id", membershipId)
+    .single();
+
+  if (fetchError || !membership) {
+    return { error: "Membership request not found" };
+  }
 
   const { error } = await supabase
     .from("organization_memberships")
@@ -723,9 +818,25 @@ export async function approveOrganizationMembership(membershipId: string) {
     return { error: error.message };
   }
 
+  const organization = Array.isArray(membership.organizations)
+    ? membership.organizations[0]
+    : membership.organizations;
+
+  await createInboxMessage({
+    recipientId: membership.volunteer_id,
+    actorId: reviewer.id,
+    organizationId: membership.organization_id,
+    membershipId: membership.id,
+    kind: "membership_accepted",
+    title: "Organization access accepted",
+    body: `You were accepted to ${organization?.name ?? "this organization"}. You can now view its private opportunities.`,
+    actionHref: `/dashboard/organizations/${membership.organization_id}`,
+  });
+
   revalidatePath("/admin/memberships");
   revalidatePath("/dashboard/organizations");
   revalidatePath("/dashboard/calendar");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -736,6 +847,16 @@ export async function rejectOrganizationMembership(
 ) {
   const reviewer = await requireAdmin();
   const supabase = createAdminClient();
+
+  const { data: membership, error: fetchError } = await supabase
+    .from("organization_memberships")
+    .select("id, volunteer_id, organization_id, organizations(name)")
+    .eq("id", membershipId)
+    .single();
+
+  if (fetchError || !membership) {
+    return { error: "Membership request not found" };
+  }
 
   const { error } = await supabase
     .from("organization_memberships")
@@ -752,8 +873,24 @@ export async function rejectOrganizationMembership(
     return { error: error.message };
   }
 
+  const organization = Array.isArray(membership.organizations)
+    ? membership.organizations[0]
+    : membership.organizations;
+
+  await createInboxMessage({
+    recipientId: membership.volunteer_id,
+    actorId: reviewer.id,
+    organizationId: membership.organization_id,
+    membershipId: membership.id,
+    kind: "membership_rejected",
+    title: "Organization access declined",
+    body: `Your request to join ${organization?.name ?? "this organization"} was declined.`,
+    actionHref: `/dashboard/organizations/${membership.organization_id}`,
+  });
+
   revalidatePath("/admin/memberships");
   revalidatePath("/dashboard/organizations");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -778,7 +915,7 @@ export async function requestBooking(data: {
 
   const { data: opportunity, error: oppError } = await supabase
     .from("volunteer_opportunities")
-    .select("*")
+    .select("*, organizations(id, name, owner_id)")
     .eq("id", parsed.data.opportunity_id)
     .single();
 
@@ -841,14 +978,21 @@ export async function requestBooking(data: {
     return { error: "You already have a booking for this session" };
   }
 
-  const { error } = await supabase.from("bookings").insert({
-    opportunity_id: parsed.data.opportunity_id,
-    volunteer_id: profile.id,
-    volunteer_note: parsed.data.volunteer_note,
-    status: opportunity.signup_mode === "open" ? "approved" : "pending",
-    approved_at:
-      opportunity.signup_mode === "open" ? new Date().toISOString() : null,
-  });
+  const requestedStatus =
+    opportunity.signup_mode === "open" ? "approved" : "pending";
+
+  const { data: newBooking, error } = await supabase
+    .from("bookings")
+    .insert({
+      opportunity_id: parsed.data.opportunity_id,
+      volunteer_id: profile.id,
+      volunteer_note: parsed.data.volunteer_note,
+      status: requestedStatus,
+      approved_at:
+        opportunity.signup_mode === "open" ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     if (error.code === "23505") {
@@ -858,9 +1002,42 @@ export async function requestBooking(data: {
     return { error: error.message };
   }
 
+  const organization = Array.isArray(opportunity.organizations)
+    ? opportunity.organizations[0]
+    : opportunity.organizations;
+
+  if (requestedStatus === "pending" && organization?.owner_id && newBooking) {
+    await createInboxMessage({
+      recipientId: organization.owner_id,
+      actorId: profile.id,
+      organizationId: opportunity.organization_id,
+      opportunityId: opportunity.id,
+      bookingId: newBooking.id,
+      kind: "booking_requested",
+      title: "New booking request",
+      body: `${profile.first_name} ${profile.last_name} requested ${opportunity.title}.`,
+      actionHref: "/admin/bookings",
+    });
+  }
+
+  if (requestedStatus === "approved" && newBooking) {
+    await createInboxMessage({
+      recipientId: profile.id,
+      actorId: organization?.owner_id ?? null,
+      organizationId: opportunity.organization_id,
+      opportunityId: opportunity.id,
+      bookingId: newBooking.id,
+      kind: "booking_approved",
+      title: "Booking confirmed",
+      body: `${opportunity.title} is confirmed for you.`,
+      actionHref: "/dashboard/bookings",
+    });
+  }
+
   revalidatePath("/dashboard/bookings");
   revalidatePath("/dashboard/calendar");
   revalidatePath("/admin/bookings");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -911,23 +1088,40 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     return { error: error.message };
   }
 
+  const organization = Array.isArray(opportunity.organizations)
+    ? opportunity.organizations[0]
+    : opportunity.organizations;
+
+  await createInboxMessage({
+    recipientId: booking.volunteer_id,
+    actorId: admin.id,
+    organizationId: opportunity.organization_id,
+    opportunityId: booking.opportunity_id,
+    bookingId: booking.id,
+    kind: "booking_approved",
+    title: "Booking request accepted",
+    body: `${opportunity.title} was accepted${organization?.name ? ` by ${organization.name}` : ""}.`,
+    actionHref: "/dashboard/bookings",
+  });
+
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/calendar");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
   revalidatePath("/dashboard/calendar");
+  revalidateInbox();
 
   return { success: true };
 }
 
 export async function rejectBooking(bookingId: string, adminNote?: string) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const supabase = await createClient();
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("id, status, opportunity_id")
+    .select("id, status, opportunity_id, volunteer_id, volunteer_opportunities(*, organizations(id, name, owner_id))")
     .eq("id", bookingId)
     .single();
 
@@ -953,11 +1147,31 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
     return { error: error.message };
   }
 
+  const opportunity = Array.isArray(booking.volunteer_opportunities)
+    ? booking.volunteer_opportunities[0]
+    : booking.volunteer_opportunities;
+  const organization = Array.isArray(opportunity?.organizations)
+    ? opportunity.organizations[0]
+    : opportunity?.organizations;
+
+  await createInboxMessage({
+    recipientId: booking.volunteer_id,
+    actorId: admin.id,
+    organizationId: opportunity?.organization_id ?? null,
+    opportunityId: booking.opportunity_id,
+    bookingId: booking.id,
+    kind: "booking_rejected",
+    title: "Booking request declined",
+    body: `${opportunity?.title ?? "Your booking request"} was declined${organization?.name ? ` by ${organization.name}` : ""}.`,
+    actionHref: "/dashboard/bookings",
+  });
+
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/calendar");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
   revalidatePath("/dashboard/calendar");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -1026,6 +1240,90 @@ export async function cancelBooking(bookingId: string) {
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/calendar");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
+
+  return { success: true };
+}
+
+export async function markInboxMessageRead(messageId: string, read = true) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile) {
+    return { error: "Not authenticated" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("inbox_messages")
+    .update({
+      read_at: read ? new Date().toISOString() : null,
+    })
+    .eq("id", messageId)
+    .eq("recipient_id", profile.id)
+    .is("deleted_at", null);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidateInbox();
+
+  return { success: true };
+}
+
+export async function markAllInboxMessagesRead() {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile) {
+    return { error: "Not authenticated" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("inbox_messages")
+    .update({
+      read_at: new Date().toISOString(),
+    })
+    .eq("recipient_id", profile.id)
+    .is("read_at", null)
+    .is("deleted_at", null);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidateInbox();
+
+  return { success: true };
+}
+
+export async function deleteInboxMessages(messageIds: string[]) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile) {
+    return { error: "Not authenticated" };
+  }
+
+  const ids = messageIds.filter(Boolean);
+
+  if (ids.length === 0) {
+    return { error: "Select at least one message" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("inbox_messages")
+    .update({
+      deleted_at: new Date().toISOString(),
+    })
+    .eq("recipient_id", profile.id)
+    .in("id", ids)
+    .is("deleted_at", null);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidateInbox();
 
   return { success: true };
 }

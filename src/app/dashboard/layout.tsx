@@ -16,6 +16,7 @@ export default async function DashboardLayout({
     { count: pendingBookings },
     { count: availableSessions },
     { count: acceptedOrganizations },
+    { count: unreadMessages },
   ] = await Promise.all([
     supabase
       .from("bookings")
@@ -37,6 +38,12 @@ export default async function DashboardLayout({
       .select("*", { count: "exact", head: true })
       .eq("volunteer_id", profile.id)
       .eq("status", "accepted"),
+    supabase
+      .from("inbox_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_id", profile.id)
+      .is("read_at", null)
+      .is("deleted_at", null),
   ]);
 
   return (
@@ -44,6 +51,7 @@ export default async function DashboardLayout({
       variant="volunteer"
       navCounts={{
         "/dashboard": pendingBookings ?? 0,
+        "/dashboard/inbox": unreadMessages ?? 0,
         "/dashboard/organizations": acceptedOrganizations ?? 0,
         "/dashboard/calendar": availableSessions ?? 0,
         "/dashboard/bookings": activeBookings ?? 0,

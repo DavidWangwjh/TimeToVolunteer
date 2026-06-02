@@ -10,11 +10,13 @@ import {
   Briefcase,
   CalendarDays,
   Building2,
+  Mail,
 } from "lucide-react";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 
 const volunteerLinks = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/inbox", label: "Inbox", icon: Mail },
   { href: "/dashboard/organizations", label: "Organizations", icon: Building2 },
   { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
   { href: "/dashboard/bookings", label: "My Bookings", icon: ClipboardList },
@@ -23,6 +25,7 @@ const volunteerLinks = [
 
 const platformAdminLinks = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/inbox", label: "Inbox", icon: Mail },
   { href: "/admin/applications", label: "Applications", icon: FileText },
   { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/volunteers", label: "Volunteers", icon: Users },
@@ -33,6 +36,7 @@ const platformAdminLinks = [
 
 const organizationAdminLinks = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/inbox", label: "Inbox", icon: Mail },
   { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
   { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },

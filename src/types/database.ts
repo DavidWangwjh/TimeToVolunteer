@@ -7,6 +7,13 @@ export type OpportunitySignupMode = "open" | "application";
 export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
 export type OrganizationStatus = "active" | "inactive" | "suspended";
 export type MembershipStatus = "pending" | "accepted" | "rejected";
+export type InboxMessageKind =
+  | "booking_requested"
+  | "booking_approved"
+  | "booking_rejected"
+  | "membership_requested"
+  | "membership_accepted"
+  | "membership_rejected";
 
 export interface Profile {
   id: string;
@@ -95,6 +102,23 @@ export interface Booking {
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface InboxMessage {
+  id: string;
+  recipient_id: string;
+  actor_id: string | null;
+  organization_id: string | null;
+  opportunity_id: string | null;
+  booking_id: string | null;
+  membership_id: string | null;
+  kind: InboxMessageKind;
+  title: string;
+  body: string;
+  action_href: string | null;
+  read_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
 }
 
 export interface BookingWithDetails extends Booking {

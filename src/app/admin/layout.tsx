@@ -19,6 +19,7 @@ export default async function AdminLayout({
     { count: pendingBookings },
     { count: upcomingSessions },
     { count: pendingMemberships },
+    { count: unreadMessages },
   ] = await Promise.all([
     isPlatformAdmin
       ? supabase
@@ -53,6 +54,12 @@ export default async function AdminLayout({
       .from("organization_memberships")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
+    supabase
+      .from("inbox_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_id", profile.id)
+      .is("read_at", null)
+      .is("deleted_at", null),
   ]);
 
   const reviewCount =
@@ -64,6 +71,7 @@ export default async function AdminLayout({
       adminKind={isPlatformAdmin ? "platform" : "organization"}
       navCounts={{
         "/admin": reviewCount,
+        "/admin/inbox": unreadMessages ?? 0,
         "/admin/applications": pendingApplications ?? 0,
         "/admin/memberships": pendingMemberships ?? 0,
         "/admin/volunteers": activeMembers ?? 0,
