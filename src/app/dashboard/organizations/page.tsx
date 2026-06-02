@@ -1,49 +1,28 @@
-import Link from "next/link";
-import { Building2, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
+import { ExploreOrganizations } from "@/components/organizations/ExploreOrganizations";
 import type { MembershipStatus, Organization } from "@/types/database";
 
-function MembershipBadge({ status }: { status?: MembershipStatus }) {
-  if (status === "accepted") {
-    return (
-      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-        <CheckCircle2 className="mr-1 size-3.5" />
-        Accepted
-      </Badge>
-    );
-  }
-
-  if (status === "pending") {
-    return (
-      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-        <Clock3 className="mr-1 size-3.5" />
-        Pending
-      </Badge>
-    );
-  }
-
-  if (status === "rejected") {
-    return (
-      <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100">
-        <XCircle className="mr-1 size-3.5" />
-        Rejected
-      </Badge>
-    );
-  }
-
-  return null;
+function tokenize(value: unknown) {
+  return String(value ?? "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 4);
 }
 
-export default async function OrganizationsPage() {
+export default async function ExplorePage() {
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
 
-  const [{ data: organizations }, { data: memberships }] = await Promise.all([
+  const [
+    { data: organizations },
+    { data: memberships },
+    { data: opportunities },
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
     supabase
       .from("organizations")
       .select("*")
@@ -53,6 +32,11 @@ export default async function OrganizationsPage() {
       .from("organization_memberships")
       .select("organization_id, status")
       .eq("volunteer_id", profile.id),
+    supabase
+      .from("volunteer_opportunities")
+      .select("id, organization_id, title, description, location")
+      .eq("status", "published"),
+    supabase.auth.getUser(),
   ]);
 
   const membershipByOrganization = new Map(
@@ -61,65 +45,72 @@ export default async function OrganizationsPage() {
       membership.status as MembershipStatus,
     ])
   );
-  const organizationList = (organizations ?? []) as Organization[];
+  const opportunitiesByOrganization = new Map<string, typeof opportunities>();
+
+  for (const opportunity of opportunities ?? []) {
+    if (!opportunity.organization_id) continue;
+    opportunitiesByOrganization.set(opportunity.organization_id, [
+      ...(opportunitiesByOrganization.get(opportunity.organization_id) ?? []),
+      opportunity,
+    ]);
+  }
+
+  const preferenceTokens = new Set(
+    tokenize([
+      user?.user_metadata?.volunteer_interests,
+      user?.user_metadata?.volunteer_availability,
+      user?.user_metadata?.volunteer_goals,
+    ].join(" "))
+  );
+
+  const exploredOrganizations = ((organizations ?? []) as Organization[])
+    .map((organization) => {
+      const orgOpportunities =
+        opportunitiesByOrganization.get(organization.id) ?? [];
+      const searchableText = [
+        organization.name,
+        organization.description,
+        orgOpportunities
+          .map((opportunity) =>
+            [opportunity.title, opportunity.description, opportunity.location].join(" ")
+          )
+          .join(" "),
+      ].join(" ");
+      const organizationTokens = new Set(tokenize(searchableText));
+      const matches = [...preferenceTokens].filter((token) =>
+        organizationTokens.has(token)
+      );
+      const acceptedBoost =
+        membershipByOrganization.get(organization.id) === "accepted" ? 2 : 0;
+      const opportunityBoost = Math.min(orgOpportunities.length, 3);
+      const matchScore = matches.length * 3 + acceptedBoost + opportunityBoost;
+
+      return {
+        id: organization.id,
+        name: organization.name,
+        description: organization.description,
+        contact_email: organization.contact_email,
+        membershipStatus: membershipByOrganization.get(organization.id),
+        opportunityCount: orgOpportunities.length,
+        matchScore,
+        matchReason:
+          matches.length > 0
+            ? `Matches ${matches.slice(0, 2).join(", ")}`
+            : membershipByOrganization.get(organization.id) === "accepted"
+            ? "You are a member"
+            : "Active opportunities",
+      };
+    })
+    .sort((a, b) => b.matchScore - a.matchScore || a.name.localeCompare(b.name));
 
   return (
     <div>
       <PageHeader
-        title="Organizations"
-        description="Request access to private organizations and unlock their member-only opportunities."
+        title="Explore"
+        description="Find organizations that match your interests, search by cause, and request access to private opportunities."
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {organizationList.map((organization) => {
-          const membershipStatus = membershipByOrganization.get(organization.id);
-          const canRequest =
-            membershipStatus === undefined || membershipStatus === "rejected";
-
-          return (
-            <Card key={organization.id} className="border-slate-200 bg-white">
-              <CardContent className="flex h-full flex-col gap-4 p-5">
-                <div className="flex min-h-10 items-center justify-between gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-                    <Building2 className="size-5" />
-                  </span>
-                  <MembershipBadge status={membershipStatus} />
-                </div>
-
-                <div>
-                  <Link
-                    href={`/dashboard/organizations/${organization.id}`}
-                    className="font-bold text-slate-950 hover:text-emerald-800 hover:underline"
-                  >
-                    {organization.name}
-                  </Link>
-                  <p className="mt-1 break-all text-sm text-slate-500">
-                    {organization.contact_email}
-                  </p>
-                </div>
-
-                {organization.description && (
-                  <p className="text-sm leading-6 text-slate-600">
-                    {organization.description}
-                  </p>
-                )}
-
-                {canRequest && (
-                  <div className="mt-auto flex justify-end pt-1">
-                    <OrganizationRequestButton organizationId={organization.id} />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {organizationList.length === 0 && (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white/70 py-12 text-center text-sm text-slate-500">
-          No organizations are available yet.
-        </div>
-      )}
+      <ExploreOrganizations organizations={exploredOrganizations} />
     </div>
   );
 }

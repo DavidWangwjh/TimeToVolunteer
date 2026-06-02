@@ -17,6 +17,15 @@ export const volunteerSignupSchema = z
     last_name: z.string().min(1, "Last name is required"),
     email: z.string().email("Valid email is required"),
     phone: z.string().optional(),
+    volunteer_interests: z
+      .string()
+      .min(10, "Tell us a little about what you care about"),
+    volunteer_availability: z
+      .string()
+      .min(5, "Tell us when you are usually available"),
+    volunteer_goals: z
+      .string()
+      .min(10, "Tell us what kind of volunteer experience you want"),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters"),

@@ -197,6 +197,9 @@ export async function signUpVolunteer(data: VolunteerSignupInput) {
         first_name: parsed.data.first_name,
         last_name: parsed.data.last_name,
         role: "volunteer",
+        volunteer_interests: parsed.data.volunteer_interests,
+        volunteer_availability: parsed.data.volunteer_availability,
+        volunteer_goals: parsed.data.volunteer_goals,
       },
     });
 
@@ -475,7 +478,6 @@ export async function createOpportunity(
   }
 
   revalidatePath("/admin/opportunities");
-  revalidatePath("/admin/calendar");
 
   redirect("/admin/opportunities");
 }
@@ -521,7 +523,6 @@ export async function updateOpportunity(
 
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${id}/edit`);
-  revalidatePath("/admin/calendar");
   revalidatePath("/dashboard/calendar");
 
   redirect("/admin/opportunities");
@@ -621,12 +622,12 @@ export async function assignVolunteerToOpportunity(
     kind: "booking_approved",
     title: "You were assigned to a session",
     body: `${opportunity.title} was added to your volunteer bookings${organization?.name ? ` by ${organization.name}` : ""}.`,
-    actionHref: "/dashboard/bookings",
+    actionHref: "/dashboard",
   });
 
   revalidatePath(`/admin/opportunities/${opportunityId}/edit`);
+  revalidatePath("/admin/opportunities");
   revalidatePath("/admin/bookings");
-  revalidatePath("/admin/calendar");
   revalidatePath("/dashboard/calendar");
   revalidatePath("/dashboard/bookings");
   revalidateInbox();
@@ -668,8 +669,8 @@ export async function unassignVolunteerFromOpportunity(bookingId: string) {
   }
 
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
+  revalidatePath("/admin/opportunities");
   revalidatePath("/admin/bookings");
-  revalidatePath("/admin/calendar");
   revalidatePath("/dashboard/calendar");
   revalidatePath("/dashboard/bookings");
 
@@ -1030,7 +1031,7 @@ export async function requestBooking(data: {
       kind: "booking_approved",
       title: "Booking confirmed",
       body: `${opportunity.title} is confirmed for you.`,
-      actionHref: "/dashboard/bookings",
+      actionHref: "/dashboard",
     });
   }
 
@@ -1101,11 +1102,11 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     kind: "booking_approved",
     title: "Booking request accepted",
     body: `${opportunity.title} was accepted${organization?.name ? ` by ${organization.name}` : ""}.`,
-    actionHref: "/dashboard/bookings",
+    actionHref: "/dashboard",
   });
 
   revalidatePath("/admin/bookings");
-  revalidatePath("/admin/calendar");
+  revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
   revalidatePath("/dashboard/calendar");
@@ -1163,11 +1164,11 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
     kind: "booking_rejected",
     title: "Booking request declined",
     body: `${opportunity?.title ?? "Your booking request"} was declined${organization?.name ? ` by ${organization.name}` : ""}.`,
-    actionHref: "/dashboard/bookings",
+    actionHref: "/dashboard",
   });
 
   revalidatePath("/admin/bookings");
-  revalidatePath("/admin/calendar");
+  revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/bookings");
   revalidatePath("/dashboard/calendar");
@@ -1238,7 +1239,7 @@ export async function cancelBooking(bookingId: string) {
   revalidatePath("/dashboard/bookings");
   revalidatePath("/dashboard/calendar");
   revalidatePath("/admin/bookings");
-  revalidatePath("/admin/calendar");
+  revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
 
   return { success: true };

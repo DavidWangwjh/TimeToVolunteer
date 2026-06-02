@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { signUpVolunteer } from "@/lib/actions";
 import { volunteerSignupSchema, type VolunteerSignupInput } from "@/lib/validators";
@@ -58,6 +59,61 @@ export function VolunteerSignupForm() {
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" type="tel" autoComplete="tel" {...register("phone")} />
+          </div>
+
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-4">
+            <h2 className="text-sm font-bold text-emerald-950">
+              Help us recommend good matches
+            </h2>
+            <div className="mt-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="volunteer_interests">
+                  What causes or activities interest you? *
+                </Label>
+                <Textarea
+                  id="volunteer_interests"
+                  placeholder="Tutoring, food support, parks, events, animals..."
+                  {...register("volunteer_interests")}
+                />
+                {errors.volunteer_interests && (
+                  <p className="text-sm text-destructive">
+                    {errors.volunteer_interests.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="volunteer_availability">
+                  When are you usually available? *
+                </Label>
+                <Textarea
+                  id="volunteer_availability"
+                  placeholder="Weekday evenings, Saturday mornings, once a month..."
+                  {...register("volunteer_availability")}
+                />
+                {errors.volunteer_availability && (
+                  <p className="text-sm text-destructive">
+                    {errors.volunteer_availability.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="volunteer_goals">
+                  What kind of volunteer experience are you looking for? *
+                </Label>
+                <Textarea
+                  id="volunteer_goals"
+                  placeholder="Build mentoring experience, meet neighbors, volunteer outdoors..."
+                  {...register("volunteer_goals")}
+                />
+                {errors.volunteer_goals && (
+                  <p className="text-sm text-destructive">
+                    {errors.volunteer_goals.message}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

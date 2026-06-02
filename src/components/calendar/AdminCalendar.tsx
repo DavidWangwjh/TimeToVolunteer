@@ -61,24 +61,27 @@ export function AdminCalendar({ opportunities }: AdminCalendarProps) {
   }
 
   return (
-    <div className="fc-admin-calendar rounded-lg border bg-white p-4">
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek",
-        }}
-        events={events}
-        eventContent={renderEventContent}
-        eventDisplay="block"
-        height="auto"
-        eventClick={(info) => {
-          const opp = info.event.extendedProps.opportunity as VolunteerOpportunity;
-          window.location.href = `/admin/opportunities/${opp.id}/edit`;
-        }}
-      />
+    <div className="fc-admin-calendar overflow-x-auto rounded-lg border bg-white p-4">
+      <div className="min-w-[720px]">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek",
+          }}
+          events={events}
+          eventContent={renderEventContent}
+          eventDisplay="block"
+          height="auto"
+          eventClick={(info) => {
+            const opp = info.event.extendedProps
+              .opportunity as VolunteerOpportunity;
+            window.location.href = `/admin/opportunities/${opp.id}/edit`;
+          }}
+        />
+      </div>
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
         {Object.entries(statusColors).map(([status, colors]) => (
           <div key={status} className="flex items-center gap-2">

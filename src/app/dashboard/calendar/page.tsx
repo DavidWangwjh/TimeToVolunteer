@@ -40,7 +40,7 @@ export default async function CalendarPage() {
     <div>
       <PageHeader
         title="Volunteer Calendar"
-        description="Browse available sessions and request bookings."
+        description="Browse available sessions, filter by organization, and register for opportunities."
       />
       <VolunteerCalendar
         opportunities={opportunities ?? []}

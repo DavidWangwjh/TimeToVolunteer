@@ -9,7 +9,6 @@ export default async function AdminLayout({
 }) {
   const profile = await requireAdmin();
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
   const isPlatformAdmin = profile.role === "admin";
 
   const [
@@ -17,7 +16,6 @@ export default async function AdminLayout({
     { count: activeMembers },
     { count: publishedOpportunities },
     { count: pendingBookings },
-    { count: upcomingSessions },
     { count: pendingMemberships },
     { count: unreadMessages },
   ] = await Promise.all([
@@ -46,11 +44,6 @@ export default async function AdminLayout({
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
     supabase
-      .from("volunteer_opportunities")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "published")
-      .gte("date", today),
-    supabase
       .from("organization_memberships")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
@@ -77,7 +70,6 @@ export default async function AdminLayout({
         "/admin/volunteers": activeMembers ?? 0,
         "/admin/opportunities": publishedOpportunities ?? 0,
         "/admin/bookings": pendingBookings ?? 0,
-        "/admin/calendar": upcomingSessions ?? 0,
       }}
     >
       {children}

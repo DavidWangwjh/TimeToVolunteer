@@ -8,7 +8,6 @@ import {
   Users,
   FileText,
   Briefcase,
-  CalendarDays,
   Building2,
   Mail,
 } from "lucide-react";
@@ -17,9 +16,8 @@ import { SignOutButton } from "@/components/layout/SignOutButton";
 const volunteerLinks = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/inbox", label: "Inbox", icon: Mail },
-  { href: "/dashboard/organizations", label: "Organizations", icon: Building2 },
+  { href: "/dashboard/organizations", label: "Explore", icon: Building2 },
   { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
-  { href: "/dashboard/bookings", label: "My Bookings", icon: ClipboardList },
   { href: "/dashboard/profile", label: "Profile", icon: User },
 ];
 
@@ -31,7 +29,7 @@ const platformAdminLinks = [
   { href: "/admin/volunteers", label: "Volunteers", icon: Users },
   { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
   { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
-  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/admin/profile", label: "Profile", icon: User },
 ];
 
 const organizationAdminLinks = [
@@ -40,7 +38,7 @@ const organizationAdminLinks = [
   { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
   { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
-  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/admin/profile", label: "Profile", icon: User },
 ];
 
 interface SidebarProps {
@@ -62,7 +60,7 @@ export function Sidebar({
         ? platformAdminLinks
         : organizationAdminLinks
       : volunteerLinks;
-  const label = variant === "admin" ? "Organization ops" : "Volunteer hub";
+  const label = variant === "admin" ? "Organization ops" : "Volunteer Dashboard";
 
   function isActive(href: string) {
     return (

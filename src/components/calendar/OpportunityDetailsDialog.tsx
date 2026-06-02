@@ -63,7 +63,7 @@ export function OpportunityDetailsDialog({
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Booking request submitted!");
+      toast.success("Registration submitted");
       onOpenChange(false);
     }
   }
@@ -134,7 +134,7 @@ export function OpportunityDetailsDialog({
               <Label htmlFor="volunteer_note">Note (optional)</Label>
               <Textarea
                 id="volunteer_note"
-                placeholder="Any notes for the admin..."
+                placeholder="Anything the organizer should know..."
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
               />
@@ -147,7 +147,7 @@ export function OpportunityDetailsDialog({
               onClick={handleRequestBooking}
               disabled={loading}
             >
-              {loading ? "Submitting..." : "Request Booking"}
+              {loading ? "Submitting..." : "Register"}
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">

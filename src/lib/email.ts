@@ -38,7 +38,7 @@ export async function sendBookingApprovedEmail(params: {
           <li><strong>Location:</strong> ${params.location}</li>
         </ul>
         ${params.notes ? `<p><strong>Notes:</strong> ${params.notes}</p>` : ""}
-        <p>View your bookings at <a href="${appUrl}/dashboard/bookings">${appUrl}/dashboard/bookings</a></p>
+        <p>View your bookings at <a href="${appUrl}/dashboard">${appUrl}/dashboard</a></p>
       `,
     });
     return { success: true };

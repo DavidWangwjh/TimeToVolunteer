@@ -15,14 +15,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-type ReviewItem = {
-  label: string;
-  value: number;
-  href: string;
-  icon: React.ElementType;
-  tone: "amber" | "emerald";
-};
-
 type StatItem = {
   label: string;
   value: number;
@@ -105,33 +97,8 @@ export default async function AdminOverviewPage() {
       .eq("status", "pending"),
   ]);
 
-  const reviewItems: ReviewItem[] = [
-    ...(isPlatformAdmin
-      ? [
-          {
-            label: "Organizations waiting",
-            value: pendingApplications ?? 0,
-            href: "/admin/applications",
-            icon: FileText,
-            tone: "amber" as const,
-          },
-        ]
-      : []),
-    {
-      label: "Membership requests",
-      value: pendingMemberships ?? 0,
-      href: "/admin/memberships",
-      icon: Users,
-      tone: "amber",
-    },
-    {
-      label: "Booking requests",
-      value: pendingBookings ?? 0,
-      href: "/admin/bookings",
-      icon: ClipboardList,
-      tone: "emerald",
-    },
-  ];
+  const reviewTotal =
+    (pendingApplications ?? 0) + (pendingMemberships ?? 0) + (pendingBookings ?? 0);
 
   const stats: StatItem[] = [
     {
@@ -146,7 +113,7 @@ export default async function AdminOverviewPage() {
     {
       label: "Upcoming sessions",
       value: upcomingSessions ?? 0,
-      href: "/admin/calendar",
+      href: "/admin/opportunities",
       icon: CalendarDays,
       description: "Published sessions still ahead",
     },
@@ -170,7 +137,7 @@ export default async function AdminOverviewPage() {
     <div>
       <PageHeader
         eyebrow="Admin dashboard"
-        title="Program command center"
+        title={`Welcome back, ${profile?.first_name ?? "Admin"}`}
         description="Review incoming demand, keep sessions staffed, and spot the operational work that needs attention."
         action={
           <Button asChild className="bg-emerald-800 hover:bg-emerald-700">
@@ -182,47 +149,49 @@ export default async function AdminOverviewPage() {
         }
       />
 
-      <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <Card className="border-emerald-950/10 bg-slate-950 text-white shadow-lg shadow-slate-950/10">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-emerald-200">
-                  Needs review
-                </p>
-                <h2 className="mt-2 text-3xl font-bold">
-                  {(pendingApplications ?? 0) +
-                    (pendingMemberships ?? 0) +
-                    (pendingBookings ?? 0)}
-                </h2>
-              </div>
-
-              <div className="flex size-12 items-center justify-center rounded-lg bg-white/10">
-                <ClipboardList className="size-6" />
-              </div>
+      <section className="space-y-4">
+        <Card className="border-emerald-950/10 bg-emerald-900 py-0 text-white shadow-lg shadow-emerald-950/10">
+          <CardContent className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center lg:p-6">
+            <div className="flex size-11 items-center justify-center rounded-lg bg-white/10">
+              <ClipboardList className="size-5" />
             </div>
-
-            <p className="mt-5 max-w-xl text-sm leading-6 text-slate-300">
-              Prioritize pending requests so volunteers can move from interest
-              to confirmed impact quickly.
-            </p>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {reviewItems.map((item) => (
-                <ReviewTile key={item.label} {...item} />
-              ))}
+            <div>
+              <p className="max-w-2xl text-2xl font-bold leading-tight">
+                {reviewTotal > 0 ? "Review queue ready" : "Operations are clear"}
+              </p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/75 sm:text-base">
+                {reviewTotal > 0
+                  ? `${reviewTotal} item${
+                      reviewTotal === 1 ? "" : "s"
+                    } need review across applications, memberships, and bookings.`
+                  : "No pending reviews right now. Keep an eye on inbox and upcoming sessions."}
+              </p>
             </div>
+            <Button
+              asChild
+              variant="outline"
+              className="w-full border-white/20 bg-white text-emerald-900 hover:bg-emerald-50 sm:w-auto"
+            >
+              <Link href="/admin/inbox">Open Inbox</Link>
+            </Button>
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
             <MetricCard key={stat.label} {...stat} />
           ))}
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-3">
+      <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ActionCard
+          icon={ClipboardList}
+          title="Work the queue"
+          description="Review applications, memberships, and booking requests that need a decision."
+          href="/admin/inbox"
+        />
+
         <ActionCard
           icon={isPlatformAdmin ? FileText : Users}
           title={isPlatformAdmin ? "Review organizations" : "Review members"}
@@ -243,40 +212,12 @@ export default async function AdminOverviewPage() {
 
         <ActionCard
           icon={CalendarDays}
-          title="Open calendar"
-          description="Scan the schedule and spot coverage gaps across the week."
-          href="/admin/calendar"
+          title="View schedule"
+          description="Switch between the opportunity list and calendar view without leaving the page."
+          href="/admin/opportunities"
         />
       </section>
     </div>
-  );
-}
-
-function ReviewTile({
-  label,
-  value,
-  href,
-  icon: Icon,
-  tone,
-}: ReviewItem) {
-  const toneClass =
-    tone === "amber"
-      ? "bg-amber-400/15 text-amber-100 ring-amber-300/20"
-      : "bg-emerald-400/15 text-emerald-100 ring-emerald-300/20";
-
-  return (
-    <Link
-      href={href}
-      className={`rounded-lg p-4 ring-1 transition-colors hover:bg-white/10 ${toneClass}`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <Icon className="size-5" />
-        <ArrowRight className="size-4 opacity-70" />
-      </div>
-
-      <p className="mt-4 text-2xl font-bold text-white">{value}</p>
-      <p className="mt-1 text-sm font-semibold">{label}</p>
-    </Link>
   );
 }
 
