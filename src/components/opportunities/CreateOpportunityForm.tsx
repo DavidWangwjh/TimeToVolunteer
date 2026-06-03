@@ -45,6 +45,8 @@ const defaultValues: OpportunityCreateInput = {
   signup_mode: "application",
 };
 
+type CreateOpportunityInitialValues = Partial<OpportunityCreateInput>;
+
 function toDraft(values: OpportunityCreateInput): OpportunityDraft {
   return {
     title: values.title ?? "",
@@ -60,7 +62,11 @@ function toDraft(values: OpportunityCreateInput): OpportunityDraft {
   };
 }
 
-export function CreateOpportunityForm() {
+export function CreateOpportunityForm({
+  initialValues,
+}: {
+  initialValues?: CreateOpportunityInitialValues;
+}) {
   const [showDraftNotice, setShowDraftNotice] = useState(false);
   const [pendingAction, setPendingAction] = useState<"draft" | "published" | null>(
     null
@@ -76,7 +82,10 @@ export function CreateOpportunityForm() {
     formState: { errors },
   } = useForm<OpportunityCreateInput>({
     resolver: zodResolver(opportunityCreateSchema),
-    defaultValues,
+    defaultValues: {
+      ...defaultValues,
+      ...initialValues,
+    },
   });
 
   const values = watch();
@@ -84,6 +93,16 @@ export function CreateOpportunityForm() {
   const signupMode = watch("signup_mode");
 
   useEffect(() => {
+    if (initialValues) {
+      clearOpportunityDraft();
+      reset({
+        ...defaultValues,
+        ...initialValues,
+      });
+      setShowDraftNotice(false);
+      return;
+    }
+
     const draft = loadOpportunityDraft();
     if (draft) {
       reset({
@@ -92,7 +111,7 @@ export function CreateOpportunityForm() {
       });
       setShowDraftNotice(true);
     }
-  }, [reset]);
+  }, [initialValues, reset]);
 
   useEffect(() => {
     const subscription = watch((formValues) => {

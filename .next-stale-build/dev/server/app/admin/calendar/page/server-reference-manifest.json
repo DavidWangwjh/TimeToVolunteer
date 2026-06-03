@@ -1,0 +1,17 @@
+{
+  "node": {
+    "00cbe9089d59db7ab6608d73a9b2f9c1ea7daff04c": {
+      "workers": {
+        "app/admin/calendar/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/calendar/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "signOut",
+          "filename": "src/lib/actions.ts"
+        }
+      },
+      "exportedName": "signOut",
+      "filename": "src/lib/actions.ts"
+    }
+  },
+  "edge": {}
+}

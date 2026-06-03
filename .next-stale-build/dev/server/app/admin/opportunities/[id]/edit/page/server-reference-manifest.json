@@ -1,0 +1,53 @@
+{
+  "node": {
+    "00cbe9089d59db7ab6608d73a9b2f9c1ea7daff04c": {
+      "workers": {
+        "app/admin/opportunities/[id]/edit/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/opportunities/[id]/edit/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "signOut",
+          "filename": "src/lib/actions.ts"
+        }
+      },
+      "exportedName": "signOut",
+      "filename": "src/lib/actions.ts"
+    },
+    "60ff17efcbc184650a5e50be6a6827f5f8f0717bfc": {
+      "workers": {
+        "app/admin/opportunities/[id]/edit/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/opportunities/[id]/edit/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateOpportunity",
+          "filename": "src/lib/actions.ts"
+        }
+      },
+      "exportedName": "updateOpportunity",
+      "filename": "src/lib/actions.ts"
+    },
+    "60646afc24b16b65013a249566ac1755a474df250c": {
+      "workers": {
+        "app/admin/opportunities/[id]/edit/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/opportunities/[id]/edit/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "assignVolunteerToOpportunity",
+          "filename": "src/lib/actions.ts"
+        }
+      },
+      "exportedName": "assignVolunteerToOpportunity",
+      "filename": "src/lib/actions.ts"
+    },
+    "40dc3b593b8212a29a2e339480bb82a6235a2c9cf8": {
+      "workers": {
+        "app/admin/opportunities/[id]/edit/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/opportunities/[id]/edit/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "unassignVolunteerFromOpportunity",
+          "filename": "src/lib/actions.ts"
+        }
+      },
+      "exportedName": "unassignVolunteerFromOpportunity",
+      "filename": "src/lib/actions.ts"
+    }
+  },
+  "edge": {}
+}

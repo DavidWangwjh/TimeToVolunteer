@@ -1,12 +1,14 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { EditOpportunityForm } from "@/components/opportunities/EditOpportunityForm";
-import { AssignVolunteers } from "@/components/opportunities/AssignVolunteers";
+import { RegisteredVolunteers } from "@/components/opportunities/RegisteredVolunteers";
+import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types/database";
 
-interface AssignedBooking {
+interface RegisteredBooking {
   id: string;
-  status: string;
   profiles: Profile;
 }
 
@@ -26,59 +28,54 @@ export default async function EditOpportunityPage({ params }: Props) {
 
   if (!opportunity) notFound();
 
-  const [{ data: volunteers }, { data: bookings }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, first_name, last_name, email, phone, role, status")
-      .eq("role", "volunteer")
-      .eq("status", "active")
-      .order("last_name"),
-  
-    supabase
-      .from("bookings")
-      .select(`
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select(`
+      id,
+      profiles:profiles!bookings_volunteer_id_fkey (
         id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        role,
         status,
-        volunteer_id,
-        profiles:profiles!bookings_volunteer_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email,
-          phone,
-          role,
-          status
-        )
-      `)
-      .eq("opportunity_id", id)
-      .in("status", ["pending", "approved"])
-      .order("created_at"),
-  ]);
+        must_reset_password,
+        created_at,
+        updated_at
+      )
+    `)
+    .eq("opportunity_id", id)
+    .eq("status", "approved")
+    .order("approved_at", { ascending: true });
 
-  const assignedBookings: AssignedBooking[] = (bookings ?? [])
+  const registeredBookings: RegisteredBooking[] = (bookings ?? [])
     .map((booking) => ({
       id: booking.id,
-      status: booking.status,
       profiles: Array.isArray(booking.profiles)
         ? booking.profiles[0]
         : booking.profiles,
     }))
-    .filter((booking): booking is AssignedBooking => Boolean(booking.profiles));
-
-  const approvedCount = assignedBookings.filter(
-    (booking) => booking.status === "approved"
-  ).length;
+    .filter(
+      (booking): booking is RegisteredBooking => Boolean(booking.profiles)
+    );
 
   return (
     <div>
-      
+      <div className="mb-4 flex justify-end">
+        <Button asChild variant="outline">
+          <Link href={`/admin/opportunities/new?duplicate=${opportunity.id}`}>
+            <Copy className="size-4" />
+            Duplicate
+          </Link>
+        </Button>
+      </div>
+
       <EditOpportunityForm opportunity={opportunity} />
 
-      <AssignVolunteers
+      <RegisteredVolunteers
         opportunity={opportunity}
-        volunteers={volunteers ?? []}
-        assignedBookings={assignedBookings}
-        approvedCount={approvedCount}
+        registeredBookings={registeredBookings}
       />
     </div>
   );

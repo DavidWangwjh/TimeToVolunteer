@@ -1,6 +1,9 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AdminCalendar } from "@/components/calendar/AdminCalendar";
 import { OpportunityTable } from "@/components/opportunities/OpportunityTable";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function OpportunitiesPage() {
@@ -50,7 +53,15 @@ export default async function OpportunitiesPage() {
 
   return (
     <div>
-      
+      <div className="mb-4 flex justify-end">
+        <Button asChild>
+          <Link href="/admin/opportunities/new">
+            <Plus className="size-4" />
+            Create Opportunity
+          </Link>
+        </Button>
+      </div>
+
       <Tabs defaultValue="list">
         <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="list">

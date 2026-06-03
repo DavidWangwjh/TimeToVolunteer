@@ -1,0 +1,29 @@
+{
+  "node": {
+    "00cbe9089d59db7ab6608d73a9b2f9c1ea7daff04c": {
+      "workers": {
+        "app/admin/opportunities/new/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/opportunities/new/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "signOut",
+          "filename": "src/lib/actions.ts"
+        }
+      },
+      "exportedName": "signOut",
+      "filename": "src/lib/actions.ts"
+    },
+    "60133abad2c82985b42382e49363d9c841c5141c40": {
+      "workers": {
+        "app/admin/opportunities/new/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/opportunities/new/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "createOpportunity",
+          "filename": "src/lib/actions.ts"
+        }
+      },
+      "exportedName": "createOpportunity",
+      "filename": "src/lib/actions.ts"
+    }
+  },
+  "edge": {}
+}

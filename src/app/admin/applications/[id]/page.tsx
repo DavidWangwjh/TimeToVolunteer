@@ -34,16 +34,17 @@ export default async function ApplicationDetailPage({ params }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Contact Information</CardTitle>
+            <CardTitle className="text-base">Organization Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>
-              <span className="text-muted-foreground">Contact:</span>{" "}
-              {application.contact_first_name} {application.contact_last_name}
+              <span className="text-muted-foreground">Category:</span>{" "}
+              {application.category ?? "—"}
             </p>
             <p><span className="text-muted-foreground">Email:</span> {application.email}</p>
             <p><span className="text-muted-foreground">Phone:</span> {application.phone ?? "—"}</p>
             <p><span className="text-muted-foreground">Website:</span> {application.website ?? "—"}</p>
+            <p><span className="text-muted-foreground">Image:</span> {application.image_url ?? "—"}</p>
           </CardContent>
         </Card>
 
@@ -52,7 +53,11 @@ export default async function ApplicationDetailPage({ params }: Props) {
             <CardTitle className="text-base">Organization Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>{application.mission ?? "—"}</p>
+            <p>
+              {application.organization_description ??
+                application.mission ??
+                "—"}
+            </p>
           </CardContent>
         </Card>
 

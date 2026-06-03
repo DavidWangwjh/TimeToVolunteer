@@ -31,7 +31,7 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
         <TableHeader className="bg-slate-50">
           <TableRow>
             <TableHead>Organization</TableHead>
-            <TableHead>Contact</TableHead>
+            <TableHead>Category</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Submitted</TableHead>
@@ -45,7 +45,7 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
                 {app.organization_name}
               </TableCell>
               <TableCell className="text-slate-600">
-                {app.contact_first_name} {app.contact_last_name}
+                {app.category ?? "—"}
               </TableCell>
               <TableCell className="text-slate-600">{app.email}</TableCell>
               <TableCell>

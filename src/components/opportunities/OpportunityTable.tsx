@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Copy } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -59,13 +59,22 @@ export function OpportunityTable({
                 <StatusBadge status={opp.status} />
               </TableCell>
               <TableCell>
-                <Link
-                  href={`/admin/opportunities/${opp.id}/edit`}
-                  className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
-                >
-                  Edit
-                  <ArrowRight className="size-3.5" />
-                </Link>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Link
+                    href={`/admin/opportunities/new?duplicate=${opp.id}`}
+                    className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                  >
+                    Duplicate
+                    <Copy className="size-3.5" />
+                  </Link>
+                  <Link
+                    href={`/admin/opportunities/${opp.id}/edit`}
+                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
+                  >
+                    Edit
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                </div>
               </TableCell>
             </TableRow>
           ))}

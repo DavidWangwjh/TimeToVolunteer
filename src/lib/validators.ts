@@ -1,13 +1,16 @@
 import { z } from "zod";
+import { organizationCategories } from "@/lib/organization-options";
 
 export const organizationApplicationSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required"),
-  contact_first_name: z.string().min(1, "First name is required"),
-  contact_last_name: z.string().min(1, "Last name is required"),
+  category: z.enum(organizationCategories),
   email: z.string().email("Valid email is required"),
   phone: z.string().optional(),
   website: z.string().url("Enter a valid website URL").optional().or(z.literal("")),
-  mission: z.string().optional(),
+  image_url: z.string().url("Enter a valid image URL").optional().or(z.literal("")),
+  organization_description: z
+    .string()
+    .min(20, "Please share a short organization description"),
   reason: z.string().min(1, "Please tell us why your organization wants to join"),
 });
 
@@ -60,11 +63,6 @@ export const opportunityUpdateSchema = opportunityFieldsSchema.extend({
   status: z.enum(["draft", "published", "cancelled", "completed"]),
 });
 
-export const assignVolunteerSchema = z.object({
-  opportunity_id: z.string().uuid(),
-  volunteer_id: z.string().uuid(),
-});
-
 export const bookingRequestSchema = z.object({
   opportunity_id: z.string().uuid("Opportunity ID is required"),
   volunteer_note: z.string().optional(),
@@ -81,6 +79,13 @@ export const profileUpdateSchema = z.object({
 });
 
 export const organizationSettingsSchema = z.object({
+  name: z.string().min(1, "Organization name is required"),
+  category: z.enum(organizationCategories),
+  description: z.string().min(20, "Please share a short organization description"),
+  website: z.string().url("Enter a valid website URL").optional().or(z.literal("")),
+  contact_email: z.string().email("Valid email is required"),
+  contact_phone: z.string().optional(),
+  image_url: z.string().url("Enter a valid image URL").optional().or(z.literal("")),
   visibility: z.enum(["public", "private"]),
 });
 

@@ -1,0 +1,27 @@
+"use client";
+
+import { useState } from "react";
+import { OrganizationProfile } from "@/components/organizations/OrganizationProfile";
+import { OrganizationSettingsForm } from "@/components/profile/OrganizationSettingsForm";
+import type { Organization } from "@/types/database";
+
+interface AdminOrganizationProfilePanelProps {
+  organization: Organization;
+}
+
+export function AdminOrganizationProfilePanel({
+  organization,
+}: AdminOrganizationProfilePanelProps) {
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <OrganizationProfile
+        organization={organization}
+        editable
+        onEdit={() => setEditing((current) => !current)}
+      />
+      {editing && <OrganizationSettingsForm organization={organization} />}
+    </div>
+  );
+}

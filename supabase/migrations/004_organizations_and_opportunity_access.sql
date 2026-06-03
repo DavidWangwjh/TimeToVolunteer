@@ -10,8 +10,8 @@ check (role in ('volunteer', 'organization', 'admin'));
 create table if not exists organization_applications (
   id uuid primary key default gen_random_uuid(),
   organization_name text not null,
-  contact_first_name text not null,
-  contact_last_name text not null,
+  contact_first_name text,
+  contact_last_name text,
   email text not null,
   phone text,
   website text,

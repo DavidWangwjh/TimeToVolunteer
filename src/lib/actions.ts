@@ -10,7 +10,6 @@ import {
   volunteerSignupSchema,
   opportunityCreateSchema,
   opportunityUpdateSchema,
-  assignVolunteerSchema,
   bookingRequestSchema,
   profileUpdateSchema,
   organizationSettingsSchema,
@@ -26,6 +25,9 @@ import type {
   OrganizationSettingsInput,
 } from "@/lib/validators";
 import type { InboxMessageKind, Profile } from "@/types/database";
+
+const ORGANIZATION_IMAGE_BUCKET = "organization-images";
+const MAX_ORGANIZATION_IMAGE_SIZE = 5 * 1024 * 1024;
 
 interface InboxMessageInput {
   recipientId: string;
@@ -55,6 +57,49 @@ function normalizeOpportunityFields(
     visibility: data.visibility,
     signup_mode: data.signup_mode,
   };
+}
+
+function getImageExtension(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (extension && /^[a-z0-9]+$/.test(extension)) return extension;
+  return file.type.split("/")[1] || "jpg";
+}
+
+export async function uploadOrganizationImage(formData: FormData) {
+  const file = formData.get("image");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose an image to upload" };
+  }
+
+  if (!file.type.startsWith("image/")) {
+    return { error: "Only image uploads are supported" };
+  }
+
+  if (file.size > MAX_ORGANIZATION_IMAGE_SIZE) {
+    return { error: "Organization images must be 5 MB or smaller" };
+  }
+
+  const adminClient = createAdminClient();
+  const extension = getImageExtension(file);
+  const path = `profiles/${crypto.randomUUID()}.${extension}`;
+
+  const { error } = await adminClient.storage
+    .from(ORGANIZATION_IMAGE_BUCKET)
+    .upload(path, file, {
+      contentType: file.type,
+      cacheControl: "31536000",
+    });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const { data } = adminClient.storage
+    .from(ORGANIZATION_IMAGE_BUCKET)
+    .getPublicUrl(path);
+
+  return { url: data.publicUrl };
 }
 
 function getAppUrl() {
@@ -168,8 +213,15 @@ export async function submitOrganizationApplication(
   const supabase = await createClient();
 
   const { error } = await supabase.from("organization_applications").insert({
-    ...parsed.data,
+    organization_name: parsed.data.organization_name,
+    category: parsed.data.category,
+    email: parsed.data.email,
+    phone: parsed.data.phone?.trim() || null,
     website: parsed.data.website?.trim() || null,
+    image_url: parsed.data.image_url?.trim() || null,
+    organization_description: parsed.data.organization_description,
+    mission: parsed.data.organization_description,
+    reason: parsed.data.reason,
     status: "pending",
   });
 
@@ -271,8 +323,8 @@ export async function acceptOrganizationApplication(applicationId: string) {
       email: application.email,
       email_confirm: true,
       user_metadata: {
-        first_name: application.contact_first_name,
-        last_name: application.contact_last_name,
+        first_name: application.organization_name,
+        last_name: "Admin",
         role: "organization",
         organization_name: application.organization_name,
       },
@@ -312,8 +364,8 @@ export async function acceptOrganizationApplication(applicationId: string) {
 
   const { error: profileError } = await adminClient.from("profiles").upsert({
     id: userId,
-    first_name: application.contact_first_name,
-    last_name: application.contact_last_name,
+    first_name: application.organization_name,
+    last_name: "Admin",
     email: application.email,
     phone: application.phone,
     role: "organization",
@@ -332,7 +384,10 @@ export async function acceptOrganizationApplication(applicationId: string) {
       {
         owner_id: userId,
         name: application.organization_name,
-        description: application.mission,
+        category: application.category,
+        description:
+          application.organization_description ?? application.mission ?? null,
+        image_url: application.image_url,
         website: application.website,
         contact_email: application.email,
         contact_phone: application.phone,
@@ -506,6 +561,25 @@ export async function updateOpportunity(
     return { error: organizationError.message };
   }
 
+  const ownershipFilter = organization
+    ? `organization_id.eq.${organization.id},created_by.eq.${admin.id}`
+    : `created_by.eq.${admin.id}`;
+
+  const { data: existingOpportunity, error: fetchError } = await supabase
+    .from("volunteer_opportunities")
+    .select("id, title, status, organization_id")
+    .eq("id", id)
+    .or(ownershipFilter)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  if (!existingOpportunity) {
+    return { error: "Opportunity not found" };
+  }
+
   const { error } = await supabase
     .from("volunteer_opportunities")
     .update({
@@ -514,170 +588,43 @@ export async function updateOpportunity(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .or(
-      organization
-        ? `organization_id.eq.${organization.id},created_by.eq.${admin.id}`
-        : `created_by.eq.${admin.id}`
-    );
+    .or(ownershipFilter);
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (existingOpportunity.status === "published") {
+    const adminClient = createAdminClient();
+    const { data: registeredBookings } = await adminClient
+      .from("bookings")
+      .select("id, volunteer_id")
+      .eq("opportunity_id", id)
+      .in("status", ["pending", "approved"]);
+
+    await Promise.all(
+      (registeredBookings ?? []).map((booking) =>
+        createInboxMessage({
+          recipientId: booking.volunteer_id,
+          actorId: admin.id,
+          organizationId: existingOpportunity.organization_id,
+          opportunityId: id,
+          bookingId: booking.id,
+          kind: "opportunity_updated",
+          title: "Opportunity updated",
+          body: "This opportunity has been updated. Check it out.",
+          actionHref: "/dashboard",
+        })
+      )
+    );
   }
 
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${id}/edit`);
   revalidatePath("/dashboard");
-
-  redirect("/admin/opportunities");
-}
-
-export async function assignVolunteerToOpportunity(
-  opportunityId: string,
-  volunteerId: string
-) {
-  const admin = await requireAdmin();
-
-  const parsed = assignVolunteerSchema.safeParse({
-    opportunity_id: opportunityId,
-    volunteer_id: volunteerId,
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
-  }
-
-  const supabase = await createClient();
-
-  const { data: opportunity, error: oppError } = await supabase
-    .from("volunteer_opportunities")
-    .select("*, organizations(id, name, owner_id)")
-    .eq("id", opportunityId)
-    .single();
-
-  if (oppError || !opportunity) {
-    return { error: "Opportunity not found" };
-  }
-
-  if (["cancelled", "completed"].includes(opportunity.status)) {
-    return { error: "Cannot assign volunteers to this opportunity" };
-  }
-
-  const { data: volunteer, error: volunteerError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", volunteerId)
-    .eq("role", "volunteer")
-    .eq("status", "active")
-    .single();
-
-  if (volunteerError || !volunteer) {
-    return { error: "Volunteer not found or not active" };
-  }
-
-  const { count: approvedCount } = await supabase
-    .from("bookings")
-    .select("*", { count: "exact", head: true })
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "approved");
-
-  if ((approvedCount ?? 0) >= opportunity.max_volunteers) {
-    return { error: "This session is full" };
-  }
-
-  const { data: existingBooking } = await supabase
-    .from("bookings")
-    .select("id, status")
-    .eq("opportunity_id", opportunityId)
-    .eq("volunteer_id", volunteerId)
-    .in("status", ["pending", "approved"])
-    .maybeSingle();
-
-  if (existingBooking) {
-    return { error: "This volunteer is already assigned to this session" };
-  }
-
-  const { error: insertError } = await supabase.from("bookings").insert({
-    opportunity_id: opportunityId,
-    volunteer_id: volunteerId,
-    status: "approved",
-    approved_by: admin.id,
-    approved_at: new Date().toISOString(),
-    admin_note: "Assigned by admin",
-  });
-
-  if (insertError) {
-    if (insertError.code === "23505") {
-      return { error: "This volunteer is already assigned to this session" };
-    }
-
-    return { error: insertError.message };
-  }
-
-  const organization = Array.isArray(opportunity.organizations)
-    ? opportunity.organizations[0]
-    : opportunity.organizations;
-
-  await createInboxMessage({
-    recipientId: volunteer.id,
-    actorId: admin.id,
-    organizationId: opportunity.organization_id,
-    opportunityId: opportunity.id,
-    kind: "booking_approved",
-    title: "You were assigned to a session",
-    body: `${opportunity.title} was added to your volunteer registrations${organization?.name ? ` by ${organization.name}` : ""}.`,
-    actionHref: "/dashboard",
-  });
-
-  revalidatePath(`/admin/opportunities/${opportunityId}/edit`);
-  revalidatePath("/admin/opportunities");
-  revalidatePath("/admin/bookings");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/bookings");
   revalidateInbox();
 
-  return { success: true };
-}
-
-export async function unassignVolunteerFromOpportunity(bookingId: string) {
-  await requireAdmin();
-
-  const supabase = await createClient();
-
-  const { data: booking, error: fetchError } = await supabase
-    .from("bookings")
-    .select("*, volunteer_opportunities(*, organizations(id, name, owner_id))")
-    .eq("id", bookingId)
-    .single();
-
-  if (fetchError || !booking) {
-    return { error: "Registration not found" };
-  }
-
-  if (booking.status !== "approved") {
-    return { error: "Only approved assignments can be removed this way" };
-  }
-
-  const { error } = await supabase
-    .from("bookings")
-    .update({
-      status: "cancelled",
-      cancelled_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      admin_note: "Unassigned by admin",
-    })
-    .eq("id", bookingId);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
-  revalidatePath("/admin/opportunities");
-  revalidatePath("/admin/bookings");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/bookings");
-
-  return { success: true };
+  redirect("/admin/opportunities");
 }
 
 export async function deleteOpportunity(id: string) {
@@ -1377,6 +1324,13 @@ export async function updateOrganizationSettings(data: OrganizationSettingsInput
   const { error } = await supabase
     .from("organizations")
     .update({
+      name: parsed.data.name,
+      category: parsed.data.category,
+      description: parsed.data.description,
+      website: parsed.data.website?.trim() || null,
+      contact_email: parsed.data.contact_email,
+      contact_phone: parsed.data.contact_phone?.trim() || null,
+      image_url: parsed.data.image_url?.trim() || null,
       visibility: parsed.data.visibility,
       updated_at: new Date().toISOString(),
     })

@@ -12,6 +12,7 @@ export type InboxMessageKind =
   | "booking_requested"
   | "booking_approved"
   | "booking_rejected"
+  | "opportunity_updated"
   | "membership_requested"
   | "membership_accepted"
   | "membership_rejected";
@@ -33,7 +34,9 @@ export interface Organization {
   id: string;
   owner_id: string;
   name: string;
+  category: string | null;
   description: string | null;
+  image_url: string | null;
   website: string | null;
   contact_email: string;
   contact_phone: string | null;
@@ -46,12 +49,15 @@ export interface Organization {
 export interface OrganizationApplication {
   id: string;
   organization_name: string;
-  contact_first_name: string;
-  contact_last_name: string;
+  category: string | null;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
   email: string;
   phone: string | null;
   website: string | null;
   mission: string | null;
+  organization_description: string | null;
+  image_url: string | null;
   reason: string | null;
   status: ApplicationStatus;
   admin_notes: string | null;
