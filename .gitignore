@@ -42,4 +42,5 @@ next-env.d.ts
 
 AGENTS.md
 CLAUDE.md
-instructions.md
+instructions.md.next-stale-build
+.next
