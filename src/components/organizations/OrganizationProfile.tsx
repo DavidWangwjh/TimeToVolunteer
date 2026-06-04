@@ -54,7 +54,7 @@ export function OrganizationProfile({
       <div className="p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 gap-4">
-            <div className="-mt-10 flex size-16 shrink-0 items-center justify-center rounded-lg border-4 border-white bg-emerald-50 text-emerald-800 shadow-sm sm:size-[4.5rem]">
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border-4 border-white bg-emerald-50 text-emerald-800 shadow-sm sm:size-[4.5rem]">
               <Building2 className="size-8" />
             </div>
             <div className="min-w-0">
