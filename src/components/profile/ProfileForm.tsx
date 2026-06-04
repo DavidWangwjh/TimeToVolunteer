@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -9,16 +10,32 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateProfile } from "@/lib/actions";
 import { profileUpdateSchema, type ProfileUpdateInput } from "@/lib/validators";
+import {
+  organizationCategories,
+  type OrganizationCategory,
+} from "@/lib/organization-options";
 import type { Profile } from "@/types/database";
 
 interface ProfileFormProps {
   profile: Profile;
+  userMetadata?: Record<string, unknown>;
 }
 
-export function ProfileForm({ profile }: ProfileFormProps) {
+function parseInterests(value: unknown): OrganizationCategory[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((item): item is OrganizationCategory =>
+    organizationCategories.includes(item as OrganizationCategory)
+  );
+}
+
+export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
+  const isVolunteer = profile.role === "volunteer";
+  const initialInterests = parseInterests(userMetadata.volunteer_interests);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProfileUpdateInput>({
     resolver: zodResolver(profileUpdateSchema),
@@ -26,8 +43,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       first_name: profile.first_name,
       last_name: profile.last_name,
       phone: profile.phone ?? "",
+      volunteer_interests: initialInterests,
+      volunteer_intro: String(userMetadata.volunteer_intro ?? ""),
+      date_of_birth: String(userMetadata.date_of_birth ?? ""),
     },
   });
+  const [selectedInterests, setSelectedInterests] =
+    useState<OrganizationCategory[]>(initialInterests);
 
   async function onSubmit(data: ProfileUpdateInput) {
     const result = await updateProfile(data);
@@ -36,6 +58,15 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     } else {
       toast.success("Profile updated");
     }
+  }
+
+  function toggleInterest(interest: OrganizationCategory) {
+    const next = selectedInterests.includes(interest)
+      ? selectedInterests.filter((item) => item !== interest)
+      : [...selectedInterests, interest];
+
+    setSelectedInterests(next);
+    setValue("volunteer_interests", next, { shouldValidate: true });
   }
 
   return (
@@ -67,6 +98,55 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" type="tel" {...register("phone")} />
           </div>
+          {isVolunteer && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="date_of_birth">Date of Birth</Label>
+                <Input
+                  id="date_of_birth"
+                  type="date"
+                  {...register("date_of_birth")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="volunteer_intro">Self Introduction</Label>
+                <Input
+                  id="volunteer_intro"
+                  placeholder="A short note about yourself"
+                  {...register("volunteer_intro")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Interested Opportunities</Label>
+                <div className="flex flex-wrap gap-2">
+                  {organizationCategories.map((interest) => {
+                    const selected = selectedInterests.includes(interest);
+
+                    return (
+                      <button
+                        key={interest}
+                        type="button"
+                        onClick={() => toggleInterest(interest)}
+                        className={
+                          selected
+                            ? "rounded-full border border-emerald-700 bg-emerald-800 px-3 py-1.5 text-sm font-medium text-white"
+                            : "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:bg-emerald-50"
+                        }
+                        aria-pressed={selected}
+                      >
+                        {interest}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.volunteer_interests && (
+                  <p className="text-sm text-destructive">
+                    {errors.volunteer_interests.message}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>

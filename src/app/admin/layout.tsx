@@ -14,7 +14,6 @@ export default async function AdminLayout({
   const [
     { count: pendingApplications },
     { count: activeMembers },
-    { count: publishedOpportunities },
     { count: pendingBookings },
     { count: pendingMemberships },
     { count: unreadMessages },
@@ -35,10 +34,6 @@ export default async function AdminLayout({
           .from("organization_memberships")
           .select("*", { count: "exact", head: true })
           .eq("status", "accepted"),
-    supabase
-      .from("volunteer_opportunities")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "published"),
     supabase
       .from("bookings")
       .select("*", { count: "exact", head: true })
@@ -68,7 +63,6 @@ export default async function AdminLayout({
         "/admin/applications": pendingApplications ?? 0,
         "/admin/memberships": pendingMemberships ?? 0,
         "/admin/volunteers": activeMembers ?? 0,
-        "/admin/opportunities": publishedOpportunities ?? 0,
         "/admin/bookings": pendingBookings ?? 0,
       }}
     >

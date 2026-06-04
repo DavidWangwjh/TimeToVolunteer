@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Building2, Globe, Mail, Pencil, Phone, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
 import type { MembershipStatus, Organization } from "@/types/database";
 
 interface OrganizationProfileProps {
@@ -79,7 +80,7 @@ export function OrganizationProfile({
             </div>
           </div>
 
-          {editable && (
+          {editable ? (
             <Button
               type="button"
               variant="outline"
@@ -99,6 +100,12 @@ export function OrganizationProfile({
                 </Link>
               )}
             </Button>
+          ) : (
+            <OrganizationRequestButton
+              organizationId={organization.id}
+              organizationVisibility={organization.visibility}
+              membershipStatus={membershipStatus}
+            />
           )}
         </div>
 

@@ -21,14 +21,10 @@ export const volunteerSignupSchema = z
     email: z.string().email("Valid email is required"),
     phone: z.string().optional(),
     volunteer_interests: z
-      .string()
-      .min(10, "Tell us a little about what you care about"),
-    volunteer_availability: z
-      .string()
-      .min(5, "Tell us when you are usually available"),
-    volunteer_goals: z
-      .string()
-      .min(10, "Tell us what kind of volunteer experience you want"),
+      .array(z.enum(organizationCategories))
+      .min(1, "Choose at least one interest"),
+    volunteer_intro: z.string().optional(),
+    date_of_birth: z.string().optional(),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters"),
@@ -50,7 +46,6 @@ export const opportunityFieldsSchema = z
     experience_required: z.string().optional(),
     max_volunteers: z.number().min(1, "At least 1 volunteer spot required"),
     visibility: z.enum(["public", "private"]),
-    signup_mode: z.enum(["open", "application"]),
   })
   .refine((data) => data.end_time > data.start_time, {
     message: "End time must be after start time",
@@ -76,6 +71,9 @@ export const profileUpdateSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
   phone: z.string().optional(),
+  volunteer_interests: z.array(z.enum(organizationCategories)).optional(),
+  volunteer_intro: z.string().optional(),
+  date_of_birth: z.string().optional(),
 });
 
 export const organizationSettingsSchema = z.object({
@@ -119,7 +117,6 @@ export type OrganizationApplicationInput = z.infer<
 export type VolunteerSignupInput = z.infer<typeof volunteerSignupSchema>;
 export type OpportunityCreateInput = z.infer<typeof opportunityCreateSchema>;
 export type OpportunityUpdateInput = z.infer<typeof opportunityUpdateSchema>;
-export type BookingRequestInput = z.infer<typeof bookingRequestSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type OrganizationSettingsInput = z.infer<
   typeof organizationSettingsSchema

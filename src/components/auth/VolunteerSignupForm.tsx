@@ -1,30 +1,50 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { signUpVolunteer } from "@/lib/actions";
 import { volunteerSignupSchema, type VolunteerSignupInput } from "@/lib/validators";
+import {
+  organizationCategories,
+  type OrganizationCategory,
+} from "@/lib/organization-options";
 
 export function VolunteerSignupForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<VolunteerSignupInput>({
     resolver: zodResolver(volunteerSignupSchema),
+    defaultValues: {
+      volunteer_interests: [],
+    },
   });
+  const [selectedInterests, setSelectedInterests] = useState<
+    OrganizationCategory[]
+  >([]);
 
   async function onSubmit(data: VolunteerSignupInput) {
     const result = await signUpVolunteer(data);
     if (result?.error) {
       toast.error(result.error);
     }
+  }
+
+  function toggleInterest(interest: OrganizationCategory) {
+    const next = selectedInterests.includes(interest)
+      ? selectedInterests.filter((item) => item !== interest)
+      : [...selectedInterests, interest];
+
+    setSelectedInterests(next);
+    setValue("volunteer_interests", next, { shouldValidate: true });
   }
 
   return (
@@ -61,20 +81,45 @@ export function VolunteerSignupForm() {
             <Input id="phone" type="tel" autoComplete="tel" {...register("phone")} />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="date_of_birth">Date of Birth</Label>
+            <Input id="date_of_birth" type="date" {...register("date_of_birth")} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="volunteer_intro">Self Introduction</Label>
+            <Input
+              id="volunteer_intro"
+              placeholder="A short note about yourself"
+              {...register("volunteer_intro")}
+            />
+          </div>
+
           <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-4">
-            <h2 className="text-sm font-bold text-emerald-950">
-              Help us recommend good matches
-            </h2>
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="volunteer_interests">
-                  What causes or activities interest you? *
-                </Label>
-                <Textarea
-                  id="volunteer_interests"
-                  placeholder="Tutoring, food support, parks, events, animals..."
-                  {...register("volunteer_interests")}
-                />
+                <Label>What opportunities are you interested in? *</Label>
+                <div className="flex flex-wrap gap-2">
+                  {organizationCategories.map((interest) => {
+                    const selected = selectedInterests.includes(interest);
+
+                    return (
+                      <button
+                        key={interest}
+                        type="button"
+                        onClick={() => toggleInterest(interest)}
+                        className={
+                          selected
+                            ? "rounded-full border border-emerald-700 bg-emerald-800 px-3 py-1.5 text-sm font-medium text-white"
+                            : "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:bg-emerald-50"
+                        }
+                        aria-pressed={selected}
+                      >
+                        {interest}
+                      </button>
+                    );
+                  })}
+                </div>
                 {errors.volunteer_interests && (
                   <p className="text-sm text-destructive">
                     {errors.volunteer_interests.message}
@@ -82,37 +127,6 @@ export function VolunteerSignupForm() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="volunteer_availability">
-                  When are you usually available? *
-                </Label>
-                <Textarea
-                  id="volunteer_availability"
-                  placeholder="Weekday evenings, Saturday mornings, once a month..."
-                  {...register("volunteer_availability")}
-                />
-                {errors.volunteer_availability && (
-                  <p className="text-sm text-destructive">
-                    {errors.volunteer_availability.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="volunteer_goals">
-                  What kind of volunteer experience are you looking for? *
-                </Label>
-                <Textarea
-                  id="volunteer_goals"
-                  placeholder="Build mentoring experience, meet neighbors, volunteer outdoors..."
-                  {...register("volunteer_goals")}
-                />
-                {errors.volunteer_goals && (
-                  <p className="text-sm text-destructive">
-                    {errors.volunteer_goals.message}
-                  </p>
-                )}
-              </div>
             </div>
           </div>
 

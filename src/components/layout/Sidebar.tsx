@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  Briefcase,
   Building2,
   Mail,
 } from "lucide-react";
@@ -25,7 +24,6 @@ const platformAdminLinks = [
   { href: "/admin/applications", label: "Applications", icon: FileText },
   { href: "/admin/memberships", label: "Memberships", icon: Users },
   { href: "/admin/volunteers", label: "Volunteers", icon: Users },
-  { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
   { href: "/admin/bookings", label: "Registrations", icon: ClipboardList },
   { href: "/admin/profile", label: "Profile", icon: User },
 ];
@@ -34,7 +32,6 @@ const organizationAdminLinks = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/inbox", label: "Inbox", icon: Mail },
   { href: "/admin/memberships", label: "Memberships", icon: Users },
-  { href: "/admin/opportunities", label: "Opportunities", icon: Briefcase },
   { href: "/admin/bookings", label: "Registrations", icon: ClipboardList },
   { href: "/admin/profile", label: "Profile", icon: User },
 ];
@@ -58,7 +55,12 @@ export function Sidebar({
         ? platformAdminLinks
         : organizationAdminLinks
       : volunteerLinks;
-  const label = variant === "admin" ? "Admin Dashboard" : "Volunteer Dashboard";
+  const label =
+    variant === "admin"
+      ? adminKind === "organization"
+        ? "Organization Dashboard"
+        : "Admin Dashboard"
+      : "Volunteer Dashboard";
 
   function isActive(href: string) {
     return (

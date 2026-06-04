@@ -21,7 +21,6 @@ import {
   type OpportunityUpdateInput,
 } from "@/lib/validators";
 import {
-  opportunitySignupModeLabels,
   opportunityStatusLabels,
   opportunityVisibilityLabels,
 } from "@/lib/opportunity-labels";
@@ -50,14 +49,12 @@ export function EditOpportunityForm({ opportunity }: EditOpportunityFormProps) {
       experience_required: opportunity.experience_required ?? "",
       max_volunteers: opportunity.max_volunteers,
       visibility: opportunity.visibility ?? "public",
-      signup_mode: opportunity.signup_mode ?? "application",
       status: opportunity.status,
     },
   });
 
   const status = watch("status");
   const visibility = watch("visibility");
-  const signupMode = watch("signup_mode");
 
   async function onSubmit(data: OpportunityUpdateInput) {
     const result = await updateOpportunity(opportunity.id, data);
@@ -136,59 +133,31 @@ export function EditOpportunityForm({ opportunity }: EditOpportunityFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Visibility</Label>
-              <Select
-                value={visibility}
-                onValueChange={(val) =>
-                  setValue("visibility", val as OpportunityUpdateInput["visibility"])
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {(value: OpportunityUpdateInput["visibility"]) =>
-                      opportunityVisibilityLabels[value] ?? "Select visibility"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(opportunityVisibilityLabels).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Signup Mode</Label>
-              <Select
-                value={signupMode}
-                onValueChange={(val) =>
-                  setValue("signup_mode", val as OpportunityUpdateInput["signup_mode"])
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {(value: OpportunityUpdateInput["signup_mode"]) =>
-                      opportunitySignupModeLabels[value] ?? "Select signup mode"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(opportunitySignupModeLabels).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Visibility</Label>
+            <Select
+              value={visibility}
+              onValueChange={(val) =>
+                setValue("visibility", val as OpportunityUpdateInput["visibility"])
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(value: OpportunityUpdateInput["visibility"]) =>
+                    opportunityVisibilityLabels[value] ?? "Select visibility"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(opportunityVisibilityLabels).map(
+                  ([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

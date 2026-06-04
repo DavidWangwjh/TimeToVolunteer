@@ -1,6 +1,17 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { StatusType } from "@/types/app";
+import type {
+  ApplicationStatus,
+  BookingStatus,
+  OpportunityStatus,
+  ProfileStatus,
+} from "@/types/database";
+
+type StatusType =
+  | ApplicationStatus
+  | BookingStatus
+  | OpportunityStatus
+  | ProfileStatus;
 
 const statusStyles: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",

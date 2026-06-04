@@ -114,28 +114,6 @@ export default async function VolunteerDashboardPage() {
   return (
     <div>
       <section className="space-y-4">
-        <Card className="border-emerald-950/10 bg-emerald-900 py-0 text-white shadow-lg shadow-emerald-950/10">
-          <CardContent className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-3 p-4 sm:p-5 lg:p-6">
-            <div className="flex size-12 items-center justify-center rounded-lg bg-white/10 sm:size-11">
-              <Calendar className="size-5" />
-            </div>
-            <div>
-              <p className="max-w-2xl text-xl font-bold leading-tight sm:text-2xl">
-                {nextOpportunity ? "Next event" : "No registered events yet"}
-              </p>
-            </div>
-            <div className="col-span-2">
-              <p className="max-w-3xl text-sm leading-6 text-emerald-50/75">
-                {nextOpportunity
-                  ? `${nextOpportunity.title} · ${
-                      nextOpportunity.organizations?.name ?? "Independent"
-                    } · ${formatDate(nextOpportunity.date)} · ${formatTime(nextOpportunity.start_time)} to ${formatTime(nextOpportunity.end_time)}`
-                  : "Explore organizations or browse the calendar to register for a session."}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <MetricCard
             icon={CheckCircle2}

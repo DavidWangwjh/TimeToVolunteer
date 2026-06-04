@@ -37,16 +37,16 @@ export async function Navbar() {
           ) : (
             <>
               <Link
-                href="/signup"
-                className="text-sm font-semibold text-slate-700 transition-colors hover:text-emerald-800"
-              >
-                Sign Up
-              </Link>
-              <Link
                 href="/apply"
                 className="hidden text-sm font-semibold text-slate-700 transition-colors hover:text-emerald-800 sm:inline"
               >
                 Organizations
+              </Link>
+              <Link
+                href="/signup"
+                className="text-sm font-semibold text-slate-700 transition-colors hover:text-emerald-800"
+              >
+                Sign Up
               </Link>
               <Button
                 asChild

@@ -3,7 +3,6 @@ export type ProfileStatus = "active" | "inactive" | "suspended";
 export type ApplicationStatus = "pending" | "contacted" | "accepted" | "rejected";
 export type OpportunityStatus = "draft" | "published" | "cancelled" | "completed";
 export type OpportunityVisibility = "public" | "private";
-export type OpportunitySignupMode = "open" | "application";
 export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
 export type OrganizationStatus = "active" | "inactive" | "suspended";
 export type OrganizationVisibility = "public" | "private";
@@ -50,12 +49,9 @@ export interface OrganizationApplication {
   id: string;
   organization_name: string;
   category: string | null;
-  contact_first_name: string | null;
-  contact_last_name: string | null;
   email: string;
   phone: string | null;
   website: string | null;
-  mission: string | null;
   organization_description: string | null;
   image_url: string | null;
   reason: string | null;
@@ -91,7 +87,6 @@ export interface VolunteerOpportunity {
   max_volunteers: number;
   status: OpportunityStatus;
   visibility: OpportunityVisibility;
-  signup_mode: OpportunitySignupMode;
   created_by: string | null;
   created_at: string;
   updated_at: string;

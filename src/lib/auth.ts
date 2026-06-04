@@ -44,11 +44,15 @@ export async function getAuthNavState(): Promise<AuthNavState> {
   }
 
   if (isAdmin(profile)) {
+    const isPlatformAdmin = profile.role === "admin";
+
     return {
       isSignedIn: true,
       firstName: profile.first_name,
       dashboardHref: "/admin",
-      dashboardLabel: "Organization Dashboard",
+      dashboardLabel: isPlatformAdmin
+        ? "Admin Dashboard"
+        : "Organization Dashboard",
       role: profile.role,
       mustResetPassword: false,
     };

@@ -22,12 +22,9 @@ create table organization_applications (
   id uuid primary key default gen_random_uuid(),
   organization_name text not null,
   category text,
-  contact_first_name text,
-  contact_last_name text,
   email text not null,
   phone text,
   website text,
-  mission text,
   organization_description text,
   image_url text,
   reason text,
@@ -93,7 +90,6 @@ create table volunteer_opportunities (
   max_volunteers integer not null default 1,
   status text not null default 'draft',
   visibility text not null default 'public',
-  signup_mode text not null default 'application',
   created_by uuid references profiles(id),
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
@@ -102,9 +98,6 @@ create table volunteer_opportunities (
   ),
   constraint volunteer_opportunities_visibility_check check (
     visibility in ('public', 'private')
-  ),
-  constraint volunteer_opportunities_signup_mode_check check (
-    signup_mode in ('open', 'application')
   ),
   constraint volunteer_opportunities_max_volunteers_check check (max_volunteers >= 1),
   constraint volunteer_opportunities_time_check check (end_time > start_time)

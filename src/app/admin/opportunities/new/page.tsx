@@ -31,7 +31,6 @@ export default async function NewOpportunityPage({
         experience_required: opportunity.experience_required ?? "",
         max_volunteers: opportunity.max_volunteers,
         visibility: opportunity.visibility ?? "public",
-        signup_mode: opportunity.signup_mode ?? "application",
       };
     }
   }

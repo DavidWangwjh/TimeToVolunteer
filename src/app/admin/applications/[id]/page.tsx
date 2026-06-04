@@ -53,11 +53,7 @@ export default async function ApplicationDetailPage({ params }: Props) {
             <CardTitle className="text-base">Organization Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>
-              {application.organization_description ??
-                application.mission ??
-                "—"}
-            </p>
+            <p>{application.organization_description ?? "—"}</p>
           </CardContent>
         </Card>
 

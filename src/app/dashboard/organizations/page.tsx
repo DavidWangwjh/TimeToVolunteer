@@ -57,8 +57,6 @@ export default async function ExplorePage() {
   const preferenceTokens = new Set(
     tokenize([
       user?.user_metadata?.volunteer_interests,
-      user?.user_metadata?.volunteer_availability,
-      user?.user_metadata?.volunteer_goals,
     ].join(" "))
   );
 
@@ -68,6 +66,7 @@ export default async function ExplorePage() {
         opportunitiesByOrganization.get(organization.id) ?? [];
       const searchableText = [
         organization.name,
+        organization.category,
         organization.description,
         orgOpportunities
           .map((opportunity) =>
@@ -89,6 +88,7 @@ export default async function ExplorePage() {
         name: organization.name,
         description: organization.description,
         contact_email: organization.contact_email,
+        visibility: organization.visibility,
         membershipStatus: membershipByOrganization.get(organization.id),
         opportunityCount: orgOpportunities.length,
         matchScore,

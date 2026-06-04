@@ -7,13 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
-import type { MembershipStatus } from "@/types/database";
+import type { MembershipStatus, OrganizationVisibility } from "@/types/database";
 
 interface ExploreOrganization {
   id: string;
   name: string;
   description: string | null;
   contact_email: string;
+  visibility: OrganizationVisibility;
   membershipStatus?: MembershipStatus;
   opportunityCount: number;
   matchScore: number;
@@ -104,9 +105,6 @@ function OrganizationCard({
 }: {
   organization: ExploreOrganization;
 }) {
-  const canRequest =
-    organization.membershipStatus === undefined ||
-    organization.membershipStatus === "rejected";
   const membershipLabel =
     organization.membershipStatus === "accepted"
       ? "You are a member"
@@ -141,11 +139,13 @@ function OrganizationCard({
           )}
         </div>
 
-        {canRequest && (
-          <div className="mt-auto flex justify-end pt-1">
-            <OrganizationRequestButton organizationId={organization.id} />
-          </div>
-        )}
+        <div className="mt-auto flex justify-end pt-1">
+          <OrganizationRequestButton
+            organizationId={organization.id}
+            organizationVisibility={organization.visibility}
+            membershipStatus={organization.membershipStatus}
+          />
+        </div>
       </CardContent>
     </Card>
   );

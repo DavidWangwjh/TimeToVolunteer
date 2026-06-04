@@ -71,7 +71,7 @@ export function VolunteerScheduleSection({
     <section id="calendar">
       <Tabs defaultValue="calendar">
         <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[auto_1fr_1fr_auto] lg:items-end">
+          <div className="grid gap-3 sm:grid-cols-[auto_1fr_1fr_auto] items-end">
             <div className="space-y-1">
               <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 View
@@ -121,10 +121,6 @@ export function VolunteerScheduleSection({
                 <option value="not_registered">Not registered</option>
               </select>
             </label>
-
-            <div className="flex h-10 items-center whitespace-nowrap text-sm font-medium text-slate-500">
-              Showing {filteredOpportunities.length} of {opportunities.length}
-            </div>
           </div>
         </div>
 

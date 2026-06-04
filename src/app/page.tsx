@@ -49,8 +49,7 @@ export default async function HomePage() {
                   </>
                 ) : (
                   <>
-                    Volunteer on{" "}
-                    <span className="italic text-emerald-800">Your</span> Schedule
+                    Find Your Place to <span className="italic text-emerald-800">Help</span>
                   </>
                 )}
               </h1>

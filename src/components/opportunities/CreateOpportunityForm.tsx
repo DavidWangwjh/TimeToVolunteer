@@ -27,10 +27,7 @@ import {
   saveOpportunityDraft,
   type OpportunityDraft,
 } from "@/lib/opportunity-draft";
-import {
-  opportunitySignupModeLabels,
-  opportunityVisibilityLabels,
-} from "@/lib/opportunity-labels";
+import { opportunityVisibilityLabels } from "@/lib/opportunity-labels";
 
 const defaultValues: OpportunityCreateInput = {
   title: "",
@@ -42,7 +39,6 @@ const defaultValues: OpportunityCreateInput = {
   experience_required: "",
   max_volunteers: 1,
   visibility: "public",
-  signup_mode: "application",
 };
 
 type CreateOpportunityInitialValues = Partial<OpportunityCreateInput>;
@@ -58,7 +54,6 @@ function toDraft(values: OpportunityCreateInput): OpportunityDraft {
     experience_required: values.experience_required ?? "",
     max_volunteers: values.max_volunteers ?? 1,
     visibility: values.visibility ?? "public",
-    signup_mode: values.signup_mode ?? "application",
   };
 }
 
@@ -90,7 +85,6 @@ export function CreateOpportunityForm({
 
   const values = watch();
   const visibility = watch("visibility");
-  const signupMode = watch("signup_mode");
 
   useEffect(() => {
     if (initialValues) {
@@ -221,59 +215,31 @@ export function CreateOpportunityForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Visibility</Label>
-              <Select
-                value={visibility}
-                onValueChange={(val) =>
-                  setValue("visibility", val as OpportunityCreateInput["visibility"])
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {(value: OpportunityCreateInput["visibility"]) =>
-                      opportunityVisibilityLabels[value] ?? "Select visibility"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(opportunityVisibilityLabels).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Signup Mode</Label>
-              <Select
-                value={signupMode}
-                onValueChange={(val) =>
-                  setValue("signup_mode", val as OpportunityCreateInput["signup_mode"])
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {(value: OpportunityCreateInput["signup_mode"]) =>
-                      opportunitySignupModeLabels[value] ?? "Select signup mode"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(opportunitySignupModeLabels).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Visibility</Label>
+            <Select
+              value={visibility}
+              onValueChange={(val) =>
+                setValue("visibility", val as OpportunityCreateInput["visibility"])
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(value: OpportunityCreateInput["visibility"]) =>
+                    opportunityVisibilityLabels[value] ?? "Select visibility"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(opportunityVisibilityLabels).map(
+                  ([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
