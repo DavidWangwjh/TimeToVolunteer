@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
   ClipboardList,
@@ -95,8 +96,18 @@ export function Sidebar({
       <div className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/90 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <Link href="/" className="block truncate text-lg font-bold text-emerald-800">
-              TimeToVolunteer
+            <Link
+              href="/"
+              className="flex min-w-0 items-center gap-2 text-lg font-bold text-emerald-800"
+            >
+              <Image
+                src="/logo-no-bg.png"
+                alt=""
+                width={28}
+                height={28}
+                className="size-10 shrink-0 object-contain"
+              />
+              <span className="truncate">TimeToVolunteer</span>
             </Link>
             <p className="truncate text-xs font-medium text-slate-500">{label}</p>
           </div>
@@ -129,8 +140,15 @@ export function Sidebar({
 
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-emerald-950/10 bg-white/85 p-4 shadow-xl shadow-slate-950/5 backdrop-blur lg:flex lg:flex-col">
         <div className="rounded-lg bg-emerald-900 p-5 text-white shadow-lg shadow-emerald-950/20">
-          <Link href="/" className="text-xl font-bold">
-            TimeToVolunteer
+          <Link href="/" className="flex min-w-0 items-center gap-2 text-xl font-bold">
+            <Image
+              src="/logo-no-bg.png"
+              alt=""
+              width={32}
+              height={32}
+              className="size-10 shrink-0 object-contain"
+            />
+            <span className="truncate">TimeToVolunteer</span>
           </Link>
           <p className="mt-1 text-xs font-medium text-emerald-50/70">
             {label}

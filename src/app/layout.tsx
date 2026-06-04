@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TimeToVolunteer",
   description: "Volunteer scheduling platform",
+  icons: {
+    icon: "/logo-no-bg.png",
+    shortcut: "/logo-no-bg.png",
+    apple: "/logo-no-bg.png",
+  },
 };
 
 export default function RootLayout({

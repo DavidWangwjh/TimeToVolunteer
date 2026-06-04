@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { getAuthNavState } from "@/lib/auth";
 import { SignOutButton } from "@/components/layout/SignOutButton";
@@ -11,9 +12,17 @@ export async function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4 sm:h-20 lg:px-8">
         <Link
           href="/"
-          className="min-w-0 text-xl font-bold leading-none text-emerald-800 sm:text-2xl"
+          className="flex min-w-0 items-center gap-2 text-xl font-bold leading-none text-emerald-800 sm:text-2xl"
         >
-          TimeToVolunteer
+          <Image
+            src="/logo-no-bg.png"
+            alt=""
+            width={32}
+            height={32}
+            className="size-12 shrink-0 object-contain"
+            priority
+          />
+          <span className="truncate">TimeToVolunteer</span>
         </Link>
         <nav className="flex shrink-0 items-center gap-3 sm:gap-8">
           <Link
