@@ -41,7 +41,7 @@ export function RegisteredVolunteers({
             {registeredBookings.map((booking) => (
               <li key={booking.id} className="px-4 py-3">
                 <Link
-                  href={`/admin/volunteers/${booking.profiles.id}`}
+                  href={`/dashboard/admin/volunteers/${booking.profiles.id}`}
                   className="text-sm font-medium text-slate-950 hover:text-emerald-800 hover:underline"
                 >
                   {getVolunteerName(booking.profiles)}

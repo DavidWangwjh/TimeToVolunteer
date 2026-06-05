@@ -15,11 +15,13 @@ import type { VolunteerOpportunity } from "@/types/database";
 interface OpportunityTableProps {
   opportunities: VolunteerOpportunity[];
   registeredCounts: Record<string, number>;
+  basePath?: string;
 }
 
 export function OpportunityTable({
   opportunities,
   registeredCounts,
+  basePath = "/dashboard/admin/opportunities",
 }: OpportunityTableProps) {
   if (opportunities.length === 0) {
     return (
@@ -61,14 +63,14 @@ export function OpportunityTable({
               <TableCell>
                 <div className="flex flex-wrap justify-end gap-2">
                   <Link
-                    href={`/admin/opportunities/new?duplicate=${opp.id}`}
+                    href={`${basePath}/new?duplicate=${opp.id}`}
                     className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
                   >
                     Duplicate
                     <Copy className="size-3.5" />
                   </Link>
                   <Link
-                    href={`/admin/opportunities/${opp.id}/edit`}
+                    href={`${basePath}/${opp.id}/edit`}
                     className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
                   >
                     Edit

@@ -99,7 +99,7 @@ export function OpportunityDetailsDialog({
                     onClick={() => {
                       onOpenChange(false);
                       router.push(
-                        `/dashboard/organizations/${opportunity.organizations!.id}`
+                        `/dashboard/volunteer/organizations/${opportunity.organizations!.id}`
                       );
                     }}
                     className="font-medium text-emerald-800 hover:underline"

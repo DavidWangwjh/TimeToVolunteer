@@ -90,7 +90,7 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
                 <TableCell className="font-medium text-slate-800">
                   {volunteer ? (
                     <Link
-                      href={`/admin/volunteers/${volunteer.id}`}
+                      href={`/dashboard/admin/volunteers/${volunteer.id}`}
                       className="hover:text-emerald-800 hover:underline"
                     >
                       {volunteer.first_name} {volunteer.last_name}
@@ -104,7 +104,7 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
                 <div>{opportunity?.title ?? "—"}</div>
                 {variant === "volunteer" && opportunity?.organizations && (
                   <Link
-                    href={`/dashboard/organizations/${opportunity.organizations.id}`}
+                    href={`/dashboard/volunteer/organizations/${opportunity.organizations.id}`}
                     className="mt-1 block text-xs font-medium text-emerald-800 hover:underline"
                   >
                     {opportunity.organizations.name}

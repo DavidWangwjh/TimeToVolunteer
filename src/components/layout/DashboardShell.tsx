@@ -8,11 +8,13 @@ export function DashboardShell({
   variant,
   navCounts,
   adminKind,
+  organizationLocked,
 }: {
   children: React.ReactNode;
   variant: "volunteer" | "admin";
   navCounts?: Record<string, number>;
   adminKind?: "platform" | "organization";
+  organizationLocked?: boolean;
 }) {
   const pathname = usePathname();
   return (
@@ -22,6 +24,7 @@ export function DashboardShell({
         currentPath={pathname}
         navCounts={navCounts}
         adminKind={adminKind}
+        organizationLocked={organizationLocked}
       />
       <main className="min-h-screen px-4 py-6 sm:px-6 lg:ml-72 lg:px-8 lg:py-8">
         <div className="mx-auto max-w-7xl">{children}</div>

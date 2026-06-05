@@ -6,35 +6,38 @@ import {
   User,
   LayoutDashboard,
   Users,
-  FileText,
   Building2,
   Mail,
 } from "lucide-react";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 
 const volunteerLinks = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/inbox", label: "Inbox", icon: Mail },
-  { href: "/dashboard/organizations", label: "Explore", icon: Building2 },
-  { href: "/dashboard/profile", label: "Profile", icon: User },
+  { href: "/dashboard/volunteer", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/volunteer/inbox", label: "Inbox", icon: Mail },
+  { href: "/dashboard/volunteer/organizations", label: "Explore", icon: Building2 },
+  { href: "/dashboard/volunteer/profile", label: "Profile", icon: User },
 ];
 
 const platformAdminLinks = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/inbox", label: "Inbox", icon: Mail },
-  { href: "/admin/applications", label: "Applications", icon: FileText },
-  { href: "/admin/memberships", label: "Memberships", icon: Users },
-  { href: "/admin/volunteers", label: "Volunteers", icon: Users },
-  { href: "/admin/bookings", label: "Registrations", icon: ClipboardList },
-  { href: "/admin/profile", label: "Profile", icon: User },
+  { href: "/dashboard/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/admin/applications", label: "Applications", icon: ClipboardList },
+  { href: "/dashboard/admin/volunteers", label: "Volunteers", icon: Users },
+  { href: "/dashboard/admin/organizations", label: "Organizations", icon: Building2 },
+  { href: "/dashboard/admin/opportunities", label: "Opportunities", icon: ClipboardList },
 ];
 
 const organizationAdminLinks = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/inbox", label: "Inbox", icon: Mail },
-  { href: "/admin/memberships", label: "Memberships", icon: Users },
-  { href: "/admin/bookings", label: "Registrations", icon: ClipboardList },
-  { href: "/admin/profile", label: "Profile", icon: User },
+  { href: "/dashboard/organization", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/organization/inbox", label: "Inbox", icon: Mail },
+  { href: "/dashboard/organization/memberships", label: "Memberships", icon: Users },
+  { href: "/dashboard/organization/bookings", label: "Registrations", icon: ClipboardList },
+  { href: "/dashboard/organization/profile", label: "Profile", icon: User },
+];
+
+const lockedOrganizationLinks = [
+  { href: "/dashboard/organization", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/organization/inbox", label: "Inbox", icon: Mail },
+  { href: "/dashboard/organization/profile", label: "Profile", icon: User },
 ];
 
 interface SidebarProps {
@@ -42,6 +45,7 @@ interface SidebarProps {
   currentPath: string;
   navCounts?: Record<string, number>;
   adminKind?: "platform" | "organization";
+  organizationLocked?: boolean;
 }
 
 export function Sidebar({
@@ -49,11 +53,14 @@ export function Sidebar({
   currentPath,
   navCounts = {},
   adminKind = "platform",
+  organizationLocked = false,
 }: SidebarProps) {
   const links =
     variant === "admin"
       ? adminKind === "platform"
         ? platformAdminLinks
+        : organizationLocked
+        ? lockedOrganizationLinks
         : organizationAdminLinks
       : volunteerLinks;
   const label =
@@ -66,7 +73,8 @@ export function Sidebar({
   function isActive(href: string) {
     return (
       currentPath === href ||
-      (href !== "/dashboard" && href !== "/admin" && currentPath.startsWith(href))
+      (!["/dashboard/volunteer", "/dashboard/admin", "/dashboard/organization"].includes(href) &&
+        currentPath.startsWith(href))
     );
   }
 
@@ -105,7 +113,7 @@ export function Sidebar({
                 alt=""
                 width={28}
                 height={28}
-                className="size-10 shrink-0 object-contain"
+                className="size-6 shrink-0 object-contain"
               />
               <span className="truncate">TimeToVolunteer</span>
             </Link>

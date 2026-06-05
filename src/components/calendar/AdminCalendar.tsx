@@ -15,6 +15,7 @@ interface AdminCalendarProps {
     approved_count: number;
     pending_count: number;
   })[];
+  editBasePath?: string;
 }
 
 const statusColors: Record<string, { bg: string; border: string }> = {
@@ -24,7 +25,10 @@ const statusColors: Record<string, { bg: string; border: string }> = {
   completed: { bg: "#3b82f6", border: "#2563eb" },
 };
 
-export function AdminCalendar({ opportunities }: AdminCalendarProps) {
+export function AdminCalendar({
+  opportunities,
+  editBasePath = "/dashboard/admin/opportunities",
+}: AdminCalendarProps) {
   const events = opportunities.map((opp) => {
     const colors = statusColors[opp.status] ?? statusColors.draft;
     return {
@@ -78,7 +82,7 @@ export function AdminCalendar({ opportunities }: AdminCalendarProps) {
           eventClick={(info) => {
             const opp = info.event.extendedProps
               .opportunity as VolunteerOpportunity;
-            window.location.href = `/admin/opportunities/${opp.id}/edit`;
+            window.location.href = `${editBasePath}/${opp.id}/edit`;
           }}
         />
       </div>

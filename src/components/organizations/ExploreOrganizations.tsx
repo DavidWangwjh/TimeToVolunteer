@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
+import { inferOrganizationCategory } from "@/lib/organization-display";
 import type { MembershipStatus, OrganizationVisibility } from "@/types/database";
 
 interface ExploreOrganization {
   id: string;
   name: string;
   description: string | null;
+  category?: string | null;
   contact_email: string;
   visibility: OrganizationVisibility;
   membershipStatus?: MembershipStatus;
@@ -117,7 +119,7 @@ function OrganizationCard({
       <CardContent className="flex h-full flex-col gap-3 px-4">
         <div>
           <Link
-            href={`/dashboard/organizations/${organization.id}`}
+            href={`/dashboard/volunteer/organizations/${organization.id}`}
             className="text-lg font-bold text-slate-950 hover:text-emerald-800 hover:underline"
           >
             {organization.name}
@@ -131,6 +133,13 @@ function OrganizationCard({
         )}
 
         <div className="flex flex-wrap gap-2">
+          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+            {inferOrganizationCategory(
+              organization.category,
+              organization.description,
+              organization.name
+            )}
+          </Badge>
           <Badge variant="outline">{organization.opportunityCount} opportunities</Badge>
           {membershipLabel && (
             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">

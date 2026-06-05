@@ -195,9 +195,9 @@ async function createInboxMessage({
 
 function revalidateInbox() {
   revalidatePath("/dashboard", "layout");
-  revalidatePath("/admin", "layout");
-  revalidatePath("/dashboard/inbox");
-  revalidatePath("/admin/inbox");
+  revalidatePath("/dashboard/volunteer/inbox");
+  revalidatePath("/dashboard/admin/inbox");
+  revalidatePath("/dashboard/organization/inbox");
 }
 
 function isSchemaCacheColumnError(error: { message?: string } | null) {
@@ -218,6 +218,7 @@ export async function submitOrganizationApplication(
   }
 
   const supabase = await createClient();
+  const adminClient = createAdminClient();
 
   const applicationPayload = {
     organization_name: parsed.data.organization_name,
@@ -231,15 +232,135 @@ export async function submitOrganizationApplication(
     status: "pending",
   };
 
-  const { error } = await supabase
+  const { data: existingApplication } = await adminClient
+    .from("organization_applications")
+    .select("id")
+    .eq("email", parsed.data.email)
+    .in("status", ["pending", "contacted"])
+    .maybeSingle();
+
+  if (existingApplication) {
+    return { error: "An organization application is already pending for this email" };
+  }
+
+  const { data: userData, error: createError } =
+    await adminClient.auth.admin.createUser({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: parsed.data.organization_name,
+        last_name: "Admin",
+        role: "organization",
+        organization_name: parsed.data.organization_name,
+      },
+    });
+
+  if (createError) {
+    return { error: createError.message };
+  }
+
+  const userId = userData.user?.id;
+
+  if (!userId) {
+    return { error: "Unable to create organization account" };
+  }
+
+  const profilePayload = {
+    id: userId,
+    first_name: parsed.data.organization_name,
+    last_name: "Admin",
+    email: parsed.data.email,
+    phone: parsed.data.phone?.trim() || null,
+    role: "organization",
+    status: "active",
+    must_reset_password: false,
+    updated_at: new Date().toISOString(),
+  };
+
+  let { error: profileError } = await adminClient
+    .from("profiles")
+    .upsert(profilePayload);
+
+  if (profileError && isSchemaCacheColumnError(profileError)) {
+    const { must_reset_password: _ignored, ...legacyProfilePayload } =
+      profilePayload;
+    const { error: legacyProfileError } = await adminClient
+      .from("profiles")
+      .upsert(legacyProfilePayload);
+    profileError = legacyProfileError;
+  }
+
+  if (profileError) {
+    return { error: profileError.message };
+  }
+
+  const organizationPayload = {
+    owner_id: userId,
+    name: parsed.data.organization_name,
+    category: parsed.data.category,
+    description: parsed.data.organization_description,
+    image_url: parsed.data.image_url?.trim() || null,
+    website: parsed.data.website?.trim() || null,
+    contact_email: parsed.data.email,
+    contact_phone: parsed.data.phone?.trim() || null,
+    visibility: "public",
+    status: "inactive",
+    updated_at: new Date().toISOString(),
+  };
+
+  let { error: organizationError } = await adminClient
+    .from("organizations")
+    .upsert(organizationPayload, { onConflict: "owner_id" });
+
+  if (organizationError && isSchemaCacheColumnError(organizationError)) {
+    const {
+      category: _category,
+      image_url: _imageUrl,
+      ...legacyOrganizationPayload
+    } = organizationPayload;
+    const { error: legacyOrganizationError } = await adminClient
+      .from("organizations")
+      .upsert(legacyOrganizationPayload, { onConflict: "owner_id" });
+    organizationError = legacyOrganizationError;
+  }
+
+  if (organizationError) {
+    return { error: organizationError.message };
+  }
+
+  let { error } = await adminClient
     .from("organization_applications")
     .insert(applicationPayload);
+
+  if (error && isSchemaCacheColumnError(error)) {
+    const {
+      category: _category,
+      image_url: _imageUrl,
+      organization_description: _organizationDescription,
+      ...legacyApplicationPayload
+    } = applicationPayload;
+
+    const { error: legacyApplicationError } = await adminClient
+      .from("organization_applications")
+      .insert(legacyApplicationPayload);
+    error = legacyApplicationError;
+  }
 
   if (error) {
     return { error: error.message };
   }
 
-  redirect("/application-submitted");
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
+
+  if (signInError) {
+    redirect("/application-submitted");
+  }
+
+  redirect("/dashboard/organization");
 }
 
 export async function signUpVolunteer(data: VolunteerSignupInput) {
@@ -315,7 +436,7 @@ export async function signUpVolunteer(data: VolunteerSignupInput) {
     return { error: signInError.message };
   }
 
-  redirect("/dashboard");
+  redirect("/dashboard/volunteer");
 }
 
 export async function acceptOrganizationApplication(applicationId: string) {
@@ -327,7 +448,6 @@ export async function acceptOrganizationApplication(applicationId: string) {
 
   const adminClient = createAdminClient();
   const supabase = await createClient();
-  const redirectTo = getPasswordSetupRedirectUrl();
 
   const { data: application, error: fetchError } = await supabase
     .from("organization_applications")
@@ -339,98 +459,76 @@ export async function acceptOrganizationApplication(applicationId: string) {
     return { error: "Application not found" };
   }
 
-  let userId: string | undefined;
+  const { user: foundUser, error: listError } = await findAuthUserByEmail(
+    adminClient,
+    application.email
+  );
 
-  const { data: createData, error: createError } =
-    await adminClient.auth.admin.createUser({
-      email: application.email,
-      email_confirm: true,
-      user_metadata: {
-        first_name: application.organization_name,
-        last_name: "Admin",
-        role: "organization",
-        organization_name: application.organization_name,
-      },
-    });
-
-  if (createError) {
-    const isDuplicate =
-      createError.message.toLowerCase().includes("already") ||
-      createError.message.toLowerCase().includes("registered") ||
-      createError.message.toLowerCase().includes("exists");
-
-    if (!isDuplicate) {
-      return { error: createError.message };
-    }
-
-    const { user: existingUser, error: listError } = await findAuthUserByEmail(
-      adminClient,
-      application.email
-    );
-
-    if (listError) {
-      return { error: listError.message };
-    }
-
-    if (!existingUser) {
-      return { error: createError.message };
-    }
-
-    userId = existingUser.id;
-  } else {
-    userId = createData.user?.id;
+  if (listError) {
+    return { error: listError.message };
   }
 
-  if (!userId) {
-    return { error: "Failed to create organization account" };
+  let ownerId = foundUser?.id;
+
+  if (!ownerId) {
+    const { data: createData, error: createError } =
+      await adminClient.auth.admin.createUser({
+        email: application.email,
+        email_confirm: true,
+        user_metadata: {
+          first_name: application.organization_name,
+          last_name: "Admin",
+          role: "organization",
+          organization_name: application.organization_name,
+        },
+      });
+
+    if (createError || !createData.user?.id) {
+      return {
+        error: createError?.message ?? "Failed to create organization account",
+      };
+    }
+
+    ownerId = createData.user.id;
   }
 
-  const profilePayload = {
-    id: userId,
-    first_name: application.organization_name,
-    last_name: "Admin",
-    email: application.email,
-    phone: application.phone,
-    role: "organization",
-    status: "active",
-    must_reset_password: true,
-    updated_at: new Date().toISOString(),
-  };
-
-  let { error: profileError } = await adminClient
+  const { error: profileError } = await adminClient
     .from("profiles")
-    .upsert(profilePayload);
-
-  if (profileError && isSchemaCacheColumnError(profileError)) {
-    const { must_reset_password: _ignored, ...legacyProfilePayload } =
-      profilePayload;
-    const { error: legacyProfileError } = await adminClient
-      .from("profiles")
-      .upsert(legacyProfilePayload);
-    profileError = legacyProfileError;
-  }
+    .upsert({
+      id: ownerId,
+      first_name: application.organization_name,
+      last_name: "Admin",
+      email: application.email,
+      phone: application.phone,
+      role: "organization",
+      status: "active",
+      must_reset_password: !foundUser,
+      updated_at: new Date().toISOString(),
+    });
 
   if (profileError) {
     return { error: profileError.message };
   }
 
   const organizationPayload = {
-    owner_id: userId,
-    name: application.organization_name,
-    category: application.category,
-    description: application.organization_description,
-    image_url: application.image_url,
-    website: application.website,
-    contact_email: application.email,
-    contact_phone: application.phone,
-    visibility: "public",
-    status: "active",
-    updated_at: new Date().toISOString(),
-  };
+      owner_id: ownerId,
+      name: application.organization_name,
+      category: application.category,
+      description: application.organization_description,
+      image_url: application.image_url,
+      website: application.website,
+      contact_email: application.email,
+      contact_phone: application.phone,
+      visibility: "public",
+      status: "active",
+      updated_at: new Date().toISOString(),
+    };
 
-  let { error: organizationError } = await adminClient
+  let { data: organization, error: organizationError } = await adminClient
     .from("organizations")
-    .upsert(organizationPayload, { onConflict: "owner_id" });
+    .upsert(organizationPayload, { onConflict: "owner_id" })
+    .select("id")
+    .single();
 
   if (organizationError && isSchemaCacheColumnError(organizationError)) {
     const {
@@ -438,26 +536,21 @@ export async function acceptOrganizationApplication(applicationId: string) {
       image_url: _imageUrl,
       ...legacyOrganizationPayload
     } = organizationPayload;
-    const { error: legacyOrganizationError } = await adminClient
+    const legacyResult = await adminClient
       .from("organizations")
-      .upsert(legacyOrganizationPayload, { onConflict: "owner_id" });
-    organizationError = legacyOrganizationError;
+      .upsert(legacyOrganizationPayload, { onConflict: "owner_id" })
+      .select("id")
+      .single();
+    organization = legacyResult.data;
+    organizationError = legacyResult.error;
   }
 
   if (organizationError) {
     return { error: organizationError.message };
   }
 
-  const { error: resetEmailError } =
-    await adminClient.auth.resetPasswordForEmail(application.email, {
-      redirectTo,
-    });
-
-  if (resetEmailError) {
-    return {
-      error:
-        "Organization account was created, but the password setup email failed to send. Please try accepting the application again.",
-    };
+  if (!organization) {
+    return { error: "Organization record could not be activated" };
   }
 
   const { error: updateError } = await supabase
@@ -472,8 +565,35 @@ export async function acceptOrganizationApplication(applicationId: string) {
     return { error: updateError.message };
   }
 
-  revalidatePath("/admin/applications");
-  revalidatePath(`/admin/applications/${applicationId}`);
+  if (!foundUser) {
+    const { error: resetEmailError } =
+      await adminClient.auth.resetPasswordForEmail(application.email, {
+        redirectTo: getPasswordSetupRedirectUrl(),
+      });
+
+    if (resetEmailError) {
+      return {
+        error:
+          "Organization was approved, but the password setup email failed to send.",
+      };
+    }
+  }
+
+  await createInboxMessage({
+    recipientId: ownerId,
+    actorId: reviewer.id,
+    organizationId: organization.id,
+    kind: "membership_accepted",
+    title: "Organization approved",
+    body: "Your organization has been approved. You can now create opportunities and access the full organization dashboard.",
+    actionHref: "/dashboard/organization",
+  });
+
+  revalidatePath("/dashboard/admin/applications");
+  revalidatePath(`/dashboard/admin/applications/${applicationId}`);
+  revalidatePath("/dashboard/admin/organizations");
+  revalidatePath("/dashboard/organization");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -489,6 +609,17 @@ export async function rejectOrganizationApplication(
   }
 
   const supabase = await createClient();
+  const adminClient = createAdminClient();
+
+  const { data: application, error: fetchError } = await supabase
+    .from("organization_applications")
+    .select("*")
+    .eq("id", applicationId)
+    .single();
+
+  if (fetchError || !application) {
+    return { error: "Application not found" };
+  }
 
   const { error } = await supabase
     .from("organization_applications")
@@ -503,8 +634,45 @@ export async function rejectOrganizationApplication(
     return { error: error.message };
   }
 
-  revalidatePath("/admin/applications");
-  revalidatePath(`/admin/applications/${applicationId}`);
+  const { user: existingUser } = await findAuthUserByEmail(
+    adminClient,
+    application.email
+  );
+
+  if (existingUser) {
+    await adminClient
+      .from("profiles")
+      .update({
+        status: "suspended",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingUser.id);
+
+    const { data: organization } = await adminClient
+      .from("organizations")
+      .update({
+        status: "suspended",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("owner_id", existingUser.id)
+      .select("id")
+      .maybeSingle();
+
+    await createInboxMessage({
+      recipientId: existingUser.id,
+      actorId: reviewer.id,
+      organizationId: organization?.id ?? null,
+      kind: "membership_rejected",
+      title: "Organization application declined",
+      body: "Your organization application was declined.",
+      actionHref: "/dashboard/organization/inbox",
+    });
+  }
+
+  revalidatePath("/dashboard/admin/applications");
+  revalidatePath(`/dashboard/admin/applications/${applicationId}`);
+  revalidatePath("/dashboard/admin/organizations");
+  revalidateInbox();
 
   return { success: true };
 }
@@ -535,8 +703,8 @@ export async function updateOrganizationApplicationStatus(
     return { error: error.message };
   }
 
-  revalidatePath("/admin/applications");
-  revalidatePath(`/admin/applications/${applicationId}`);
+  revalidatePath("/dashboard/admin/applications");
+  revalidatePath(`/dashboard/admin/applications/${applicationId}`);
 
   return { success: true };
 }
@@ -581,9 +749,10 @@ export async function createOpportunity(
     return { error: error.message };
   }
 
-  revalidatePath("/admin/opportunities");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
 
-  redirect("/admin/opportunities");
+  redirect(admin.role === "admin" ? "/dashboard/admin/opportunities" : "/dashboard/organization/opportunities");
 }
 
 export async function updateOpportunity(
@@ -607,16 +776,23 @@ export async function updateOpportunity(
     return { error: organizationError.message };
   }
 
-  const ownershipFilter = organization
+  const ownershipFilter = admin.role === "admin"
+    ? null
+    : organization
     ? `organization_id.eq.${organization.id},created_by.eq.${admin.id}`
     : `created_by.eq.${admin.id}`;
 
-  const { data: existingOpportunity, error: fetchError } = await supabase
+  let fetchQuery = supabase
     .from("volunteer_opportunities")
     .select("id, title, status, organization_id")
-    .eq("id", id)
-    .or(ownershipFilter)
-    .maybeSingle();
+    .eq("id", id);
+
+  if (ownershipFilter) {
+    fetchQuery = fetchQuery.or(ownershipFilter);
+  }
+
+  const { data: existingOpportunity, error: fetchError } =
+    await fetchQuery.maybeSingle();
 
   if (fetchError) {
     return { error: fetchError.message };
@@ -626,15 +802,20 @@ export async function updateOpportunity(
     return { error: "Opportunity not found" };
   }
 
-  const { error } = await supabase
+  let updateQuery = supabase
     .from("volunteer_opportunities")
     .update({
       ...normalizeOpportunityFields(parsed.data),
       status: parsed.data.status,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .or(ownershipFilter);
+    .eq("id", id);
+
+  if (ownershipFilter) {
+    updateQuery = updateQuery.or(ownershipFilter);
+  }
+
+  const { error } = await updateQuery;
 
   if (error) {
     return { error: error.message };
@@ -659,35 +840,47 @@ export async function updateOpportunity(
           kind: "opportunity_updated",
           title: "Opportunity updated",
           body: "This opportunity has been updated. Check it out.",
-          actionHref: "/dashboard",
+          actionHref: "/dashboard/volunteer",
         })
       )
     );
   }
 
-  revalidatePath("/admin/opportunities");
-  revalidatePath(`/admin/opportunities/${id}/edit`);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath(`/dashboard/admin/opportunities/${id}/edit`);
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${id}/edit`);
+  revalidatePath("/dashboard/volunteer");
   revalidateInbox();
 
-  redirect("/admin/opportunities");
+  redirect(admin.role === "admin" ? "/dashboard/admin/opportunities" : "/dashboard/organization/opportunities");
 }
 
 export async function deleteOpportunity(id: string) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { organization } = await getOwnedOrganization(admin.id);
+  let deleteQuery = supabase
     .from("volunteer_opportunities")
     .delete()
     .eq("id", id);
+
+  if (admin.role === "organization") {
+    deleteQuery = organization
+      ? deleteQuery.eq("organization_id", organization.id)
+      : deleteQuery.eq("created_by", admin.id);
+  }
+
+  const { error } = await deleteQuery;
 
   if (error) {
     return { error: error.message };
   }
 
-  revalidatePath("/admin/opportunities");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
 
   return { success: true };
 }
@@ -780,12 +973,12 @@ export async function requestOrganizationMembership(
       kind: "membership_requested",
       title: "New organization access request",
       body: `${profile.first_name} ${profile.last_name} requested access to ${organization.name}.`,
-      actionHref: "/admin/memberships",
+      actionHref: "/dashboard/organization/memberships",
     });
   }
 
-  revalidatePath("/dashboard/organizations");
-  revalidatePath("/admin/memberships");
+  revalidatePath("/dashboard/volunteer/organizations");
+  revalidatePath("/dashboard/organization/memberships");
   revalidateInbox();
 
   return { success: true, status: nextStatus };
@@ -797,7 +990,7 @@ export async function approveOrganizationMembership(membershipId: string) {
 
   const { data: membership, error: fetchError } = await supabase
     .from("organization_memberships")
-    .select("id, volunteer_id, organization_id, organizations(name)")
+    .select("id, volunteer_id, organization_id, organizations(name, owner_id)")
     .eq("id", membershipId)
     .single();
 
@@ -823,6 +1016,10 @@ export async function approveOrganizationMembership(membershipId: string) {
     ? membership.organizations[0]
     : membership.organizations;
 
+  if (reviewer.role === "organization" && organization?.owner_id !== reviewer.id) {
+    return { error: "You can only approve requests for your organization" };
+  }
+
   await createInboxMessage({
     recipientId: membership.volunteer_id,
     actorId: reviewer.id,
@@ -831,12 +1028,12 @@ export async function approveOrganizationMembership(membershipId: string) {
     kind: "membership_accepted",
     title: "Organization access accepted",
     body: `You were accepted to ${organization?.name ?? "this organization"}. You can now view its private opportunities.`,
-    actionHref: `/dashboard/organizations/${membership.organization_id}`,
+    actionHref: `/dashboard/volunteer/organizations/${membership.organization_id}`,
   });
 
-  revalidatePath("/admin/memberships");
-  revalidatePath("/dashboard/organizations");
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/organization/memberships");
+  revalidatePath("/dashboard/volunteer/organizations");
+  revalidatePath("/dashboard/volunteer");
   revalidateInbox();
 
   return { success: true };
@@ -851,7 +1048,7 @@ export async function rejectOrganizationMembership(
 
   const { data: membership, error: fetchError } = await supabase
     .from("organization_memberships")
-    .select("id, volunteer_id, organization_id, organizations(name)")
+    .select("id, volunteer_id, organization_id, organizations(name, owner_id)")
     .eq("id", membershipId)
     .single();
 
@@ -878,6 +1075,10 @@ export async function rejectOrganizationMembership(
     ? membership.organizations[0]
     : membership.organizations;
 
+  if (reviewer.role === "organization" && organization?.owner_id !== reviewer.id) {
+    return { error: "You can only reject requests for your organization" };
+  }
+
   await createInboxMessage({
     recipientId: membership.volunteer_id,
     actorId: reviewer.id,
@@ -886,11 +1087,11 @@ export async function rejectOrganizationMembership(
     kind: "membership_rejected",
     title: "Organization access declined",
     body: `Your request to join ${organization?.name ?? "this organization"} was declined.`,
-    actionHref: `/dashboard/organizations/${membership.organization_id}`,
+    actionHref: `/dashboard/volunteer/organizations/${membership.organization_id}`,
   });
 
-  revalidatePath("/admin/memberships");
-  revalidatePath("/dashboard/organizations");
+  revalidatePath("/dashboard/organization/memberships");
+  revalidatePath("/dashboard/volunteer/organizations");
   revalidateInbox();
 
   return { success: true };
@@ -1013,7 +1214,7 @@ export async function requestBooking(data: {
       kind: "booking_requested",
       title: "New registration request",
       body: `${profile.first_name} ${profile.last_name} requested ${opportunity.title}.`,
-      actionHref: "/admin/bookings",
+      actionHref: "/dashboard/organization/bookings",
     });
   }
 
@@ -1027,12 +1228,12 @@ export async function requestBooking(data: {
       kind: "booking_approved",
       title: "Registration confirmed",
       body: `${opportunity.title} is confirmed for you.`,
-      actionHref: "/dashboard",
+      actionHref: "/dashboard/volunteer",
     });
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/admin/bookings");
+  revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/organization/bookings");
   revalidateInbox();
 
   return { success: true };
@@ -1045,7 +1246,7 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*)")
+    .select("*, volunteer_opportunities(*, organizations(id, name, owner_id))")
     .eq("id", bookingId)
     .single();
 
@@ -1057,7 +1258,16 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     return { error: "Only pending registrations can be approved" };
   }
 
-  const opportunity = booking.volunteer_opportunities;
+  const opportunity = Array.isArray(booking.volunteer_opportunities)
+    ? booking.volunteer_opportunities[0]
+    : booking.volunteer_opportunities;
+  const organization = Array.isArray(opportunity.organizations)
+    ? opportunity.organizations[0]
+    : opportunity.organizations;
+
+  if (admin.role === "organization" && organization?.owner_id !== admin.id) {
+    return { error: "You can only approve registrations for your organization" };
+  }
 
   const { count: approvedCount } = await supabase
     .from("bookings")
@@ -1084,10 +1294,6 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     return { error: error.message };
   }
 
-  const organization = Array.isArray(opportunity.organizations)
-    ? opportunity.organizations[0]
-    : opportunity.organizations;
-
   await createInboxMessage({
     recipientId: booking.volunteer_id,
     actorId: admin.id,
@@ -1097,13 +1303,14 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
     kind: "booking_approved",
     title: "Registration request accepted",
     body: `${opportunity.title} was accepted${organization?.name ? ` by ${organization.name}` : ""}.`,
-    actionHref: "/dashboard",
+    actionHref: "/dashboard/volunteer",
   });
 
-  revalidatePath("/admin/bookings");
-  revalidatePath("/admin/opportunities");
-  revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/organization/bookings");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${booking.opportunity_id}/edit`);
+  revalidatePath("/dashboard/volunteer");
   revalidateInbox();
 
   return { success: true };
@@ -1149,6 +1356,10 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
     ? opportunity.organizations[0]
     : opportunity?.organizations;
 
+  if (admin.role === "organization" && organization?.owner_id !== admin.id) {
+    return { error: "You can only reject registrations for your organization" };
+  }
+
   await createInboxMessage({
     recipientId: booking.volunteer_id,
     actorId: admin.id,
@@ -1158,13 +1369,14 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
     kind: "booking_rejected",
     title: "Registration request declined",
     body: `${opportunity?.title ?? "Your registration request"} was declined${organization?.name ? ` by ${organization.name}` : ""}.`,
-    actionHref: "/dashboard",
+    actionHref: "/dashboard/volunteer",
   });
 
-  revalidatePath("/admin/bookings");
-  revalidatePath("/admin/opportunities");
-  revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/organization/bookings");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${booking.opportunity_id}/edit`);
+  revalidatePath("/dashboard/volunteer");
   revalidateInbox();
 
   return { success: true };
@@ -1229,10 +1441,11 @@ export async function cancelBooking(bookingId: string) {
     return { error: error.message };
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/admin/bookings");
-  revalidatePath("/admin/opportunities");
-  revalidatePath(`/admin/opportunities/${booking.opportunity_id}/edit`);
+  revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/organization/bookings");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${booking.opportunity_id}/edit`);
 
   return { success: true };
 }
@@ -1372,8 +1585,8 @@ export async function updateProfile(data: ProfileUpdateInput) {
     return { error: metadataError.message };
   }
 
-  revalidatePath("/dashboard/profile");
-  revalidatePath("/dashboard/organizations");
+  revalidatePath("/dashboard/volunteer/profile");
+  revalidatePath("/dashboard/volunteer/organizations");
 
   return { success: true };
 }
@@ -1411,9 +1624,9 @@ export async function updateOrganizationSettings(data: OrganizationSettingsInput
     return { error: error.message };
   }
 
-  revalidatePath("/admin/profile");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/organizations");
+  revalidatePath("/dashboard/organization/profile");
+  revalidatePath("/dashboard/organization");
+  revalidatePath("/dashboard/volunteer/organizations");
 
   return { success: true };
 }
@@ -1438,8 +1651,144 @@ export async function updateVolunteerStatus(
     return { error: error.message };
   }
 
-  revalidatePath("/admin/volunteers");
-  revalidatePath(`/admin/volunteers/${volunteerId}`);
+  revalidatePath("/dashboard/admin/volunteers");
+  revalidatePath(`/dashboard/admin/volunteers/${volunteerId}`);
+
+  return { success: true };
+}
+
+export async function updateProfileByAdmin(
+  profileId: string,
+  data: ProfileUpdateInput
+) {
+  const admin = await requireAdmin();
+
+  if (admin.role !== "admin") {
+    return { error: "Only platform admins can update user profiles" };
+  }
+
+  const parsed = profileUpdateSchema.safeParse(data);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient
+    .from("profiles")
+    .update({
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name,
+      phone: parsed.data.phone?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", profileId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  await adminClient.auth.admin.updateUserById(profileId, {
+    user_metadata: {
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name,
+      volunteer_interests: parsed.data.volunteer_interests ?? [],
+      volunteer_intro: parsed.data.volunteer_intro?.trim() || "",
+      date_of_birth: parsed.data.date_of_birth || "",
+    },
+  });
+
+  revalidatePath("/dashboard/admin/volunteers");
+  revalidatePath(`/dashboard/admin/volunteers/${profileId}`);
+
+  return { success: true };
+}
+
+export async function updateOrganizationByAdmin(
+  organizationId: string,
+  data: OrganizationSettingsInput
+) {
+  const admin = await requireAdmin();
+
+  if (admin.role !== "admin") {
+    return { error: "Only platform admins can update organization profiles" };
+  }
+
+  const parsed = organizationSettingsSchema.safeParse(data);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient
+    .from("organizations")
+    .update({
+      name: parsed.data.name,
+      category: parsed.data.category,
+      description: parsed.data.description,
+      website: parsed.data.website?.trim() || null,
+      contact_email: parsed.data.contact_email,
+      contact_phone: parsed.data.contact_phone?.trim() || null,
+      image_url: parsed.data.image_url?.trim() || null,
+      visibility: parsed.data.visibility,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", organizationId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard/admin/organizations");
+  revalidatePath(`/dashboard/admin/organizations/${organizationId}`);
+  revalidatePath("/dashboard/volunteer/organizations");
+
+  return { success: true };
+}
+
+export async function updateOrganizationStatus(
+  organizationId: string,
+  status: "active" | "inactive" | "suspended"
+) {
+  const admin = await requireAdmin();
+
+  if (admin.role !== "admin") {
+    return { error: "Only platform admins can update organization status" };
+  }
+
+  const adminClient = createAdminClient();
+  const { data: organization } = await adminClient
+    .from("organizations")
+    .select("owner_id")
+    .eq("id", organizationId)
+    .single();
+
+  const { error } = await adminClient
+    .from("organizations")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", organizationId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (organization?.owner_id) {
+    await adminClient
+      .from("profiles")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", organization.owner_id);
+  }
+
+  revalidatePath("/dashboard/admin/organizations");
+  revalidatePath(`/dashboard/admin/organizations/${organizationId}`);
+  revalidatePath("/dashboard/volunteer/organizations");
 
   return { success: true };
 }
@@ -1459,19 +1808,27 @@ function redirectAfterLogin(profile: Profile, requestedPath?: string | null) {
 
   const safePath = getSafeRedirectPath(requestedPath);
 
-  if (profile.role === "organization" || profile.role === "admin") {
-    if (safePath?.startsWith("/admin")) {
+  if (profile.role === "admin") {
+    if (safePath?.startsWith("/dashboard/admin")) {
       redirect(safePath);
     }
 
-    redirect("/admin");
+    redirect("/dashboard/admin");
   }
 
-  if (safePath?.startsWith("/dashboard")) {
+  if (profile.role === "organization") {
+    if (safePath?.startsWith("/dashboard/organization")) {
+      redirect(safePath);
+    }
+
+    redirect("/dashboard/organization");
+  }
+
+  if (safePath?.startsWith("/dashboard/volunteer")) {
     redirect(safePath);
   }
 
-  redirect("/dashboard");
+  redirect("/dashboard/volunteer");
 }
 
 export async function requestPasswordReset(email: string) {

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { formatDate } from "@/lib/dates";
+import { inferOrganizationCategory } from "@/lib/organization-display";
 import type { OrganizationApplication } from "@/types/database";
 
 interface ApplicationTableProps {
@@ -45,7 +46,12 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
                 {app.organization_name}
               </TableCell>
               <TableCell className="text-slate-600">
-                {app.category ?? "—"}
+                {inferOrganizationCategory(
+                  app.category,
+                  app.organization_description,
+                  app.organization_name,
+                  app.reason
+                )}
               </TableCell>
               <TableCell className="text-slate-600">{app.email}</TableCell>
               <TableCell>
@@ -56,7 +62,7 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
               </TableCell>
               <TableCell>
                 <Link
-                  href={`/admin/applications/${app.id}`}
+                  href={`/dashboard/admin/applications/${app.id}`}
                   className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
                 >
                   View

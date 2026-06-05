@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  updateOrganizationByAdmin,
   updateOrganizationSettings,
   uploadOrganizationImage,
 } from "@/lib/actions";
@@ -26,10 +27,12 @@ import type { Organization, OrganizationVisibility } from "@/types/database";
 
 interface OrganizationSettingsFormProps {
   organization: Organization;
+  platformAdmin?: boolean;
 }
 
 export function OrganizationSettingsForm({
   organization,
+  platformAdmin = false,
 }: OrganizationSettingsFormProps) {
   const [name, setName] = useState(organization.name);
   const [category, setCategory] = useState<OrganizationCategory>(
@@ -71,7 +74,7 @@ export function OrganizationSettingsForm({
       setImageUrl(nextImageUrl);
     }
 
-    const result = await updateOrganizationSettings({
+    const payload = {
       name,
       category,
       description,
@@ -80,7 +83,10 @@ export function OrganizationSettingsForm({
       contact_phone: contactPhone,
       image_url: nextImageUrl,
       visibility,
-    });
+    };
+    const result = platformAdmin
+      ? await updateOrganizationByAdmin(organization.id, payload)
+      : await updateOrganizationSettings(payload);
     setIsSubmitting(false);
     if (result.error) {
       toast.error(result.error);

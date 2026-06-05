@@ -7,10 +7,12 @@ import type { Organization } from "@/types/database";
 
 interface AdminOrganizationProfilePanelProps {
   organization: Organization;
+  platformAdmin?: boolean;
 }
 
 export function AdminOrganizationProfilePanel({
   organization,
+  platformAdmin = false,
 }: AdminOrganizationProfilePanelProps) {
   const [editing, setEditing] = useState(false);
 
@@ -21,7 +23,12 @@ export function AdminOrganizationProfilePanel({
         editable
         onEdit={() => setEditing((current) => !current)}
       />
-      {editing && <OrganizationSettingsForm organization={organization} />}
+      {editing && (
+        <OrganizationSettingsForm
+          organization={organization}
+          platformAdmin={platformAdmin}
+        />
+      )}
     </div>
   );
 }

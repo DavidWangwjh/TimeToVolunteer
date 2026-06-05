@@ -12,6 +12,11 @@ export const organizationApplicationSchema = z.object({
     .string()
     .min(20, "Please share a short organization description"),
   reason: z.string().min(1, "Please tell us why your organization wants to join"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirm_password: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.password === data.confirm_password, {
+  message: "Passwords do not match",
+  path: ["confirm_password"],
 });
 
 export const volunteerSignupSchema = z

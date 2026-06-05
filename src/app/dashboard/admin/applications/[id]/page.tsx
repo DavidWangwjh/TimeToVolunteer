@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { ApplicationActions } from "@/components/applications/ApplicationActions";
 import { formatDate } from "@/lib/dates";
+import {
+  fallbackOrganizationImage,
+  inferOrganizationCategory,
+} from "@/lib/organization-display";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Props {
@@ -21,6 +25,17 @@ export default async function ApplicationDetailPage({ params }: Props) {
 
   if (!application) notFound();
 
+  const imageUrl = application.image_url?.trim() || fallbackOrganizationImage;
+  const description =
+    application.organization_description?.trim() ||
+    "A volunteer organization applying to publish community opportunities.";
+  const category = inferOrganizationCategory(
+    application.category,
+    application.organization_description,
+    application.organization_name,
+    application.reason
+  );
+
   return (
     <div>
       
@@ -32,6 +47,25 @@ export default async function ApplicationDetailPage({ params }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Card className="overflow-hidden md:col-span-2">
+          <div className="h-56 bg-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt={`${application.organization_name} application`}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {application.organization_name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-6 text-slate-600">{description}</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Organization Information</CardTitle>
@@ -39,12 +73,11 @@ export default async function ApplicationDetailPage({ params }: Props) {
           <CardContent className="space-y-2 text-sm">
             <p>
               <span className="text-muted-foreground">Category:</span>{" "}
-              {application.category ?? "—"}
+              {category}
             </p>
             <p><span className="text-muted-foreground">Email:</span> {application.email}</p>
             <p><span className="text-muted-foreground">Phone:</span> {application.phone ?? "—"}</p>
             <p><span className="text-muted-foreground">Website:</span> {application.website ?? "—"}</p>
-            <p><span className="text-muted-foreground">Image:</span> {application.image_url ?? "—"}</p>
           </CardContent>
         </Card>
 
@@ -53,7 +86,7 @@ export default async function ApplicationDetailPage({ params }: Props) {
             <CardTitle className="text-base">Organization Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>{application.organization_description ?? "—"}</p>
+            <p>{description}</p>
           </CardContent>
         </Card>
 

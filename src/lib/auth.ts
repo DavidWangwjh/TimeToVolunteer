@@ -49,7 +49,9 @@ export async function getAuthNavState(): Promise<AuthNavState> {
     return {
       isSignedIn: true,
       firstName: profile.first_name,
-      dashboardHref: "/admin",
+      dashboardHref: isPlatformAdmin
+        ? "/dashboard/admin"
+        : "/dashboard/organization",
       dashboardLabel: isPlatformAdmin
         ? "Admin Dashboard"
         : "Organization Dashboard",
@@ -72,7 +74,7 @@ export async function getAuthNavState(): Promise<AuthNavState> {
   return {
     isSignedIn: true,
     firstName: profile.first_name,
-    dashboardHref: "/dashboard",
+    dashboardHref: "/dashboard/volunteer",
     dashboardLabel: "My Dashboard",
     role: profile.role,
     mustResetPassword: false,
@@ -129,7 +131,7 @@ export async function requireActiveVolunteer(): Promise<Profile> {
     redirect("/login?error=inactive");
   }
   if (!isActiveVolunteer(profile)) {
-    redirect("/admin");
+    redirect(profile.role === "admin" ? "/dashboard/admin" : "/dashboard/organization");
   }
   if (profile.must_reset_password) {
     redirect("/reset-password");

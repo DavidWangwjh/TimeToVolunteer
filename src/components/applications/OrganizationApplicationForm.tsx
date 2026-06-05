@@ -146,6 +146,31 @@ export function OrganizationApplicationForm() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input id="password" type="password" {...register("password")} />
+              {errors.password && (
+                <p className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm_password">Confirm Password *</Label>
+              <Input
+                id="confirm_password"
+                type="password"
+                {...register("confirm_password")}
+              />
+              {errors.confirm_password && (
+                <p className="text-sm text-destructive">
+                  {errors.confirm_password.message}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="website">Website</Label>
             <Input id="website" type="url" {...register("website")} />

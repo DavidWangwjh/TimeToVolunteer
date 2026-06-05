@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { Building2, Globe, Mail, Pencil, Phone, ShieldCheck } from "lucide-react";
+import { Building2, Globe, Mail, Pencil, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
+import {
+  getOrganizationImageUrl,
+  inferOrganizationCategory,
+} from "@/lib/organization-display";
 import type { MembershipStatus, Organization } from "@/types/database";
 
 interface OrganizationProfileProps {
@@ -25,31 +29,23 @@ export function OrganizationProfile({
   editable = false,
   onEdit,
 }: OrganizationProfileProps) {
-  const imageUrl = organization.image_url?.trim();
+  const imageUrl = getOrganizationImageUrl(organization.image_url);
+  const category = inferOrganizationCategory(
+    organization.category,
+    organization.description,
+    organization.name
+  );
 
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-950/5">
       <div className="relative h-44 bg-slate-100 sm:h-56 lg:h-64">
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
-            alt={`${organization.name} organization`}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#ecfdf5_0%,#f8fafc_55%,#e2e8f0_100%)] text-emerald-900">
-            <div className="text-center">
-              <ShieldCheck className="mx-auto size-9 opacity-80" />
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-900/70">
-                Organization profile
-              </p>
-            </div>
-          </div>
-        )}
-        {imageUrl && (
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-950/35 to-transparent" />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt={`${organization.name} organization`}
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-950/35 to-transparent" />
       </div>
 
       <div className="p-5 sm:p-6">
@@ -65,11 +61,9 @@ export function OrganizationProfile({
                 </h1>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {organization.category && (
-                  <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                    {organization.category}
-                  </Badge>
-                )}
+                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                  {category}
+                </Badge>
                 <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
                   {organization.visibility === "private" ? "Private" : "Public"}
                 </Badge>

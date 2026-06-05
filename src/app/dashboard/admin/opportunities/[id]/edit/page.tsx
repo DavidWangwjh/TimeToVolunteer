@@ -64,7 +64,7 @@ export default async function EditOpportunityPage({ params }: Props) {
     <div>
       <div className="mb-4 flex justify-end">
         <Button asChild variant="outline">
-          <Link href={`/admin/opportunities/new?duplicate=${opportunity.id}`}>
+          <Link href={`/dashboard/admin/opportunities/new?duplicate=${opportunity.id}`}>
             <Copy className="size-4" />
             Duplicate
           </Link>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { ExploreOrganizations } from "@/components/organizations/ExploreOrganizations";
+import { inferOrganizationCategory } from "@/lib/organization-display";
 import type { MembershipStatus, Organization } from "@/types/database";
 
 function tokenize(value: unknown) {
@@ -64,9 +65,14 @@ export default async function ExplorePage() {
     .map((organization) => {
       const orgOpportunities =
         opportunitiesByOrganization.get(organization.id) ?? [];
+      const category = inferOrganizationCategory(
+        organization.category,
+        organization.description,
+        organization.name
+      );
       const searchableText = [
         organization.name,
-        organization.category,
+        category,
         organization.description,
         orgOpportunities
           .map((opportunity) =>
@@ -87,6 +93,7 @@ export default async function ExplorePage() {
         id: organization.id,
         name: organization.name,
         description: organization.description,
+        category,
         contact_email: organization.contact_email,
         visibility: organization.visibility,
         membershipStatus: membershipByOrganization.get(organization.id),

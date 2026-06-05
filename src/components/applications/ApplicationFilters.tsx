@@ -21,7 +21,7 @@ export function ApplicationFilters({ currentStatus }: ApplicationFiltersProps) {
       {statuses.map(({ value, label }) => (
         <Link
           key={value}
-          href={value === "all" ? "/admin/applications" : `/admin/applications?status=${value}`}
+          href={value === "all" ? "/dashboard/admin/applications" : `/dashboard/admin/applications?status=${value}`}
           className={cn(
             "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
             currentStatus === value

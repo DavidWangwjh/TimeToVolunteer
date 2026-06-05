@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { BookingTable } from "@/components/bookings/BookingTable";
+import { AdminVolunteerProfileForm } from "@/components/volunteers/AdminVolunteerProfileForm";
 import { VolunteerStatusActions } from "@/components/volunteers/VolunteerStatusActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -28,13 +29,25 @@ export default async function VolunteerDetailPage({ params }: Props) {
     .order("created_at", { ascending: false });
 
   return (
-    <div>
-      
-      <div className="flex items-center gap-3 mb-6">
-        <StatusBadge status={volunteer.status} />
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-950">
+            {volunteer.first_name} {volunteer.last_name}
+          </h1>
+          <div className="mt-2">
+            <StatusBadge status={volunteer.status} />
+          </div>
+        </div>
+        <VolunteerStatusActions
+          volunteerId={volunteer.id}
+          currentStatus={volunteer.status}
+        />
       </div>
 
-      <Card className="mb-8 max-w-lg">
+      <AdminVolunteerProfileForm volunteer={volunteer} />
+
+      <Card className="max-w-lg">
         <CardHeader>
           <CardTitle className="text-base">Contact</CardTitle>
         </CardHeader>
@@ -44,9 +57,7 @@ export default async function VolunteerDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      <VolunteerStatusActions volunteerId={volunteer.id} currentStatus={volunteer.status} />
-
-      <div className="mt-8">
+      <div>
         <h2 className="text-lg font-semibold mb-4">Registration History</h2>
         <BookingTable
           variant="admin"
