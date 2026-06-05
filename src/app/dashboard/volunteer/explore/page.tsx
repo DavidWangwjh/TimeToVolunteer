@@ -93,13 +93,14 @@ export default async function VolunteerExplorePage() {
   const { data: bookings } = visibleOpportunityIds.length
     ? await supabase
         .from("bookings")
-        .select("opportunity_id, volunteer_id, status")
+        .select("id, opportunity_id, volunteer_id, status")
         .in("opportunity_id", visibleOpportunityIds)
     : { data: [] };
 
   const approvedCounts: Record<string, number> = {};
   const userBookingOpportunityIds: string[] = [];
   const userBookingStatuses: Record<string, BookingStatus> = {};
+  const userBookingIds: Record<string, string> = {};
 
   for (const booking of bookings ?? []) {
     if (booking.status === "approved") {
@@ -113,6 +114,7 @@ export default async function VolunteerExplorePage() {
     ) {
       userBookingOpportunityIds.push(booking.opportunity_id);
       userBookingStatuses[booking.opportunity_id] = booking.status as BookingStatus;
+      userBookingIds[booking.opportunity_id] = booking.id;
     }
   }
 
@@ -196,6 +198,7 @@ export default async function VolunteerExplorePage() {
       approvedCounts={approvedCounts}
       userBookingOpportunityIds={userBookingOpportunityIds}
       userBookingStatuses={userBookingStatuses}
+      userBookingIds={userBookingIds}
     />
   );
 }

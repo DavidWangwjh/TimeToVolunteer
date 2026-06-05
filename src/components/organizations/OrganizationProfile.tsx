@@ -99,6 +99,7 @@ export function OrganizationProfile({
               organizationId={organization.id}
               organizationVisibility={organization.visibility}
               membershipStatus={membershipStatus}
+              allowLeave
             />
           )}
         </div>

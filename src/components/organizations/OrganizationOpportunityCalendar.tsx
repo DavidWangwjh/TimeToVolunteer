@@ -3,18 +3,25 @@
 import { useState } from "react";
 import { OpportunityDetailsDialog } from "@/components/calendar/OpportunityDetailsDialog";
 import { VolunteerCalendar } from "@/components/calendar/VolunteerCalendar";
-import type { VolunteerOpportunityWithOrganization } from "@/types/database";
+import type {
+  BookingStatus,
+  VolunteerOpportunityWithOrganization,
+} from "@/types/database";
 
 interface OrganizationOpportunityCalendarProps {
   opportunities: VolunteerOpportunityWithOrganization[];
   approvedCounts: Record<string, number>;
   userBookingOpportunityIds: string[];
+  userBookingStatuses: Record<string, BookingStatus>;
+  userBookingIds: Record<string, string>;
 }
 
 export function OrganizationOpportunityCalendar({
   opportunities,
   approvedCounts,
   userBookingOpportunityIds,
+  userBookingStatuses,
+  userBookingIds,
 }: OrganizationOpportunityCalendarProps) {
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<VolunteerOpportunityWithOrganization | null>(null);
@@ -39,6 +46,8 @@ export function OrganizationOpportunityCalendar({
           hasExistingBooking={userBookingOpportunityIds.includes(
             selectedOpportunity.id
           )}
+          existingBookingId={userBookingIds[selectedOpportunity.id]}
+          existingBookingStatus={userBookingStatuses[selectedOpportunity.id]}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />

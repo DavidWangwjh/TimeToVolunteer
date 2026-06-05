@@ -60,7 +60,7 @@ export default async function VolunteerDashboardPage() {
   const { data: calendarBookings } = opportunityIds.length
     ? await supabase
     .from("bookings")
-    .select("opportunity_id, status, volunteer_id")
+    .select("id, opportunity_id, status, volunteer_id")
         .in("opportunity_id", opportunityIds)
     : { data: [] };
 
@@ -92,6 +92,7 @@ export default async function VolunteerDashboardPage() {
   const approvedCounts: Record<string, number> = {};
   const userBookingOpportunityIds: string[] = [];
   const userBookingStatuses: Record<string, BookingStatus> = {};
+  const userBookingIds: Record<string, string> = {};
 
   for (const booking of calendarBookings ?? []) {
     if (booking.status === "approved") {
@@ -106,6 +107,7 @@ export default async function VolunteerDashboardPage() {
       userBookingOpportunityIds.push(booking.opportunity_id);
       userBookingStatuses[booking.opportunity_id] =
         booking.status as BookingStatus;
+      userBookingIds[booking.opportunity_id] = booking.id;
     }
   }
 
@@ -146,6 +148,7 @@ export default async function VolunteerDashboardPage() {
           approvedCounts={approvedCounts}
           userBookingOpportunityIds={userBookingOpportunityIds}
           userBookingStatuses={userBookingStatuses}
+          userBookingIds={userBookingIds}
         />
       </div>
     </div>

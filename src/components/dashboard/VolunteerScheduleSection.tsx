@@ -18,6 +18,7 @@ interface VolunteerScheduleSectionProps {
   approvedCounts: Record<string, number>;
   userBookingOpportunityIds: string[];
   userBookingStatuses: Record<string, BookingStatus>;
+  userBookingIds: Record<string, string>;
 }
 
 export function VolunteerScheduleSection({
@@ -25,6 +26,7 @@ export function VolunteerScheduleSection({
   approvedCounts,
   userBookingOpportunityIds,
   userBookingStatuses,
+  userBookingIds,
 }: VolunteerScheduleSectionProps) {
   const [organizationFilter, setOrganizationFilter] = useState("all");
   const [registrationFilter, setRegistrationFilter] =
@@ -204,6 +206,8 @@ export function VolunteerScheduleSection({
           hasExistingBooking={userBookingOpportunityIds.includes(
             selectedOpportunity.id
           )}
+          existingBookingId={userBookingIds[selectedOpportunity.id]}
+          existingBookingStatus={userBookingStatuses[selectedOpportunity.id]}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />

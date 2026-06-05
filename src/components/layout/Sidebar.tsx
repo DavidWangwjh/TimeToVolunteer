@@ -14,9 +14,9 @@ import { SignOutButton } from "@/components/layout/SignOutButton";
 
 const volunteerLinks = [
   { href: "/dashboard/volunteer", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/volunteer/inbox", label: "Inbox", icon: Mail },
-  { href: "/dashboard/volunteer/explore", label: "Explore", icon: Search },
   { href: "/dashboard/volunteer/organizations", label: "Organizations", icon: Building2 },
+  { href: "/dashboard/volunteer/explore", label: "Explore", icon: Search },
+  { href: "/dashboard/volunteer/inbox", label: "Inbox", icon: Mail },
   { href: "/dashboard/volunteer/profile", label: "Profile", icon: User },
 ];
 
@@ -108,18 +108,18 @@ export function Sidebar({
           <div className="min-w-0">
             <Link
               href="/"
-              className="flex min-w-0 items-center gap-2 text-lg font-bold text-emerald-800"
+              className="flex min-w-0 items-center gap-2 text-lg sm:text-xl font-bold text-emerald-800"
             >
               <Image
                 src="/logo-no-bg.png"
                 alt=""
                 width={28}
                 height={28}
-                className="size-6 shrink-0 object-contain"
+                className="size-8 sm:size-10 shrink-0 object-contain"
               />
               <span className="truncate">TimeToVolunteer</span>
             </Link>
-            <p className="truncate text-xs font-medium text-slate-500">{label}</p>
+            <p className="truncate text-xs font-medium text-slate-500 w-full text-center">{label}</p>
           </div>
           <SignOutButton />
         </div>
@@ -149,7 +149,7 @@ export function Sidebar({
       </div>
 
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-emerald-950/10 bg-white/85 p-4 shadow-xl shadow-slate-950/5 backdrop-blur lg:flex lg:flex-col">
-        <div className="rounded-lg bg-emerald-900 p-5 text-white shadow-lg shadow-emerald-950/20">
+        <div className="rounded-lg bg-emerald-900 p-3 text-white shadow-lg shadow-emerald-950/20">
           <Link href="/" className="flex min-w-0 items-center gap-2 text-xl font-bold">
             <Image
               src="/logo-no-bg.png"
@@ -160,7 +160,7 @@ export function Sidebar({
             />
             <span className="truncate">TimeToVolunteer</span>
           </Link>
-          <p className="mt-1 text-xs font-medium text-emerald-50/70">
+          <p className="mt-1 text-xs font-medium text-emerald-50/70 w-full text-center">
             {label}
           </p>
         </div>

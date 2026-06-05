@@ -13,18 +13,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { requestBooking } from "@/lib/actions";
+import { cancelBooking, requestBooking } from "@/lib/actions";
 import {
   formatDate,
   formatTime,
   isOpportunityPast,
 } from "@/lib/dates";
-import type { VolunteerOpportunityWithOrganization } from "@/types/database";
+import type {
+  BookingStatus,
+  VolunteerOpportunityWithOrganization,
+} from "@/types/database";
 
 interface OpportunityDetailsDialogProps {
   opportunity: VolunteerOpportunityWithOrganization;
   approvedCount: number;
   hasExistingBooking: boolean;
+  existingBookingId?: string;
+  existingBookingStatus?: BookingStatus;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -33,15 +38,22 @@ export function OpportunityDetailsDialog({
   opportunity,
   approvedCount,
   hasExistingBooking,
+  existingBookingId,
+  existingBookingStatus,
   open,
   onOpenChange,
 }: OpportunityDetailsDialogProps) {
   const router = useRouter();
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const isFull = approvedCount >= opportunity.max_volunteers;
   const isPast = isOpportunityPast(opportunity);
+  const canCancel =
+    Boolean(existingBookingId) &&
+    existingBookingStatus !== undefined &&
+    ["pending", "approved"].includes(existingBookingStatus);
 
   const canBook =
     !hasExistingBooking && !isFull && !isPast && opportunity.status === "published";
@@ -64,6 +76,25 @@ export function OpportunityDetailsDialog({
       toast.error(result.error);
     } else {
       toast.success("Registration submitted");
+      onOpenChange(false);
+    }
+  }
+
+  async function handleCancelBooking() {
+    if (!existingBookingId || !existingBookingStatus) return;
+
+    setCancelling(true);
+    const result = await cancelBooking(existingBookingId);
+    setCancelling(false);
+
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(
+        existingBookingStatus === "pending"
+          ? "Registration request cancelled"
+          : "Registration cancelled"
+      );
       onOpenChange(false);
     }
   }
@@ -148,6 +179,19 @@ export function OpportunityDetailsDialog({
               disabled={loading}
             >
               {loading ? "Submitting..." : "Register"}
+            </Button>
+          ) : canCancel ? (
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={handleCancelBooking}
+              disabled={cancelling}
+            >
+              {cancelling
+                ? "Cancelling..."
+                : existingBookingStatus === "pending"
+                  ? "Cancel Request"
+                  : "Cancel Registration"}
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">

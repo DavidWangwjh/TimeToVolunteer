@@ -5,7 +5,6 @@ import { Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
-import { cn } from "@/lib/utils";
 import {
   getOrganizationImageUrl,
   inferOrganizationCategory,
@@ -42,7 +41,7 @@ export function OrganizationCard({
 
   return (
     <div className="h-full">
-      <Card className="h-full overflow-hidden border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md hover:shadow-slate-950/5">
+      <Card className="h-full gap-0 overflow-hidden border-slate-200 bg-white py-0 transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md hover:shadow-slate-950/5">
         <CardContent className="flex h-full flex-col p-0">
           <Link href={href} className="group block">
             <div className="relative h-28 overflow-hidden bg-emerald-50">
@@ -60,8 +59,8 @@ export function OrganizationCard({
             </div>
           </Link>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
-            <div>
+          <div className="flex min-h-0 flex-1 flex-col p-3">
+            <div className="min-h-0 flex-1 overflow-hidden">
               <Link
                 href={href}
                 className="line-clamp-2 text-lg font-bold text-slate-950 hover:text-emerald-800 hover:underline"
@@ -69,41 +68,34 @@ export function OrganizationCard({
                 {organization.name}
               </Link>
               {organization.description && (
-                <p
-                  className={cn(
-                    "mt-1.5 text-sm leading-5 text-slate-600",
-                    showAction ? "line-clamp-3" : "line-clamp-4"
-                  )}
-                >
+                <p className="mt-1.5 line-clamp-4 text-sm leading-5 text-slate-600">
                   {organization.description}
                 </p>
               )}
             </div>
 
-            <div className="mt-auto flex flex-wrap gap-2">
-              <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                {category}
-              </Badge>
-              <Badge className="capitalize bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                {organization.visibility}
-              </Badge>
-              <Badge variant="outline">
-                {organization.opportunityCount} opportunities
-              </Badge>
-              {organization.membershipStatus === "pending" && (
-                <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                  Requested
+            {/* bottom section */}
+            <div className="flex shrink-0 flex-col gap-2 pt-5 sm:p-0">
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                  {category}
                 </Badge>
+                <Badge className="capitalize bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                  {organization.visibility}
+                </Badge>
+                <Badge variant="outline">
+                  {organization.opportunityCount} opportunities
+                </Badge>
+              </div>
+
+              {showAction && (
+                <OrganizationRequestButton
+                  organizationId={organization.id}
+                  organizationVisibility={organization.visibility}
+                  membershipStatus={organization.membershipStatus}
+                />
               )}
             </div>
-
-            {showAction && (
-              <OrganizationRequestButton
-                organizationId={organization.id}
-                organizationVisibility={organization.visibility}
-                membershipStatus={organization.membershipStatus}
-              />
-            )}
           </div>
         </CardContent>
       </Card>

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { OrganizationOpportunityCalendar } from "@/components/organizations/OrganizationOpportunityCalendar";
 import { OrganizationProfile } from "@/components/organizations/OrganizationProfile";
 import type {
+  BookingStatus,
   MembershipStatus,
   Organization,
   VolunteerOpportunityWithOrganization,
@@ -62,11 +63,13 @@ export default async function OrganizationDetailPage({ params }: Props) {
   const { data: bookings } = opportunityIds.length
     ? await supabase
         .from("bookings")
-        .select("opportunity_id, status, volunteer_id")
+        .select("id, opportunity_id, status, volunteer_id")
         .in("opportunity_id", opportunityIds)
     : { data: [] };
   const approvedCounts: Record<string, number> = {};
   const userBookingOpportunityIds: string[] = [];
+  const userBookingStatuses: Record<string, BookingStatus> = {};
+  const userBookingIds: Record<string, string> = {};
 
   for (const booking of bookings ?? []) {
     if (booking.status === "approved") {
@@ -79,6 +82,9 @@ export default async function OrganizationDetailPage({ params }: Props) {
       ["pending", "approved"].includes(booking.status)
     ) {
       userBookingOpportunityIds.push(booking.opportunity_id);
+      userBookingStatuses[booking.opportunity_id] =
+        booking.status as BookingStatus;
+      userBookingIds[booking.opportunity_id] = booking.id;
     }
   }
 
@@ -108,6 +114,8 @@ export default async function OrganizationDetailPage({ params }: Props) {
                 opportunities={visibleOpportunities}
                 approvedCounts={approvedCounts}
                 userBookingOpportunityIds={userBookingOpportunityIds}
+                userBookingStatuses={userBookingStatuses}
+                userBookingIds={userBookingIds}
               />
             )}
           </CardContent>

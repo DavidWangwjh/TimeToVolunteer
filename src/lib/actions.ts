@@ -1101,6 +1101,96 @@ export async function rejectOrganizationMembership(
   return { success: true };
 }
 
+export async function leaveOrganizationMembership(
+  organizationId: string,
+  confirmCancellation = false
+) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile || profile.role !== "volunteer") {
+    return { error: "You must be signed in as a volunteer" };
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: membership, error: fetchError } = await supabase
+    .from("organization_memberships")
+    .select("id, status")
+    .eq("organization_id", organizationId)
+    .eq("volunteer_id", profile.id)
+    .in("status", ["pending", "accepted"])
+    .maybeSingle();
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  if (!membership) {
+    return { error: "No active organization membership found" };
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const { data: upcomingBookings, error: upcomingError } = await supabase
+    .from("bookings")
+    .select("id, status, volunteer_opportunities!inner(id, date, organization_id)")
+    .eq("volunteer_id", profile.id)
+    .in("status", ["pending", "approved"])
+    .eq("volunteer_opportunities.organization_id", organizationId)
+    .gte("volunteer_opportunities.date", today);
+
+  if (upcomingError) {
+    return { error: upcomingError.message };
+  }
+
+  if (
+    membership.status === "accepted" &&
+    (upcomingBookings?.length ?? 0) > 0 &&
+    !confirmCancellation
+  ) {
+    return {
+      requiresConfirmation: true,
+      upcomingRegistrationCount: upcomingBookings!.length,
+    };
+  }
+
+  const upcomingBookingIds = (upcomingBookings ?? []).map((booking) => booking.id);
+
+  if (upcomingBookingIds.length > 0) {
+    const { error: bookingError } = await supabase
+      .from("bookings")
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", upcomingBookingIds);
+
+    if (bookingError) {
+      return { error: bookingError.message };
+    }
+  }
+
+  const { error } = await supabase
+    .from("organization_memberships")
+    .delete()
+    .eq("id", membership.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/explore");
+  revalidatePath("/dashboard/volunteer/organizations");
+  revalidatePath(`/dashboard/volunteer/organizations/${organizationId}`);
+  revalidatePath("/dashboard/organization/memberships");
+  revalidatePath("/dashboard/organization/bookings");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath("/dashboard/admin/opportunities");
+
+  return { success: true };
+}
+
 export async function requestBooking(data: {
   opportunity_id: string;
   volunteer_note?: string;
@@ -1393,11 +1483,11 @@ export async function cancelBooking(bookingId: string) {
     return { error: "Not authenticated" };
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("*, volunteer_opportunities(*)")
+    .select("*, volunteer_opportunities(*, organizations(id, owner_id))")
     .eq("id", bookingId)
     .single();
 
@@ -1413,12 +1503,22 @@ export async function cancelBooking(bookingId: string) {
     return { error: "Not authorized" };
   }
 
+  const opportunity = Array.isArray(booking.volunteer_opportunities)
+    ? booking.volunteer_opportunities[0]
+    : booking.volunteer_opportunities;
+  const organization = Array.isArray(opportunity?.organizations)
+    ? opportunity.organizations[0]
+    : opportunity?.organizations;
+
+  if (profile.role === "organization" && organization?.owner_id !== profile.id) {
+    return { error: "You can only cancel registrations for your organization" };
+  }
+
   if (!["pending", "approved"].includes(booking.status)) {
     return { error: "This registration cannot be cancelled" };
   }
 
   if (isOwner && !isAdminUser) {
-    const opportunity = booking.volunteer_opportunities;
     const sessionStart = new Date(
       `${opportunity.date}T${opportunity.start_time}`
     );
