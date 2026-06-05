@@ -1,6 +1,5 @@
 import type React from "react";
 import {
-  Calendar,
   CheckCircle2,
   Clock,
   History,
@@ -10,8 +9,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { VolunteerScheduleSection } from "@/components/dashboard/VolunteerScheduleSection";
-import { formatDate, formatTime } from "@/lib/dates";
-import type { BookingStatus } from "@/types/database";
+import type {
+  BookingStatus,
+  VolunteerOpportunityWithOrganization,
+} from "@/types/database";
 
 function bookingHours(booking: {
   volunteer_opportunities?: {
@@ -32,30 +33,36 @@ export default async function VolunteerDashboardPage() {
   const profile = await getCurrentUserProfile();
   const supabase = await createClient();
 
-  const [{ data: allBookings }, { data: opportunities }] = await Promise.all([
-    supabase
-      .from("bookings")
-      .select("*, volunteer_opportunities(*, organizations(*))")
-      .eq("volunteer_id", profile!.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("volunteer_opportunities")
-      .select("*, organizations(*)")
-      .eq("status", "published")
-      .order("date", { ascending: true }),
-  ]);
+  const { data: allBookings } = await supabase
+    .from("bookings")
+    .select("*, volunteer_opportunities(*, organizations(*))")
+    .eq("volunteer_id", profile!.id)
+    .order("created_at", { ascending: false });
 
-  const opportunityIds = (opportunities ?? []).map((opportunity) => opportunity.id);
+  const scheduleOpportunities = (allBookings ?? [])
+    .filter(
+      (booking) =>
+        ["pending", "approved"].includes(booking.status) &&
+        booking.volunteer_opportunities?.status === "published"
+    )
+    .map((booking) => {
+      const opportunity = Array.isArray(booking.volunteer_opportunities)
+        ? booking.volunteer_opportunities[0]
+        : booking.volunteer_opportunities;
+      return opportunity;
+    })
+    .filter(
+      (opportunity): opportunity is VolunteerOpportunityWithOrganization =>
+        Boolean(opportunity)
+    );
+  const opportunityIds = scheduleOpportunities.map((opportunity) => opportunity.id);
 
-  const { data: calendarBookings } = await supabase
+  const { data: calendarBookings } = opportunityIds.length
+    ? await supabase
     .from("bookings")
     .select("opportunity_id, status, volunteer_id")
-    .in(
-      "opportunity_id",
-      opportunityIds.length
-        ? opportunityIds
-        : ["00000000-0000-0000-0000-000000000000"]
-    );
+        .in("opportunity_id", opportunityIds)
+    : { data: [] };
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -81,15 +88,6 @@ export default async function VolunteerDashboardPage() {
     (total, booking) => total + bookingHours(booking),
     0
   );
-
-  const nextBooking = [...approved].sort((a, b) => {
-    const first = a.volunteer_opportunities;
-    const second = b.volunteer_opportunities;
-    return `${first?.date ?? ""} ${first?.start_time ?? ""}`.localeCompare(
-      `${second?.date ?? ""} ${second?.start_time ?? ""}`
-    );
-  })[0];
-  const nextOpportunity = nextBooking?.volunteer_opportunities;
 
   const approvedCounts: Record<string, number> = {};
   const userBookingOpportunityIds: string[] = [];
@@ -144,7 +142,7 @@ export default async function VolunteerDashboardPage() {
 
       <div className="mt-6">
         <VolunteerScheduleSection
-          opportunities={opportunities ?? []}
+          opportunities={scheduleOpportunities}
           approvedCounts={approvedCounts}
           userBookingOpportunityIds={userBookingOpportunityIds}
           userBookingStatuses={userBookingStatuses}

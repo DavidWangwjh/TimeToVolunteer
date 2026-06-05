@@ -1,7 +1,17 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/Navbar";
 import { CheckCircle } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Application Submitted",
+  description: "Your TimeToVolunteer organization application was submitted.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function ApplicationSubmittedPage() {
   return (

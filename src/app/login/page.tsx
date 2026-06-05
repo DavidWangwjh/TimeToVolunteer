@@ -1,8 +1,18 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { getAuthNavState } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Log In",
+  description: "Log in to TimeToVolunteer to manage your volunteer account.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function LoginPage() {
   const auth = await getAuthNavState();

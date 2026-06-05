@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateProfile } from "@/lib/actions";
@@ -36,6 +37,7 @@ export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
     register,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ProfileUpdateInput>({
     resolver: zodResolver(profileUpdateSchema),
@@ -52,6 +54,14 @@ export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
     useState<OrganizationCategory[]>(initialInterests);
 
   async function onSubmit(data: ProfileUpdateInput) {
+    if (isVolunteer && !data.date_of_birth?.trim()) {
+      setError("date_of_birth", {
+        type: "required",
+        message: "Date of birth is required",
+      });
+      return;
+    }
+
     const result = await updateProfile(data);
     if (result.error) {
       toast.error(result.error);
@@ -101,18 +111,24 @@ export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
           {isVolunteer && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="date_of_birth">Date of Birth</Label>
+                <Label htmlFor="date_of_birth">Date of Birth *</Label>
                 <Input
                   id="date_of_birth"
                   type="date"
                   {...register("date_of_birth")}
                 />
+                {errors.date_of_birth && (
+                  <p className="text-sm text-destructive">
+                    {errors.date_of_birth.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="volunteer_intro">Self Introduction</Label>
-                <Input
+                <Textarea
                   id="volunteer_intro"
-                  placeholder="A short note about yourself"
+                  rows={4}
+                  placeholder="Tell organizations about yourself, what motivates you, and the kinds of volunteer work you enjoy."
                   {...register("volunteer_intro")}
                 />
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -70,9 +70,9 @@ export function CreateOpportunityForm({
 
   const {
     register,
+    control,
     handleSubmit,
     setValue,
-    watch,
     reset,
     formState: { errors },
   } = useForm<OpportunityCreateInput>({
@@ -83,17 +83,21 @@ export function CreateOpportunityForm({
     },
   });
 
-  const values = watch();
-  const visibility = watch("visibility");
+  const values = useWatch({ control });
+  const visibility = useWatch({ control, name: "visibility" });
 
   useEffect(() => {
+    function setDraftNotice(visible: boolean) {
+      queueMicrotask(() => setShowDraftNotice(visible));
+    }
+
     if (initialValues) {
       clearOpportunityDraft();
       reset({
         ...defaultValues,
         ...initialValues,
       });
-      setShowDraftNotice(false);
+      setDraftNotice(false);
       return;
     }
 
@@ -103,23 +107,15 @@ export function CreateOpportunityForm({
         ...defaultValues,
         ...draft,
       });
-      setShowDraftNotice(true);
+      setDraftNotice(true);
     }
   }, [initialValues, reset]);
 
   useEffect(() => {
-    const subscription = watch((formValues) => {
-      if (skipDraftSave.current) return;
-      saveOpportunityDraft(toDraft(formValues as OpportunityCreateInput));
-    });
-    return () => subscription.unsubscribe();
-  }, [watch]);
-
-  useEffect(() => {
-    return () => {
-      if (skipDraftSave.current) return;
-      saveOpportunityDraft(toDraft(values));
-    };
+    if (skipDraftSave.current) return;
+    saveOpportunityDraft(
+      toDraft({ ...defaultValues, ...values } as OpportunityCreateInput)
+    );
   }, [values]);
 
   async function onSubmit(
@@ -138,6 +134,14 @@ export function CreateOpportunityForm({
       saveOpportunityDraft(toDraft(data));
       toast.error(result.error);
     }
+  }
+
+  async function handleSaveDraft() {
+    await handleSubmit((data) => onSubmit(data, "draft"))();
+  }
+
+  async function handlePublish() {
+    await handleSubmit((data) => onSubmit(data, "published"))();
   }
 
   return (
@@ -247,14 +251,14 @@ export function CreateOpportunityForm({
               type="button"
               variant="outline"
               disabled={pendingAction !== null}
-              onClick={handleSubmit((data) => onSubmit(data, "draft"))}
+              onClick={handleSaveDraft}
             >
               {pendingAction === "draft" ? "Saving..." : "Save and Exit"}
             </Button>
             <Button
               type="button"
               disabled={pendingAction !== null}
-              onClick={handleSubmit((data) => onSubmit(data, "published"))}
+              onClick={handlePublish}
             >
               {pendingAction === "published" ? "Publishing..." : "Publish"}
             </Button>

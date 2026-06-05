@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { signUpVolunteer } from "@/lib/actions";
@@ -82,15 +83,25 @@ export function VolunteerSignupForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date_of_birth">Date of Birth</Label>
-            <Input id="date_of_birth" type="date" {...register("date_of_birth")} />
+            <Label htmlFor="date_of_birth">Date of Birth *</Label>
+            <Input
+              id="date_of_birth"
+              type="date"
+              {...register("date_of_birth")}
+            />
+            {errors.date_of_birth && (
+              <p className="text-sm text-destructive">
+                {errors.date_of_birth.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="volunteer_intro">Self Introduction</Label>
-            <Input
+            <Textarea
               id="volunteer_intro"
-              placeholder="A short note about yourself"
+              rows={4}
+              placeholder="Tell organizations about yourself, what motivates you, and the kinds of volunteer work you enjoy."
               {...register("volunteer_intro")}
             />
           </div>

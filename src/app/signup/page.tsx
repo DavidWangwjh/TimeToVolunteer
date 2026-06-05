@@ -1,6 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { VolunteerSignupForm } from "@/components/auth/VolunteerSignupForm";
+
+export const metadata: Metadata = {
+  title: "Create Volunteer Account",
+  description:
+    "Create a volunteer profile, choose your interests, and start finding opportunities with local organizations.",
+  alternates: {
+    canonical: "/signup",
+  },
+};
 
 export default function SignupPage() {
   return (

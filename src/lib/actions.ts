@@ -283,8 +283,10 @@ export async function submitOrganizationApplication(
     .upsert(profilePayload);
 
   if (profileError && isSchemaCacheColumnError(profileError)) {
-    const { must_reset_password: _ignored, ...legacyProfilePayload } =
-      profilePayload;
+    const legacyProfilePayload: Partial<typeof profilePayload> = {
+      ...profilePayload,
+    };
+    delete legacyProfilePayload.must_reset_password;
     const { error: legacyProfileError } = await adminClient
       .from("profiles")
       .upsert(legacyProfilePayload);
@@ -314,11 +316,11 @@ export async function submitOrganizationApplication(
     .upsert(organizationPayload, { onConflict: "owner_id" });
 
   if (organizationError && isSchemaCacheColumnError(organizationError)) {
-    const {
-      category: _category,
-      image_url: _imageUrl,
-      ...legacyOrganizationPayload
-    } = organizationPayload;
+    const legacyOrganizationPayload: Partial<typeof organizationPayload> = {
+      ...organizationPayload,
+    };
+    delete legacyOrganizationPayload.category;
+    delete legacyOrganizationPayload.image_url;
     const { error: legacyOrganizationError } = await adminClient
       .from("organizations")
       .upsert(legacyOrganizationPayload, { onConflict: "owner_id" });
@@ -334,12 +336,12 @@ export async function submitOrganizationApplication(
     .insert(applicationPayload);
 
   if (error && isSchemaCacheColumnError(error)) {
-    const {
-      category: _category,
-      image_url: _imageUrl,
-      organization_description: _organizationDescription,
-      ...legacyApplicationPayload
-    } = applicationPayload;
+    const legacyApplicationPayload: Partial<typeof applicationPayload> = {
+      ...applicationPayload,
+    };
+    delete legacyApplicationPayload.category;
+    delete legacyApplicationPayload.image_url;
+    delete legacyApplicationPayload.organization_description;
 
     const { error: legacyApplicationError } = await adminClient
       .from("organization_applications")
@@ -415,8 +417,10 @@ export async function signUpVolunteer(data: VolunteerSignupInput) {
     .upsert(volunteerProfilePayload);
 
   if (profileError && isSchemaCacheColumnError(profileError)) {
-    const { must_reset_password: _ignored, ...legacyProfilePayload } =
-      volunteerProfilePayload;
+    const legacyProfilePayload: Partial<typeof volunteerProfilePayload> = {
+      ...volunteerProfilePayload,
+    };
+    delete legacyProfilePayload.must_reset_password;
     const { error: legacyProfileError } = await adminClient
       .from("profiles")
       .upsert(legacyProfilePayload);
@@ -531,11 +535,11 @@ export async function acceptOrganizationApplication(applicationId: string) {
     .single();
 
   if (organizationError && isSchemaCacheColumnError(organizationError)) {
-    const {
-      category: _category,
-      image_url: _imageUrl,
-      ...legacyOrganizationPayload
-    } = organizationPayload;
+    const legacyOrganizationPayload: Partial<typeof organizationPayload> = {
+      ...organizationPayload,
+    };
+    delete legacyOrganizationPayload.category;
+    delete legacyOrganizationPayload.image_url;
     const legacyResult = await adminClient
       .from("organizations")
       .upsert(legacyOrganizationPayload, { onConflict: "owner_id" })
@@ -1545,6 +1549,10 @@ export async function updateProfile(data: ProfileUpdateInput) {
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
+  }
+
+  if (profile.role === "volunteer" && !parsed.data.date_of_birth?.trim()) {
+    return { error: "Date of birth is required" };
   }
 
   const supabase = await createClient();

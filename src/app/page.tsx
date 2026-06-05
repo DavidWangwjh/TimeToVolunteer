@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   Calendar,
@@ -18,12 +19,39 @@ import {
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/Navbar";
 import { getAuthNavState } from "@/lib/auth";
+import { absoluteUrl, siteDescription, siteName } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Volunteer Opportunities That Fit Your Schedule",
+  description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default async function HomePage() {
   const auth = await getAuthNavState();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: siteName,
+    applicationCategory: "CommunityApplication",
+    operatingSystem: "Web",
+    url: absoluteUrl("/"),
+    description: siteDescription,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-white text-slate-950">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
 
       <main className="flex-1 overflow-hidden">

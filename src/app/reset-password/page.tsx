@@ -1,6 +1,16 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getCurrentUser, getCurrentUserProfile } from "@/lib/auth";
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
+
+export const metadata: Metadata = {
+  title: "Reset Password",
+  description: "Set or reset your TimeToVolunteer account password.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function ResetPasswordPage() {
   const user = await getCurrentUser();

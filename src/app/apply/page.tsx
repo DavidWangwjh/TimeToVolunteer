@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { OrganizationApplicationForm } from "@/components/applications/OrganizationApplicationForm";
+
+export const metadata: Metadata = {
+  title: "Apply as an Organization",
+  description:
+    "Apply to create an organization account, manage volunteers, and publish community volunteer opportunities.",
+  alternates: {
+    canonical: "/apply",
+  },
+};
 
 export default function ApplyPage() {
   return (

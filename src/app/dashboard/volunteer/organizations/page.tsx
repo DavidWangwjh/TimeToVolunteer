@@ -1,118 +1,56 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireActiveVolunteer } from "@/lib/auth";
-import { ExploreOrganizations } from "@/components/organizations/ExploreOrganizations";
+import { JoinedOrganizations } from "@/components/organizations/JoinedOrganizations";
 import { inferOrganizationCategory } from "@/lib/organization-display";
-import type { MembershipStatus, Organization } from "@/types/database";
+import type { Organization } from "@/types/database";
 
-function tokenize(value: unknown) {
-  return String(value ?? "")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((token) => token.length >= 4);
-}
-
-export default async function ExplorePage() {
+export default async function JoinedOrganizationsPage() {
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
 
-  const [
-    { data: organizations },
-    { data: memberships },
-    { data: opportunities },
-    {
-      data: { user },
-    },
-  ] = await Promise.all([
-    supabase
-      .from("organizations")
-      .select("*")
-      .eq("status", "active")
-      .order("name", { ascending: true }),
+  const [{ data: memberships }, { data: opportunities }] = await Promise.all([
     supabase
       .from("organization_memberships")
-      .select("organization_id, status")
-      .eq("volunteer_id", profile.id),
+      .select("organizations(*)")
+      .eq("volunteer_id", profile.id)
+      .eq("status", "accepted"),
     supabase
       .from("volunteer_opportunities")
-      .select("id, organization_id, title, description, location")
+      .select("id, organization_id")
       .eq("status", "published"),
-    supabase.auth.getUser(),
   ]);
 
-  const membershipByOrganization = new Map(
-    (memberships ?? []).map((membership) => [
-      membership.organization_id,
-      membership.status as MembershipStatus,
-    ])
-  );
-  const opportunitiesByOrganization = new Map<string, typeof opportunities>();
-
+  const opportunityCounts = new Map<string, number>();
   for (const opportunity of opportunities ?? []) {
     if (!opportunity.organization_id) continue;
-    opportunitiesByOrganization.set(opportunity.organization_id, [
-      ...(opportunitiesByOrganization.get(opportunity.organization_id) ?? []),
-      opportunity,
-    ]);
+    opportunityCounts.set(
+      opportunity.organization_id,
+      (opportunityCounts.get(opportunity.organization_id) ?? 0) + 1
+    );
   }
 
-  const preferenceTokens = new Set(
-    tokenize([
-      user?.user_metadata?.volunteer_interests,
-    ].join(" "))
-  );
-
-  const exploredOrganizations = ((organizations ?? []) as Organization[])
-    .map((organization) => {
-      const orgOpportunities =
-        opportunitiesByOrganization.get(organization.id) ?? [];
-      const category = inferOrganizationCategory(
+  const organizations = (memberships ?? [])
+    .map((membership) =>
+      Array.isArray(membership.organizations)
+        ? membership.organizations[0]
+        : membership.organizations
+    )
+    .filter((organization): organization is Organization => Boolean(organization))
+    .map((organization) => ({
+      id: organization.id,
+      name: organization.name,
+      description: organization.description,
+      category: inferOrganizationCategory(
         organization.category,
         organization.description,
         organization.name
-      );
-      const searchableText = [
-        organization.name,
-        category,
-        organization.description,
-        orgOpportunities
-          .map((opportunity) =>
-            [opportunity.title, opportunity.description, opportunity.location].join(" ")
-          )
-          .join(" "),
-      ].join(" ");
-      const organizationTokens = new Set(tokenize(searchableText));
-      const matches = [...preferenceTokens].filter((token) =>
-        organizationTokens.has(token)
-      );
-      const acceptedBoost =
-        membershipByOrganization.get(organization.id) === "accepted" ? 2 : 0;
-      const opportunityBoost = Math.min(orgOpportunities.length, 3);
-      const matchScore = matches.length * 3 + acceptedBoost + opportunityBoost;
+      ),
+      imageUrl: organization.image_url,
+      visibility: organization.visibility,
+      membershipStatus: "accepted" as const,
+      opportunityCount: opportunityCounts.get(organization.id) ?? 0,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-      return {
-        id: organization.id,
-        name: organization.name,
-        description: organization.description,
-        category,
-        contact_email: organization.contact_email,
-        visibility: organization.visibility,
-        membershipStatus: membershipByOrganization.get(organization.id),
-        opportunityCount: orgOpportunities.length,
-        matchScore,
-        matchReason:
-          matches.length > 0
-            ? `Matches ${matches.slice(0, 2).join(", ")}`
-            : membershipByOrganization.get(organization.id) === "accepted"
-            ? "You are a member"
-            : "Active opportunities",
-      };
-    })
-    .sort((a, b) => b.matchScore - a.matchScore || a.name.localeCompare(b.name));
-
-  return (
-    <div>
-      
-      <ExploreOrganizations organizations={exploredOrganizations} />
-    </div>
-  );
+  return <JoinedOrganizations organizations={organizations} />;
 }

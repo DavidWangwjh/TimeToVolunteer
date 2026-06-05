@@ -29,7 +29,7 @@ export const volunteerSignupSchema = z
       .array(z.enum(organizationCategories))
       .min(1, "Choose at least one interest"),
     volunteer_intro: z.string().optional(),
-    date_of_birth: z.string().optional(),
+    date_of_birth: z.string().min(1, "Date of birth is required"),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,9 @@ interface EditOpportunityFormProps {
 export function EditOpportunityForm({ opportunity }: EditOpportunityFormProps) {
   const {
     register,
+    control,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<OpportunityUpdateInput>({
     resolver: zodResolver(opportunityUpdateSchema),
@@ -53,8 +53,8 @@ export function EditOpportunityForm({ opportunity }: EditOpportunityFormProps) {
     },
   });
 
-  const status = watch("status");
-  const visibility = watch("visibility");
+  const status = useWatch({ control, name: "status" });
+  const visibility = useWatch({ control, name: "visibility" });
 
   async function onSubmit(data: OpportunityUpdateInput) {
     const result = await updateOpportunity(opportunity.id, data);

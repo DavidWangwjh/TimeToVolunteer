@@ -11,7 +11,7 @@ import type {
   VolunteerOpportunityWithOrganization,
 } from "@/types/database";
 
-type RegistrationFilter = "all" | "registered" | "requested" | "not_registered";
+type RegistrationFilter = "all" | "registered" | "requested";
 
 interface VolunteerScheduleSectionProps {
   opportunities: VolunteerOpportunityWithOrganization[];
@@ -56,8 +56,7 @@ export function VolunteerScheduleSection({
     const matchesRegistration =
       registrationFilter === "all" ||
       (registrationFilter === "registered" && bookingStatus === "approved") ||
-      (registrationFilter === "requested" && bookingStatus === "pending") ||
-      (registrationFilter === "not_registered" && !bookingStatus);
+      (registrationFilter === "requested" && bookingStatus === "pending");
 
     return matchesOrganization && matchesRegistration;
   });
@@ -115,10 +114,9 @@ export function VolunteerScheduleSection({
                 }
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
               >
-                <option value="all">All opportunities</option>
+                <option value="all">Registered and requested</option>
                 <option value="registered">Registered</option>
                 <option value="requested">Requested</option>
-                <option value="not_registered">Not registered</option>
               </select>
             </label>
           </div>

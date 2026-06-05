@@ -8,13 +8,15 @@ import {
   Users,
   Building2,
   Mail,
+  Search,
 } from "lucide-react";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 
 const volunteerLinks = [
   { href: "/dashboard/volunteer", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/volunteer/inbox", label: "Inbox", icon: Mail },
-  { href: "/dashboard/volunteer/organizations", label: "Explore", icon: Building2 },
+  { href: "/dashboard/volunteer/explore", label: "Explore", icon: Search },
+  { href: "/dashboard/volunteer/organizations", label: "Organizations", icon: Building2 },
   { href: "/dashboard/volunteer/profile", label: "Profile", icon: User },
 ];
 
