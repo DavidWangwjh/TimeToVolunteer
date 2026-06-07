@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { CalendarListTabs } from "@/components/calendar/CalendarListTabs";
 import { VolunteerCalendar } from "@/components/calendar/VolunteerCalendar";
 import { OpportunityDetailsDialog } from "@/components/calendar/OpportunityDetailsDialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { formatDate, formatTime } from "@/lib/dates";
 import type {
   BookingStatus,
@@ -12,6 +13,7 @@ import type {
 } from "@/types/database";
 
 type RegistrationFilter = "all" | "registered" | "requested";
+type ScheduleView = "calendar" | "list";
 
 interface VolunteerScheduleSectionProps {
   opportunities: VolunteerOpportunityWithOrganization[];
@@ -31,6 +33,7 @@ export function VolunteerScheduleSection({
   const [organizationFilter, setOrganizationFilter] = useState("all");
   const [registrationFilter, setRegistrationFilter] =
     useState<RegistrationFilter>("all");
+  const [scheduleView, setScheduleView] = useState<ScheduleView>("calendar");
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<VolunteerOpportunityWithOrganization | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,21 +73,17 @@ export function VolunteerScheduleSection({
 
   return (
     <section id="calendar">
-      <Tabs defaultValue="calendar">
+      <Tabs
+        value={scheduleView}
+        onValueChange={(value) => setScheduleView(value as ScheduleView)}
+      >
         <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5">
           <div className="grid gap-3 sm:grid-cols-[auto_1fr_1fr_auto] items-end">
             <div className="space-y-1">
               <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 View
               </span>
-              <TabsList className="!h-10 w-40 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                <TabsTrigger className="min-w-0 px-3" value="calendar">
-                  Calendar
-                </TabsTrigger>
-                <TabsTrigger className="min-w-0 px-3" value="list">
-                  List
-                </TabsTrigger>
-              </TabsList>
+              <CalendarListTabs listCount={filteredOpportunities.length} />
             </div>
 
             <label className="space-y-1">

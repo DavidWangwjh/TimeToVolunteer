@@ -23,6 +23,10 @@ import {
   organizationCategories,
   type OrganizationCategory,
 } from "@/lib/organization-options";
+import {
+  isOrganizationImageTooLarge,
+  ORGANIZATION_IMAGE_SIZE_LABEL,
+} from "@/lib/file-limits";
 import type { Organization, OrganizationVisibility } from "@/types/database";
 
 interface OrganizationSettingsFormProps {
@@ -190,16 +194,28 @@ export function OrganizationSettingsForm({
                 accept="image/*"
                 onChange={(event) => {
                   const file = event.target.files?.[0] ?? null;
+                  if (file && isOrganizationImageTooLarge(file)) {
+                    event.target.value = "";
+                    setImageFile(null);
+                    setImagePreview(imageUrl);
+                    toast.error(
+                      `Organization images must be ${ORGANIZATION_IMAGE_SIZE_LABEL} or smaller`
+                    );
+                    return;
+                  }
                   setImageFile(file);
                   setImagePreview(file ? URL.createObjectURL(file) : imageUrl);
                 }}
               />
+              <p className="text-xs text-slate-500">
+                Upload an image up to {ORGANIZATION_IMAGE_SIZE_LABEL}.
+              </p>
               {imagePreview && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={imagePreview}
                   alt="Organization profile"
-                  className="mt-2 h-28 w-full rounded-lg object-cover"
+                  className="mt-2 h-44 w-full rounded-lg object-cover sm:h-56 lg:h-64"
                 />
               )}
             </div>

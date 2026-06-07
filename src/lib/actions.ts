@@ -2,9 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, getCurrentUserProfile } from "@/lib/auth";
+import {
+  MAX_ORGANIZATION_IMAGE_SIZE,
+  ORGANIZATION_IMAGE_SIZE_LABEL,
+} from "@/lib/file-limits";
 import {
   organizationApplicationSchema,
   volunteerSignupSchema,
@@ -27,8 +32,7 @@ import type {
 import type { InboxMessageKind, Profile } from "@/types/database";
 
 const ORGANIZATION_IMAGE_BUCKET = "organization-images";
-const MAX_ORGANIZATION_IMAGE_SIZE = 5 * 1024 * 1024;
-
+const PASSWORD_RESET_EMAIL_SUBJECT = "Reset your TimeToVolunteer password";
 interface InboxMessageInput {
   recipientId: string;
   actorId?: string | null;
@@ -85,7 +89,9 @@ export async function uploadOrganizationImage(formData: FormData) {
   }
 
   if (file.size > MAX_ORGANIZATION_IMAGE_SIZE) {
-    return { error: "Organization images must be 5 MB or smaller" };
+    return {
+      error: `Organization images must be ${ORGANIZATION_IMAGE_SIZE_LABEL} or smaller`,
+    };
   }
 
   const adminClient = createAdminClient();
@@ -123,6 +129,70 @@ function getPasswordSetupRedirectUrl() {
   return `${appUrl}/auth/callback?next=${encodeURIComponent(
     "/reset-password"
   )}`;
+}
+
+function canUseResendFallback() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+}
+
+function isSupabaseMailerError(message: string) {
+  return /sending.*recovery.*email|send.*recovery.*email|smtp|mailer/i.test(
+    message
+  );
+}
+
+async function sendPasswordResetEmailWithResend(email: string, resetUrl: string) {
+  if (!canUseResendFallback()) {
+    return {
+      error:
+        "Supabase could not send the reset email, and Resend fallback is not configured.",
+    };
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL!,
+    to: email,
+    subject: PASSWORD_RESET_EMAIL_SUBJECT,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+        <h1 style="font-size: 24px;">Reset your password</h1>
+        <p>Use the secure link below to choose a new TimeToVolunteer password.</p>
+        <p>
+          <a href="${resetUrl}" style="display: inline-block; background: #047857; color: #ffffff; padding: 12px 16px; border-radius: 8px; text-decoration: none; font-weight: 700;">
+            Reset password
+          </a>
+        </p>
+        <p>If you did not request this, you can ignore this email.</p>
+      </div>
+    `,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
+}
+
+async function sendPasswordResetEmailFallback(email: string, redirectTo: string) {
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const resetUrl = data.properties?.action_link;
+  if (!resetUrl) {
+    return { error: "Supabase did not return a reset link" };
+  }
+
+  return sendPasswordResetEmailWithResend(email, resetUrl);
 }
 
 async function findAuthUserByEmail(
@@ -595,16 +665,35 @@ export async function acceptOrganizationApplication(applicationId: string) {
   }
 
   if (!foundUser) {
+    const redirectTo = getPasswordSetupRedirectUrl();
     const { error: resetEmailError } =
       await adminClient.auth.resetPasswordForEmail(application.email, {
-        redirectTo: getPasswordSetupRedirectUrl(),
+        redirectTo,
       });
 
     if (resetEmailError) {
-      return {
-        error:
-          "Organization was approved, but the password setup email failed to send.",
-      };
+      if (isSupabaseMailerError(resetEmailError.message)) {
+        const fallbackResult = await sendPasswordResetEmailFallback(
+          application.email,
+          redirectTo
+        );
+
+        if (fallbackResult.error) {
+          return {
+            error:
+              "Organization was approved, but the password setup email failed to send.",
+          };
+        }
+
+        console.warn(
+          "Supabase password setup email failed; sent organization setup email through Resend fallback."
+        );
+      } else {
+        return {
+          error:
+            "Organization was approved, but the password setup email failed to send.",
+        };
+      }
     }
   }
 
@@ -2062,19 +2151,12 @@ export async function requestPasswordReset(email: string) {
   const supabase = await createClient();
   const redirectTo = getPasswordSetupRedirectUrl();
 
-  let error;
-
-  try {
-    ({ error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    parsed.data.email,
+    {
       redirectTo,
-    }));
-  } catch (err) {
-    console.error("Password reset request failed:", err);
-
-    return {
-      error: "Unable to send reset email. Please try again later.",
-    };
-  }
+    }
+  );
 
   if (error) {
     return { error: error.message };

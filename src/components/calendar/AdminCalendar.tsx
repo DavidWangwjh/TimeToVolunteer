@@ -7,6 +7,10 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventContentArg } from "@fullcalendar/core";
 import { formatTime } from "@/lib/dates";
+import {
+  getDurationBucketClass,
+  getEventDurationMinutes,
+} from "@/lib/calendar-duration";
 import { opportunityStatusLabels } from "@/lib/opportunity-labels";
 import type { VolunteerOpportunity } from "@/types/database";
 
@@ -48,12 +52,31 @@ export function AdminCalendar({
       pending_count: number;
     };
     const isTimeGrid = info.view.type.startsWith("timeGrid");
+    const isSubHour =
+      isTimeGrid &&
+      getEventDurationMinutes(opp.start_time, opp.end_time) < 60;
+
+    if (isSubHour) {
+      return (
+        <div
+          className="fc-calendar-duration-pill"
+          title={`${formatTime(opp.start_time)} - ${formatTime(opp.end_time)} · ${
+            opp.title
+          } · ${opportunityStatusLabels[opp.status]} · ${opp.approved_count}/${
+            opp.max_volunteers
+          }`}
+        >
+          +1
+        </div>
+      );
+    }
 
     return (
       <div
         className={[
           "fc-admin-event",
           `fc-admin-event--${opp.status}`,
+          getDurationBucketClass(opp.start_time, opp.end_time, "fc-admin-event"),
           isTimeGrid ? "fc-admin-event--timegrid" : "",
         ]
           .filter(Boolean)
@@ -89,7 +112,10 @@ export function AdminCalendar({
           events={events}
           eventContent={renderEventContent}
           eventDisplay="block"
+          eventMaxStack={1}
           height="auto"
+          moreLinkClick="popover"
+          slotEventOverlap={false}
           eventClick={(info) => {
             const opp = info.event.extendedProps
               .opportunity as VolunteerOpportunity;

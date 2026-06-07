@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Plus } from "lucide-react";
+import { CalendarListTabs } from "@/components/calendar/CalendarListTabs";
 import { AdminCalendar } from "@/components/calendar/AdminCalendar";
 import { OpportunityTable } from "@/components/opportunities/OpportunityTable";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { Organization, VolunteerOpportunity } from "@/types/database";
 
@@ -14,6 +16,7 @@ type AdminScheduleOpportunity = VolunteerOpportunity & {
   pending_count: number;
   organizations?: Pick<Organization, "id" | "name"> | null;
 };
+type ScheduleView = "calendar" | "list";
 
 interface AdminScheduleSectionProps {
   opportunities: AdminScheduleOpportunity[];
@@ -36,6 +39,7 @@ export function AdminScheduleSection({
   currentOrganization = "all",
   currentStatus = "all",
 }: AdminScheduleSectionProps) {
+  const [scheduleView, setScheduleView] = useState<ScheduleView>("calendar");
   const organizations = Array.from(
     new Map(
       opportunities
@@ -49,7 +53,10 @@ export function AdminScheduleSection({
 
   return (
     <section className="mt-6">
-      <Tabs defaultValue="calendar">
+      <Tabs
+        value={scheduleView}
+        onValueChange={(value) => setScheduleView(value as ScheduleView)}
+      >
         <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5">
           <div
             className={cn(
@@ -63,14 +70,7 @@ export function AdminScheduleSection({
               <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 View
               </span>
-              <TabsList className="!h-10 w-40 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                <TabsTrigger className="min-w-0 px-3" value="calendar">
-                  Calendar
-                </TabsTrigger>
-                <TabsTrigger className="min-w-0 px-3" value="list">
-                  List
-                </TabsTrigger>
-              </TabsList>
+              <CalendarListTabs listCount={opportunities.length} />
             </div>
 
             {showFilters ? (

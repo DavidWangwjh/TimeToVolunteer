@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { AdminCalendar } from "@/components/calendar/AdminCalendar";
-import { OpportunityTable } from "@/components/opportunities/OpportunityTable";
+import { OpportunityViewTabs } from "@/components/opportunities/OpportunityViewTabs";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function OpportunitiesPage() {
   const profile = await requireAdmin();
@@ -75,29 +73,11 @@ export default async function OpportunitiesPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="list">
-        <TabsList className="h-10 overflow-hidden">
-          <TabsTrigger className="min-w-0 px-3" value="list">
-            List ({opportunities?.length ?? 0})
-          </TabsTrigger>
-          <TabsTrigger className="min-w-0 px-3" value="calendar">
-            Calendar
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="list" className="mt-4">
-          <OpportunityTable
-            opportunities={opportunities ?? []}
-            registeredCounts={registeredCounts}
-            basePath="/dashboard/organization/opportunities"
-          />
-        </TabsContent>
-        <TabsContent value="calendar" className="mt-4">
-          <AdminCalendar
-            opportunities={opportunitiesWithCounts}
-            editBasePath="/dashboard/organization/opportunities"
-          />
-        </TabsContent>
-      </Tabs>
+      <OpportunityViewTabs
+        opportunities={opportunitiesWithCounts}
+        registeredCounts={registeredCounts}
+        basePath="/dashboard/organization/opportunities"
+      />
     </div>
   );
 }

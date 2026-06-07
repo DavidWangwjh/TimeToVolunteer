@@ -7,6 +7,10 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg, EventContentArg } from "@fullcalendar/core";
 import type { VolunteerOpportunityWithOrganization } from "@/types/database";
+import {
+  getDurationBucketClass,
+  getEventDurationMinutes,
+} from "@/lib/calendar-duration";
 import { formatTime } from "@/lib/dates";
 
 interface VolunteerCalendarProps {
@@ -50,6 +54,22 @@ export function VolunteerCalendar({
     const isBooked = info.event.extendedProps.isBooked as boolean;
     const isFull = info.event.extendedProps.isFull as boolean;
     const isTimeGrid = info.view.type.startsWith("timeGrid");
+    const isSubHour =
+      isTimeGrid &&
+      getEventDurationMinutes(opp.start_time, opp.end_time) < 60;
+
+    if (isSubHour) {
+      return (
+        <div
+          className="fc-calendar-duration-pill"
+          title={`${formatTime(opp.start_time)} - ${formatTime(opp.end_time)} · ${
+            opp.title
+          } · ${approved}/${opp.max_volunteers}`}
+        >
+          +1
+        </div>
+      );
+    }
 
     return (
       <div
@@ -60,6 +80,11 @@ export function VolunteerCalendar({
             : isFull
             ? "fc-opportunity-event--full"
             : "fc-opportunity-event--open",
+          getDurationBucketClass(
+            opp.start_time,
+            opp.end_time,
+            "fc-opportunity-event"
+          ),
           isTimeGrid ? "fc-opportunity-event--timegrid" : "",
         ]
           .filter(Boolean)
@@ -96,8 +121,11 @@ export function VolunteerCalendar({
         events={events}
         eventClick={handleEventClick}
         eventContent={renderEventContent}
+        eventMaxStack={1}
         height="auto"
         dayMaxEvents={false}
+        moreLinkClick="popover"
+        slotEventOverlap={false}
         eventTimeFormat={{
           hour: "numeric",
           minute: "2-digit",
