@@ -1140,7 +1140,7 @@ export async function leaveOrganizationMembership(
 
   const { data: membership, error: fetchError } = await supabase
     .from("organization_memberships")
-    .select("id, status")
+    .select("id, status, organizations!inner(id, visibility)")
     .eq("organization_id", organizationId)
     .eq("volunteer_id", profile.id)
     .in("status", ["pending", "accepted"])
@@ -1154,10 +1154,16 @@ export async function leaveOrganizationMembership(
     return { error: "No active organization membership found" };
   }
 
+  const organization = Array.isArray(membership.organizations)
+    ? membership.organizations[0]
+    : membership.organizations;
+
   const today = new Date().toISOString().split("T")[0];
   const { data: upcomingBookings, error: upcomingError } = await supabase
     .from("bookings")
-    .select("id, status, volunteer_opportunities!inner(id, date, organization_id)")
+    .select(
+      "id, status, volunteer_opportunities!inner(id, date, organization_id, visibility)"
+    )
     .eq("volunteer_id", profile.id)
     .in("status", ["pending", "approved"])
     .eq("volunteer_opportunities.organization_id", organizationId)
@@ -1167,18 +1173,38 @@ export async function leaveOrganizationMembership(
     return { error: upcomingError.message };
   }
 
+  const bookingsToCancel = (upcomingBookings ?? []).filter((booking) => {
+    const opportunity = Array.isArray(booking.volunteer_opportunities)
+      ? booking.volunteer_opportunities[0]
+      : booking.volunteer_opportunities;
+
+    if (organization?.visibility === "public") {
+      return booking.status === "pending" || opportunity?.visibility === "private";
+    }
+
+    return true;
+  });
+  const pendingRequestCount = bookingsToCancel.filter(
+    (booking) => booking.status === "pending"
+  ).length;
+  const approvedRegistrationCount = bookingsToCancel.filter(
+    (booking) => booking.status === "approved"
+  ).length;
+
   if (
     membership.status === "accepted" &&
-    (upcomingBookings?.length ?? 0) > 0 &&
+    bookingsToCancel.length > 0 &&
     !confirmCancellation
   ) {
     return {
       requiresConfirmation: true,
-      upcomingRegistrationCount: upcomingBookings!.length,
+      upcomingRegistrationCount: bookingsToCancel.length,
+      pendingRequestCount,
+      approvedRegistrationCount,
     };
   }
 
-  const upcomingBookingIds = (upcomingBookings ?? []).map((booking) => booking.id);
+  const upcomingBookingIds = bookingsToCancel.map((booking) => booking.id);
 
   if (upcomingBookingIds.length > 0) {
     const { error: bookingError } = await supabase

@@ -67,16 +67,13 @@ export function VolunteerCalendar({
       >
         <div className="fc-opportunity-event__topline">
           <span title={`${formatTime(opp.start_time)} - ${formatTime(opp.end_time)}`}>
-            {formatTime(opp.start_time)}
+            {formatTime(opp.start_time)} - {formatTime(opp.end_time)}
           </span>
           <span>
             {approved}/{opp.max_volunteers}
           </span>
         </div>
         <div className="fc-opportunity-event__title">{opp.title}</div>
-        <div className="fc-opportunity-event__meta">
-          {opp.organizations?.name ?? opp.location}
-        </div>
       </div>
     );
   }

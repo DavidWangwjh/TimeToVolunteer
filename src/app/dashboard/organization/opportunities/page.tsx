@@ -76,11 +76,13 @@ export default async function OpportunitiesPage() {
       </div>
 
       <Tabs defaultValue="list">
-        <TabsList className="max-w-full overflow-x-auto">
-          <TabsTrigger value="list">
+        <TabsList className="h-10 overflow-hidden">
+          <TabsTrigger className="min-w-0 px-3" value="list">
             List ({opportunities?.length ?? 0})
           </TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          <TabsTrigger className="min-w-0 px-3" value="calendar">
+            Calendar
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="list" className="mt-4">
           <OpportunityTable

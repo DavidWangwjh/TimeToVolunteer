@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { redirect } from "next/navigation";
 import { Copy } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { EditOpportunityForm } from "@/components/opportunities/EditOpportunityForm";
 import { RegisteredVolunteers } from "@/components/opportunities/RegisteredVolunteers";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,10 @@ interface Props {
 export default async function EditOpportunityPage({ params }: Props) {
   const { id } = await params;
   const profile = await requireAdmin();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: organization } = await supabase
     .from("organizations")
-    .select("id, status")
+    .select("id, status, visibility")
     .eq("owner_id", profile.id)
     .maybeSingle();
 
@@ -84,11 +84,15 @@ export default async function EditOpportunityPage({ params }: Props) {
         </Button>
       </div>
 
-      <EditOpportunityForm opportunity={opportunity} />
+      <EditOpportunityForm
+        opportunity={opportunity}
+        organizationVisibility={organization.visibility}
+      />
 
       <RegisteredVolunteers
         opportunity={opportunity}
         registeredBookings={registeredBookings}
+        volunteerBasePath="/dashboard/organization/volunteers"
       />
     </div>
   );

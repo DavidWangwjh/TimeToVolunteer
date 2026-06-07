@@ -63,11 +63,11 @@ export function AdminScheduleSection({
               <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 View
               </span>
-              <TabsList className="!h-10 max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-slate-50">
-                <TabsTrigger className="px-3" value="calendar">
+              <TabsList className="!h-10 w-40 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                <TabsTrigger className="min-w-0 px-3" value="calendar">
                   Calendar
                 </TabsTrigger>
-                <TabsTrigger className="px-3" value="list">
+                <TabsTrigger className="min-w-0 px-3" value="list">
                   List
                 </TabsTrigger>
               </TabsList>

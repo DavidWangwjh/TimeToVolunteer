@@ -22,15 +22,24 @@ import {
 } from "@/lib/validators";
 import {
   opportunityStatusLabels,
-  opportunityVisibilityLabels,
+  getOpportunityVisibilityLabels,
 } from "@/lib/opportunity-labels";
-import type { VolunteerOpportunity } from "@/types/database";
+import type {
+  OrganizationVisibility,
+  VolunteerOpportunity,
+} from "@/types/database";
 
 interface EditOpportunityFormProps {
   opportunity: VolunteerOpportunity;
+  organizationVisibility?: OrganizationVisibility;
 }
 
-export function EditOpportunityForm({ opportunity }: EditOpportunityFormProps) {
+export function EditOpportunityForm({
+  opportunity,
+  organizationVisibility = "public",
+}: EditOpportunityFormProps) {
+  const opportunityVisibilityLabels =
+    getOpportunityVisibilityLabels(organizationVisibility);
   const {
     register,
     control,

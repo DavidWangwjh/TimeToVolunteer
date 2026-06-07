@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OrganizationRequestButton } from "@/components/organizations/OrganizationRequestButton";
 import {
+  getOrganizationVisibilityBadgeClassName,
+  getOrganizationVisibilityLabel,
   getOrganizationImageUrl,
   inferOrganizationCategory,
 } from "@/lib/organization-display";
@@ -64,8 +66,12 @@ export function OrganizationProfile({
                 <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
                   {category}
                 </Badge>
-                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                  {organization.visibility === "private" ? "Private" : "Public"}
+                <Badge
+                  className={getOrganizationVisibilityBadgeClassName(
+                    organization.visibility
+                  )}
+                >
+                  {getOrganizationVisibilityLabel(organization.visibility)}
                 </Badge>
                 {!editable && (
                   <Badge variant="outline">{membershipLabel(membershipStatus)}</Badge>

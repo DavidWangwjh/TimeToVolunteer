@@ -16,7 +16,7 @@ export default async function NewOpportunityPage({
   const supabase = await createClient();
   const { data: ownedOrganization } = await supabase
     .from("organizations")
-    .select("id, status")
+    .select("id, status, visibility")
     .eq("owner_id", profile.id)
     .maybeSingle();
 
@@ -51,7 +51,10 @@ export default async function NewOpportunityPage({
 
   return (
     <div>
-      <CreateOpportunityForm initialValues={initialValues} />
+      <CreateOpportunityForm
+        initialValues={initialValues}
+        organizationVisibility={ownedOrganization.visibility}
+      />
     </div>
   );
 }

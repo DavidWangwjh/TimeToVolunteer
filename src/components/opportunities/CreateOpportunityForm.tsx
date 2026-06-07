@@ -27,7 +27,8 @@ import {
   saveOpportunityDraft,
   type OpportunityDraft,
 } from "@/lib/opportunity-draft";
-import { opportunityVisibilityLabels } from "@/lib/opportunity-labels";
+import { getOpportunityVisibilityLabels } from "@/lib/opportunity-labels";
+import type { OrganizationVisibility } from "@/types/database";
 
 const defaultValues: OpportunityCreateInput = {
   title: "",
@@ -59,9 +60,13 @@ function toDraft(values: OpportunityCreateInput): OpportunityDraft {
 
 export function CreateOpportunityForm({
   initialValues,
+  organizationVisibility = "public",
 }: {
   initialValues?: CreateOpportunityInitialValues;
+  organizationVisibility?: OrganizationVisibility;
 }) {
+  const opportunityVisibilityLabels =
+    getOpportunityVisibilityLabels(organizationVisibility);
   const [showDraftNotice, setShowDraftNotice] = useState(false);
   const [pendingAction, setPendingAction] = useState<"draft" | "published" | null>(
     null

@@ -392,6 +392,16 @@ using (
     where organization_memberships.volunteer_id = profiles.id
       and organizations.owner_id = auth.uid()
   )
+  or exists (
+    select 1
+    from bookings
+    join volunteer_opportunities
+      on volunteer_opportunities.id = bookings.opportunity_id
+    join organizations
+      on organizations.id = volunteer_opportunities.organization_id
+    where bookings.volunteer_id = profiles.id
+      and organizations.owner_id = auth.uid()
+  )
 );
 
 create policy "Users can update own limited profile"

@@ -30,11 +30,17 @@ interface BookingTableProps {
   bookings: BookingRow[];
   variant: "volunteer" | "admin";
   showActions?: boolean;
+  volunteerBasePath?: string;
 }
 
 export type { BookingRow };
 
-export function BookingTable({ bookings, variant, showActions = true }: BookingTableProps) {
+export function BookingTable({
+  bookings,
+  variant,
+  showActions = true,
+  volunteerBasePath = "/dashboard/admin/volunteers",
+}: BookingTableProps) {
   if (bookings.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/70 py-12 text-center text-sm text-slate-500">
@@ -90,7 +96,7 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
                 <TableCell className="font-medium text-slate-800">
                   {volunteer ? (
                     <Link
-                      href={`/dashboard/admin/volunteers/${volunteer.id}`}
+                      href={`${volunteerBasePath}/${volunteer.id}`}
                       className="hover:text-emerald-800 hover:underline"
                     >
                       {volunteer.first_name} {volunteer.last_name}
@@ -143,7 +149,9 @@ export function BookingTable({ bookings, variant, showActions = true }: BookingT
                         </Button>
                       </>
                     )}
-                    {["pending", "approved"].includes(booking.status) && (
+                    {((variant === "volunteer" &&
+                      ["pending", "approved"].includes(booking.status)) ||
+                      (variant === "admin" && booking.status === "approved")) && (
                       <Button
                         size="sm"
                         variant="outline"

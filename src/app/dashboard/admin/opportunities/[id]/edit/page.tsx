@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { EditOpportunityForm } from "@/components/opportunities/EditOpportunityForm";
 import { RegisteredVolunteers } from "@/components/opportunities/RegisteredVolunteers";
 import { Button } from "@/components/ui/button";
-import type { Profile } from "@/types/database";
+import type { OrganizationVisibility, Profile } from "@/types/database";
 
 interface RegisteredBooking {
   id: string;
@@ -22,11 +22,18 @@ export default async function EditOpportunityPage({ params }: Props) {
 
   const { data: opportunity } = await supabase
     .from("volunteer_opportunities")
-    .select("*")
+    .select("*, organizations(visibility)")
     .eq("id", id)
     .single();
 
   if (!opportunity) notFound();
+
+  const opportunityOrganization = Array.isArray(opportunity.organizations)
+    ? opportunity.organizations[0]
+    : opportunity.organizations;
+  const organizationVisibility =
+    (opportunityOrganization?.visibility as OrganizationVisibility | undefined) ??
+    "public";
 
   const { data: bookings } = await supabase
     .from("bookings")
@@ -71,7 +78,10 @@ export default async function EditOpportunityPage({ params }: Props) {
         </Button>
       </div>
 
-      <EditOpportunityForm opportunity={opportunity} />
+      <EditOpportunityForm
+        opportunity={opportunity}
+        organizationVisibility={organizationVisibility}
+      />
 
       <RegisteredVolunteers
         opportunity={opportunity}

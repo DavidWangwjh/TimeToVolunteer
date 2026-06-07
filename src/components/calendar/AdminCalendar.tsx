@@ -61,15 +61,15 @@ export function AdminCalendar({
       >
         <div className="fc-admin-event__topline">
           <span title={`${formatTime(opp.start_time)} - ${formatTime(opp.end_time)}`}>
-            {formatTime(opp.start_time)}
-          </span>
-          <span>
-            {opp.approved_count}/{opp.max_volunteers}
+            {formatTime(opp.start_time)} - {formatTime(opp.end_time)}
           </span>
         </div>
         <div className="fc-admin-event__title">{opp.title}</div>
         <div className="fc-admin-event__status">
-          {opportunityStatusLabels[opp.status]}
+          <span>{opportunityStatusLabels[opp.status]}</span>
+          <span>
+            {opp.approved_count}/{opp.max_volunteers}
+          </span>
         </div>
       </div>
     );

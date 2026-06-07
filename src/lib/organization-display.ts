@@ -59,6 +59,16 @@ export function inferOrganizationCategory(...values: Array<unknown>) {
   return "Other";
 }
 
+export function getOrganizationVisibilityLabel(visibility: unknown) {
+  return visibility === "private" ? "Private" : "Public";
+}
+
+export function getOrganizationVisibilityBadgeClassName(visibility: unknown) {
+  return visibility === "private"
+    ? "bg-violet-100 text-violet-800 hover:bg-violet-100"
+    : "bg-sky-100 text-sky-800 hover:bg-sky-100";
+}
+
 export function getOrganizationImageUrl(imageUrl?: string | null) {
   return imageUrl?.trim() || fallbackOrganizationImage;
 }

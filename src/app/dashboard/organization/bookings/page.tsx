@@ -1,12 +1,12 @@
 import { requireAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { BookingTable } from "@/components/bookings/BookingTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function AdminBookingsPage() {
   const profile = await requireAdmin();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: organization } = await supabase
     .from("organizations")
@@ -68,13 +68,27 @@ export default async function AdminBookingsPage() {
           <TabsTrigger value="other">Other ({other.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="pending" className="mt-4">
-          <BookingTable variant="admin" bookings={toRows(pending)} />
+          <BookingTable
+            variant="admin"
+            volunteerBasePath="/dashboard/organization/volunteers"
+            bookings={toRows(pending)}
+          />
         </TabsContent>
         <TabsContent value="approved" className="mt-4">
-          <BookingTable variant="admin" showActions bookings={toRows(approved)} />
+          <BookingTable
+            variant="admin"
+            showActions
+            volunteerBasePath="/dashboard/organization/volunteers"
+            bookings={toRows(approved)}
+          />
         </TabsContent>
         <TabsContent value="other" className="mt-4">
-          <BookingTable variant="admin" showActions={false} bookings={toRows(other)} />
+          <BookingTable
+            variant="admin"
+            showActions={false}
+            volunteerBasePath="/dashboard/organization/volunteers"
+            bookings={toRows(other)}
+          />
         </TabsContent>
       </Tabs>
     </div>

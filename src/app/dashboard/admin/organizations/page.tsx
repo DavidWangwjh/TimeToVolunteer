@@ -2,7 +2,12 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
-import { inferOrganizationCategory } from "@/lib/organization-display";
+import {
+  getOrganizationVisibilityBadgeClassName,
+  getOrganizationVisibilityLabel,
+  inferOrganizationCategory,
+} from "@/lib/organization-display";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -122,8 +127,14 @@ export default async function OrganizationsPage({
                       organization.name
                     )}
                   </TableCell>
-                  <TableCell className="capitalize text-slate-600">
-                    {organization.visibility}
+                  <TableCell>
+                    <Badge
+                      className={getOrganizationVisibilityBadgeClassName(
+                        organization.visibility
+                      )}
+                    >
+                      {getOrganizationVisibilityLabel(organization.visibility)}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={organization.status} />

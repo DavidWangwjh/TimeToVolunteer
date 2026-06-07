@@ -27,6 +27,7 @@ export function AdminOrganizationProfilePanel({
         <OrganizationSettingsForm
           organization={organization}
           platformAdmin={platformAdmin}
+          onSaved={() => setEditing(false)}
         />
       )}
     </div>

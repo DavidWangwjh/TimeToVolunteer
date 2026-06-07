@@ -104,7 +104,7 @@ function MembershipTable({
               <TableCell>
                 {membership.profiles ? (
                   <Link
-                    href={`/dashboard/admin/volunteers/${membership.profiles.id}`}
+                    href={`/dashboard/organization/volunteers/${membership.profiles.id}`}
                     className="font-semibold text-slate-950 hover:text-emerald-800 hover:underline"
                   >
                     {membership.profiles.first_name} {membership.profiles.last_name}

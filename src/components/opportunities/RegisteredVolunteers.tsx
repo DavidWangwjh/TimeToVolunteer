@@ -10,6 +10,7 @@ interface RegisteredBooking {
 interface RegisteredVolunteersProps {
   opportunity: VolunteerOpportunity;
   registeredBookings: RegisteredBooking[];
+  volunteerBasePath?: string;
 }
 
 function getVolunteerName(volunteer: Profile) {
@@ -24,6 +25,7 @@ function getVolunteerName(volunteer: Profile) {
 export function RegisteredVolunteers({
   opportunity,
   registeredBookings,
+  volunteerBasePath = "/dashboard/admin/volunteers",
 }: RegisteredVolunteersProps) {
   return (
     <Card className="mt-8">
@@ -41,7 +43,7 @@ export function RegisteredVolunteers({
             {registeredBookings.map((booking) => (
               <li key={booking.id} className="px-4 py-3">
                 <Link
-                  href={`/dashboard/admin/volunteers/${booking.profiles.id}`}
+                  href={`${volunteerBasePath}/${booking.profiles.id}`}
                   className="text-sm font-medium text-slate-950 hover:text-emerald-800 hover:underline"
                 >
                   {getVolunteerName(booking.profiles)}

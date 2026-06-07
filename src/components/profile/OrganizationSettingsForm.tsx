@@ -28,11 +28,13 @@ import type { Organization, OrganizationVisibility } from "@/types/database";
 interface OrganizationSettingsFormProps {
   organization: Organization;
   platformAdmin?: boolean;
+  onSaved?: () => void;
 }
 
 export function OrganizationSettingsForm({
   organization,
   platformAdmin = false,
+  onSaved,
 }: OrganizationSettingsFormProps) {
   const [name, setName] = useState(organization.name);
   const [category, setCategory] = useState<OrganizationCategory>(
@@ -92,6 +94,7 @@ export function OrganizationSettingsForm({
       toast.error(result.error);
     } else {
       toast.success("Organization profile updated");
+      onSaved?.();
     }
   }
 

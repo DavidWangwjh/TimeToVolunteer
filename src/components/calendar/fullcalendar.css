@@ -136,13 +136,6 @@
   overflow-wrap: anywhere;
 }
 
-.fc .fc-opportunity-event__meta {
-  font-size: 0.68rem;
-  font-weight: 600;
-  line-height: 1.25;
-  opacity: 0.76;
-}
-
 .fc .fc-admin-event {
   border: 1px solid rgb(16 185 129 / 28%);
   border-left: 4px solid #047857;
@@ -209,10 +202,6 @@
   white-space: nowrap;
 }
 
-.fc .fc-admin-event__topline span:last-child {
-  flex: 0 0 auto;
-}
-
 .fc .fc-admin-event__title {
   color: inherit;
   font-size: 0.82rem;
@@ -222,10 +211,25 @@
 }
 
 .fc .fc-admin-event__status {
+  align-items: center;
+  display: flex;
   font-size: 0.68rem;
   font-weight: 700;
+  gap: 8px;
+  justify-content: space-between;
   line-height: 1.2;
   opacity: 0.78;
+}
+
+.fc .fc-admin-event__status span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc .fc-admin-event__status span:last-child {
+  flex: 0 0 auto;
 }
 
 .fc-theme-standard td,
@@ -278,7 +282,6 @@
     padding: 7px;
   }
 
-  .fc .fc-opportunity-event__meta,
   .fc .fc-opportunity-event__topline,
   .fc .fc-admin-event__status,
   .fc .fc-admin-event__topline {

@@ -30,6 +30,8 @@ export function OrganizationRequestButton({
   const [isPending, setIsPending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [upcomingRegistrationCount, setUpcomingRegistrationCount] = useState(0);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [approvedRegistrationCount, setApprovedRegistrationCount] = useState(0);
   const joined = membershipStatus === "accepted";
   const requested = membershipStatus === "pending";
   const isReadOnlyState = (joined || requested) && !allowLeave;
@@ -64,6 +66,8 @@ export function OrganizationRequestButton({
       const count = result.upcomingRegistrationCount;
       setIsPending(false);
       setUpcomingRegistrationCount(count);
+      setPendingRequestCount(result.pendingRequestCount ?? 0);
+      setApprovedRegistrationCount(result.approvedRegistrationCount ?? 0);
       setConfirmOpen(true);
       return;
     }
@@ -91,6 +95,21 @@ export function OrganizationRequestButton({
       toast.success("Left organization and cancelled upcoming registrations");
     }
   }
+
+  const cancellationDetails = [
+    pendingRequestCount > 0
+      ? `${pendingRequestCount} pending request${
+          pendingRequestCount === 1 ? "" : "s"
+        }`
+      : null,
+    approvedRegistrationCount > 0
+      ? `${approvedRegistrationCount} registration${
+          approvedRegistrationCount === 1 ? "" : "s"
+        }`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" and ");
 
   return (
     <>
@@ -120,10 +139,11 @@ export function OrganizationRequestButton({
           <DialogHeader>
             <DialogTitle>Leave this organization?</DialogTitle>
             <DialogDescription>
-              You have {upcomingRegistrationCount} upcoming registration
-              {upcomingRegistrationCount === 1 ? "" : "s"} or request
+              Leaving will cancel {upcomingRegistrationCount} upcoming item
               {upcomingRegistrationCount === 1 ? "" : "s"} with this
-              organization. Leaving will cancel all of them.
+              organization
+              {cancellationDetails ? `: ${cancellationDetails}.` : "."}{" "}
+              Are you sure you want to continue?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
