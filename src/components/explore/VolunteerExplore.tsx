@@ -1,15 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, MapPin, Search } from "lucide-react";
+import { CalendarDays, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { OpportunityDetailsDialog } from "@/components/calendar/OpportunityDetailsDialog";
 import { OrganizationCard } from "@/components/organizations/OrganizationCard";
 import { formatDate, formatTime } from "@/lib/dates";
 import { inferOrganizationCategory } from "@/lib/organization-display";
+import { organizationCategories } from "@/lib/organization-options";
+import { cn } from "@/lib/utils";
 import type {
   BookingStatus,
   MembershipStatus,
@@ -37,6 +47,10 @@ type ExploreOpportunity = VolunteerOpportunityWithOrganization & {
 };
 
 type ExploreItem = ExploreOrganization | ExploreOpportunity;
+type ExploreView = "organization" | "opportunity";
+type MembershipFilter = "joined" | "requested" | "not_joined";
+type RegistrationFilter = "registered" | "requested" | "open";
+type OpportunityAccessFilter = "open" | "request_required";
 
 interface VolunteerExploreProps {
   items: ExploreItem[];
@@ -48,6 +62,12 @@ interface VolunteerExploreProps {
 
 const pageSize = 12;
 
+function toggleValue<T extends string>(values: T[], value: T) {
+  return values.includes(value)
+    ? values.filter((current) => current !== value)
+    : [...values, value];
+}
+
 export function VolunteerExplore({
   items,
   approvedCounts,
@@ -56,10 +76,32 @@ export function VolunteerExplore({
   userBookingIds,
 }: VolunteerExploreProps) {
   const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "organization" | "opportunity">("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [registrationFilter, setRegistrationFilter] =
-    useState<"all" | "registered" | "requested" | "open">("all");
+  const [activeView, setActiveView] = useState<ExploreView>("organization");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [organizationAccessFilters, setOrganizationAccessFilters] = useState<
+    OrganizationVisibility[]
+  >([]);
+  const [membershipFilters, setMembershipFilters] = useState<
+    MembershipFilter[]
+  >([]);
+  const [registrationFilters, setRegistrationFilters] = useState<
+    RegistrationFilter[]
+  >([]);
+  const [opportunityAccessFilters, setOpportunityAccessFilters] = useState<
+    OpportunityAccessFilter[]
+  >([]);
+  const [draftCategoryFilters, setDraftCategoryFilters] = useState<string[]>([]);
+  const [draftOrganizationAccessFilters, setDraftOrganizationAccessFilters] =
+    useState<OrganizationVisibility[]>([]);
+  const [draftMembershipFilters, setDraftMembershipFilters] = useState<
+    MembershipFilter[]
+  >([]);
+  const [draftRegistrationFilters, setDraftRegistrationFilters] = useState<
+    RegistrationFilter[]
+  >([]);
+  const [draftOpportunityAccessFilters, setDraftOpportunityAccessFilters] =
+    useState<OpportunityAccessFilter[]>([]);
   const [visibleCount, setVisibleCount] = useState(pageSize);
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<ExploreOpportunity | null>(null);
@@ -67,21 +109,26 @@ export function VolunteerExplore({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const categories = useMemo(
-    () =>
-      Array.from(
+    () => {
+      if (activeView === "opportunity") {
+        return [...organizationCategories];
+      }
+
+      return Array.from(
         new Set(
-          items.map((item) =>
-            inferOrganizationCategory(
-              item.category,
-              item.kind === "organization"
-                ? item.description
-                : item.organizations?.description,
-              item.kind === "organization" ? item.name : item.title
+          items
+            .filter((item) => item.kind === "organization")
+            .map((item) =>
+              inferOrganizationCategory(
+                item.category,
+                item.description,
+                item.name
+              )
             )
-          )
         )
-      ).sort(),
-    [items]
+      ).sort();
+    },
+    [activeView, items]
   );
 
   const filteredItems = useMemo(() => {
@@ -114,33 +161,71 @@ export function VolunteerExplore({
               ].join(" ");
         const bookingStatus =
           item.kind === "opportunity" ? userBookingStatuses[item.id] : undefined;
+        const membershipKey: MembershipFilter | undefined =
+          item.kind === "organization"
+            ? item.membershipStatus === "accepted"
+              ? "joined"
+              : item.membershipStatus === "pending"
+                ? "requested"
+                : "not_joined"
+            : undefined;
+        const registrationKey: RegistrationFilter | undefined =
+          item.kind === "opportunity"
+            ? bookingStatus === "approved"
+              ? "registered"
+              : bookingStatus === "pending"
+                ? "requested"
+                : "open"
+            : undefined;
+        const opportunityAccessKey: OpportunityAccessFilter | undefined =
+          item.kind === "opportunity"
+            ? item.visibility === "private"
+              ? "request_required"
+              : "open"
+            : undefined;
 
         const matchesQuery =
           !normalizedQuery || text.toLowerCase().includes(normalizedQuery);
-        const matchesType = typeFilter === "all" || item.kind === typeFilter;
+        const matchesType = item.kind === activeView;
         const matchesCategory =
-          categoryFilter === "all" || category === categoryFilter;
+          categoryFilters.length === 0 || categoryFilters.includes(category);
+        const matchesOrganizationAccess =
+          item.kind !== "organization" ||
+          organizationAccessFilters.length === 0 ||
+          organizationAccessFilters.includes(item.visibility);
+        const matchesMembership =
+          item.kind !== "organization" ||
+          membershipFilters.length === 0 ||
+          membershipFilters.includes(membershipKey!);
         const matchesRegistration =
-          item.kind === "organization" ||
-          registrationFilter === "all" ||
-          (registrationFilter === "registered" && bookingStatus === "approved") ||
-          (registrationFilter === "requested" && bookingStatus === "pending") ||
-          (registrationFilter === "open" && !bookingStatus);
+          item.kind !== "opportunity" ||
+          registrationFilters.length === 0 ||
+          registrationFilters.includes(registrationKey!);
+        const matchesOpportunityAccess =
+          item.kind !== "opportunity" ||
+          opportunityAccessFilters.length === 0 ||
+          opportunityAccessFilters.includes(opportunityAccessKey!);
 
         return (
           matchesQuery &&
           matchesType &&
           matchesCategory &&
-          matchesRegistration
+          matchesOrganizationAccess &&
+          matchesMembership &&
+          matchesRegistration &&
+          matchesOpportunityAccess
         );
       })
       .sort((a, b) => b.score - a.score);
   }, [
-    categoryFilter,
+    activeView,
+    categoryFilters,
     items,
+    membershipFilters,
+    opportunityAccessFilters,
+    organizationAccessFilters,
     query,
-    registrationFilter,
-    typeFilter,
+    registrationFilters,
     userBookingStatuses,
   ]);
 
@@ -161,10 +246,47 @@ export function VolunteerExplore({
   }, [filteredItems.length]);
 
   const visibleItems = filteredItems.slice(0, visibleCount);
+  const activeFilterCount =
+    categoryFilters.length +
+    (activeView === "organization"
+      ? organizationAccessFilters.length + membershipFilters.length
+      : registrationFilters.length + opportunityAccessFilters.length);
+
+  function setView(view: ExploreView) {
+    setVisibleCount(pageSize);
+    setActiveView(view);
+  }
+
+  function openFilters() {
+    setDraftCategoryFilters(categoryFilters);
+    setDraftOrganizationAccessFilters(organizationAccessFilters);
+    setDraftMembershipFilters(membershipFilters);
+    setDraftRegistrationFilters(registrationFilters);
+    setDraftOpportunityAccessFilters(opportunityAccessFilters);
+    setFiltersOpen(true);
+  }
+
+  function applyFilters() {
+    setVisibleCount(pageSize);
+    setCategoryFilters(draftCategoryFilters);
+    setOrganizationAccessFilters(draftOrganizationAccessFilters);
+    setMembershipFilters(draftMembershipFilters);
+    setRegistrationFilters(draftRegistrationFilters);
+    setOpportunityAccessFilters(draftOpportunityAccessFilters);
+    setFiltersOpen(false);
+  }
+
+  function clearDraftFilters() {
+    setDraftCategoryFilters([]);
+    setDraftOrganizationAccessFilters([]);
+    setDraftMembershipFilters([]);
+    setDraftRegistrationFilters([]);
+    setDraftOpportunityAccessFilters([]);
+  }
 
   return (
     <div className="space-y-4">
-      <div className="grid items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5 lg:grid-cols-[1fr_170px_220px_180px]">
+      <div className="grid items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5 lg:grid-cols-[1fr_auto_auto]">
         <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3">
           <Search className="size-4 text-slate-500" />
           <Input
@@ -177,51 +299,130 @@ export function VolunteerExplore({
             className="h-full border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
           />
         </label>
-        <select
-          value={typeFilter}
-          onChange={(event) => {
-            setVisibleCount(pageSize);
-            setTypeFilter(
-              event.target.value as "all" | "organization" | "opportunity"
-            );
-          }}
-          className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-        >
-          <option value="all">Everything</option>
-          <option value="organization">Organizations</option>
-          <option value="opportunity">Opportunities</option>
-        </select>
-        <select
-          value={categoryFilter}
-          onChange={(event) => {
-            setVisibleCount(pageSize);
-            setCategoryFilter(event.target.value);
-          }}
-          className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-        >
-          <option value="all">All categories</option>
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
+        <div className="flex h-10 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {(["organization", "opportunity"] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setView(view)}
+              className={cn(
+                "rounded-md px-3 text-sm font-semibold transition",
+                activeView === view
+                  ? "bg-white text-slate-950 shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              )}
+            >
+              {view === "organization" ? "Organizations" : "Opportunities"}
+            </button>
           ))}
-        </select>
-        <select
-          value={registrationFilter}
-          onChange={(event) => {
-            setVisibleCount(pageSize);
-            setRegistrationFilter(
-              event.target.value as "all" | "registered" | "requested" | "open"
-            );
-          }}
-          className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 justify-center"
+          onClick={openFilters}
         >
-          <option value="all">All registration</option>
-          <option value="open">Open</option>
-          <option value="registered">Registered</option>
-          <option value="requested">Requested</option>
-        </select>
+          <SlidersHorizontal className="size-4" />
+          Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+        </Button>
       </div>
+
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent className="max-h-[min(34rem,calc(100dvh-2rem))] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {activeView === "organization"
+                ? "Organization filters"
+                : "Opportunity filters"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="-mx-1 min-h-0 space-y-5 overflow-y-auto px-1 pr-2">
+            <FilterGroup
+              title="Category"
+              options={categories.map((category) => ({
+                label: category,
+                value: category,
+              }))}
+              selected={draftCategoryFilters}
+              onToggle={(category) =>
+                setDraftCategoryFilters((current) =>
+                  toggleValue(current, category)
+                )
+              }
+            />
+
+            {activeView === "organization" ? (
+              <>
+                <FilterGroup
+                  title="Access"
+                  options={[
+                    { label: "Public", value: "public" },
+                    { label: "Private", value: "private" },
+                  ]}
+                  selected={draftOrganizationAccessFilters}
+                  onToggle={(value) => {
+                    setDraftOrganizationAccessFilters((current) =>
+                      toggleValue(current, value)
+                    );
+                  }}
+                />
+                <FilterGroup
+                  title="Membership"
+                  options={[
+                    { label: "Joined", value: "joined" },
+                    { label: "Requested", value: "requested" },
+                    { label: "Not joined", value: "not_joined" },
+                  ]}
+                  selected={draftMembershipFilters}
+                  onToggle={(value) => {
+                    setDraftMembershipFilters((current) =>
+                      toggleValue(current, value)
+                    );
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <FilterGroup
+                  title="Registration"
+                  options={[
+                    { label: "Open", value: "open" },
+                    { label: "Registered", value: "registered" },
+                    { label: "Requested", value: "requested" },
+                  ]}
+                  selected={draftRegistrationFilters}
+                  onToggle={(value) => {
+                    setDraftRegistrationFilters((current) =>
+                      toggleValue(current, value)
+                    );
+                  }}
+                />
+                <FilterGroup
+                  title="Signup"
+                  options={[
+                    { label: "Register directly", value: "open" },
+                    { label: "Request required", value: "request_required" },
+                  ]}
+                  selected={draftOpportunityAccessFilters}
+                  onToggle={(value) => {
+                    setDraftOpportunityAccessFilters((current) =>
+                      toggleValue(current, value)
+                    );
+                  }}
+                />
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={clearDraftFilters}>
+              Clear filters
+            </Button>
+            <Button type="button" onClick={applyFilters}>
+              Apply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {visibleItems.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 bg-white/70 py-12 text-center text-sm text-slate-500">
@@ -281,6 +482,46 @@ export function VolunteerExplore({
         />
       )}
     </div>
+  );
+}
+
+function FilterGroup<T extends string>({
+  title,
+  options,
+  selected,
+  onToggle,
+}: {
+  title: string;
+  options: Array<{ label: string; value: T }>;
+  selected: T[];
+  onToggle: (value: T) => void;
+}) {
+  if (options.length === 0) {
+    return null;
+  }
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-semibold text-slate-950">{title}</legend>
+      <div className="grid gap-2">
+        {options.map((option) => {
+          const checked = selected.includes(option.value);
+
+          return (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50/40"
+            >
+              <Checkbox
+                checked={checked}
+                onCheckedChange={() => onToggle(option.value)}
+              />
+              {option.label}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

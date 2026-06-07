@@ -32,6 +32,7 @@ export function OrganizationRequestButton({
   const [upcomingRegistrationCount, setUpcomingRegistrationCount] = useState(0);
   const joined = membershipStatus === "accepted";
   const requested = membershipStatus === "pending";
+  const isReadOnlyState = (joined || requested) && !allowLeave;
   const idleLabel =
     organizationVisibility === "public" ? "Join" : "Request to Join";
   const label = joined
@@ -98,11 +99,13 @@ export function OrganizationRequestButton({
         size="sm"
         variant={allowLeave && (joined || requested) ? "outline" : "default"}
         className={
-          allowLeave && (joined || requested)
+          isReadOnlyState
+            ? "bg-slate-200 text-slate-600 hover:bg-slate-200"
+            : allowLeave && (joined || requested)
             ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
             : "bg-emerald-800 hover:bg-emerald-700"
         }
-        disabled={isPending}
+        disabled={isPending || isReadOnlyState}
         onClick={handleRequest}
       >
         {isPending

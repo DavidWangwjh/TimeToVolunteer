@@ -140,10 +140,7 @@ export default async function VolunteerExplorePage() {
       const opportunityCount =
         visibleOpportunityCountByOrganization.get(organization.id) ?? 0;
       const score =
-        getMatchScore(category, interests) +
-        opportunityCount * 2 +
-        (membershipStatus === "accepted" ? 3 : 0) +
-        (membershipStatus === "pending" ? 1 : 0);
+        getMatchScore(category, interests) + opportunityCount * 2;
 
       return {
         kind: "organization" as const,
