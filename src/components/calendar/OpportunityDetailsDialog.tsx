@@ -178,7 +178,7 @@ export function OpportunityDetailsDialog({
               onClick={handleRequestBooking}
               disabled={loading}
             >
-              {loading ? "Submitting..." : "Register"}
+              {loading ? "Submitting..." : opportunity.visibility == "public"? "Register" : "Request registration"}
             </Button>
           ) : canCancel ? (
             <Button
