@@ -47,11 +47,22 @@ export function AdminCalendar({
       approved_count: number;
       pending_count: number;
     };
+    const isTimeGrid = info.view.type.startsWith("timeGrid");
 
     return (
-      <div className={`fc-admin-event fc-admin-event--${opp.status}`}>
+      <div
+        className={[
+          "fc-admin-event",
+          `fc-admin-event--${opp.status}`,
+          isTimeGrid ? "fc-admin-event--timegrid" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className="fc-admin-event__topline">
-          <span>{formatTime(opp.start_time)}</span>
+          <span title={`${formatTime(opp.start_time)} - ${formatTime(opp.end_time)}`}>
+            {formatTime(opp.start_time)}
+          </span>
           <span>
             {opp.approved_count}/{opp.max_volunteers}
           </span>

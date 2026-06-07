@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { OrganizationOpportunityCalendar } from "@/components/organizations/OrganizationOpportunityCalendar";
@@ -20,11 +21,14 @@ export default async function OrganizationDetailPage({ params }: Props) {
   const { id } = await params;
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
+  const adminClient = createAdminClient();
+  const today = new Date().toISOString().split("T")[0];
 
   const [
     { data: organization },
     { data: membership },
     { data: opportunities },
+    { count: upcomingOpportunityCount },
   ] = await Promise.all([
       supabase
         .from("organizations")
@@ -43,8 +47,14 @@ export default async function OrganizationDetailPage({ params }: Props) {
         .select("*, organizations(*)")
         .eq("organization_id", id)
         .eq("status", "published")
-        .gte("date", new Date().toISOString().split("T")[0])
+        .gte("date", today)
         .order("date", { ascending: true }),
+      adminClient
+        .from("volunteer_opportunities")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", id)
+        .eq("status", "published")
+        .gte("date", today),
     ]);
 
   if (!organization) notFound();
@@ -101,13 +111,15 @@ export default async function OrganizationDetailPage({ params }: Props) {
             <div className="mb-4 flex items-center gap-2">
               <Calendar className="size-5 text-emerald-800" />
               <h2 className="font-semibold text-slate-950">
-                Available opportunities
+                Available Opportunities ({upcomingOpportunityCount ?? 0})
               </h2>
             </div>
 
             {visibleOpportunities.length === 0 ? (
               <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500">
-                No visible upcoming opportunities from this organization.
+                {canViewOpportunities
+                  ? "No upcoming opportunities from this organization."
+                  : `Join ${organizationRecord.name} to view available opportunities.`}
               </p>
             ) : (
               <OrganizationOpportunityCalendar

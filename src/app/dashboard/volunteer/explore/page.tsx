@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { VolunteerExplore } from "@/components/explore/VolunteerExplore";
 import { inferOrganizationCategory } from "@/lib/organization-display";
@@ -40,12 +41,14 @@ function getMatchScore(category: string, interests: string[]) {
 export default async function VolunteerExplorePage() {
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
+  const adminClient = createAdminClient();
   const today = new Date().toISOString().split("T")[0];
 
   const [
     { data: organizations },
     { data: memberships },
     { data: opportunities },
+    { data: allUpcomingOpportunities },
   ] = await Promise.all([
     supabase
       .from("organizations")
@@ -62,6 +65,11 @@ export default async function VolunteerExplorePage() {
       .eq("status", "published")
       .gte("date", today)
       .order("date", { ascending: true }),
+    adminClient
+      .from("volunteer_opportunities")
+      .select("id, organization_id")
+      .eq("status", "published")
+      .gte("date", today),
   ]);
 
   const interests = getVolunteerInterests(profile);
@@ -118,13 +126,13 @@ export default async function VolunteerExplorePage() {
     }
   }
 
-  const visibleOpportunityCountByOrganization = new Map<string, number>();
+  const upcomingOpportunityCountByOrganization = new Map<string, number>();
 
-  for (const opportunity of visibleOpportunities) {
+  for (const opportunity of allUpcomingOpportunities ?? []) {
     if (!opportunity.organization_id) continue;
-    visibleOpportunityCountByOrganization.set(
+    upcomingOpportunityCountByOrganization.set(
       opportunity.organization_id,
-      (visibleOpportunityCountByOrganization.get(opportunity.organization_id) ??
+      (upcomingOpportunityCountByOrganization.get(opportunity.organization_id) ??
         0) + 1
     );
   }
@@ -138,7 +146,7 @@ export default async function VolunteerExplorePage() {
       );
       const membershipStatus = membershipByOrganization.get(organization.id);
       const opportunityCount =
-        visibleOpportunityCountByOrganization.get(organization.id) ?? 0;
+        upcomingOpportunityCountByOrganization.get(organization.id) ?? 0;
       const score =
         getMatchScore(category, interests) + opportunityCount * 2;
 

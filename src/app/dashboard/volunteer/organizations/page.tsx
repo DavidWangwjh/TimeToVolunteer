@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { JoinedOrganizations } from "@/components/organizations/JoinedOrganizations";
 import { inferOrganizationCategory } from "@/lib/organization-display";
@@ -7,6 +8,8 @@ import type { Organization } from "@/types/database";
 export default async function JoinedOrganizationsPage() {
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
+  const adminClient = createAdminClient();
+  const today = new Date().toISOString().split("T")[0];
 
   const [{ data: memberships }, { data: opportunities }] = await Promise.all([
     supabase
@@ -14,10 +17,11 @@ export default async function JoinedOrganizationsPage() {
       .select("organizations(*)")
       .eq("volunteer_id", profile.id)
       .eq("status", "accepted"),
-    supabase
+    adminClient
       .from("volunteer_opportunities")
       .select("id, organization_id")
-      .eq("status", "published"),
+      .eq("status", "published")
+      .gte("date", today),
   ]);
 
   const opportunityCounts = new Map<string, number>();
