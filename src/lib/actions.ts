@@ -426,6 +426,9 @@ export async function signUpVolunteer(data: VolunteerSignupInput) {
     role: "volunteer",
     status: "active",
     must_reset_password: false,
+    volunteer_interests: parsed.data.volunteer_interests,
+    volunteer_intro: parsed.data.volunteer_intro?.trim() || null,
+    date_of_birth: parsed.data.date_of_birth || null,
     updated_at: new Date().toISOString(),
   };
 
@@ -438,6 +441,9 @@ export async function signUpVolunteer(data: VolunteerSignupInput) {
       ...volunteerProfilePayload,
     };
     delete legacyProfilePayload.must_reset_password;
+    delete legacyProfilePayload.volunteer_interests;
+    delete legacyProfilePayload.volunteer_intro;
+    delete legacyProfilePayload.date_of_birth;
     const { error: legacyProfileError } = await adminClient
       .from("profiles")
       .upsert(legacyProfilePayload);
@@ -1676,15 +1682,39 @@ export async function updateProfile(data: ProfileUpdateInput) {
 
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const profileUpdatePayload = {
+    first_name: parsed.data.first_name,
+    last_name: parsed.data.last_name,
+    phone: parsed.data.phone?.trim() || null,
+    ...(profile.role === "volunteer"
+      ? {
+          volunteer_interests: parsed.data.volunteer_interests ?? [],
+          volunteer_intro: parsed.data.volunteer_intro?.trim() || null,
+          date_of_birth: parsed.data.date_of_birth || null,
+        }
+      : {}),
+    updated_at: new Date().toISOString(),
+  };
+
+  let { error } = await supabase
     .from("profiles")
-    .update({
-      first_name: parsed.data.first_name,
-      last_name: parsed.data.last_name,
-      phone: parsed.data.phone?.trim() || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(profileUpdatePayload)
     .eq("id", profile.id);
+
+  if (error && isSchemaCacheColumnError(error)) {
+    const legacyProfileUpdatePayload: Partial<typeof profileUpdatePayload> = {
+      ...profileUpdatePayload,
+    };
+    delete legacyProfileUpdatePayload.volunteer_interests;
+    delete legacyProfileUpdatePayload.volunteer_intro;
+    delete legacyProfileUpdatePayload.date_of_birth;
+
+    const { error: legacyError } = await supabase
+      .from("profiles")
+      .update(legacyProfileUpdatePayload)
+      .eq("id", profile.id);
+    error = legacyError;
+  }
 
   if (error) {
     return { error: error.message };
@@ -1809,15 +1839,37 @@ export async function updateProfileByAdmin(
   }
 
   const adminClient = createAdminClient();
-  const { error } = await adminClient
+  const adminProfileUpdatePayload = {
+    first_name: parsed.data.first_name,
+    last_name: parsed.data.last_name,
+    phone: parsed.data.phone?.trim() || null,
+    volunteer_interests: parsed.data.volunteer_interests ?? [],
+    volunteer_intro: parsed.data.volunteer_intro?.trim() || null,
+    date_of_birth: parsed.data.date_of_birth || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  let { error } = await adminClient
     .from("profiles")
-    .update({
-      first_name: parsed.data.first_name,
-      last_name: parsed.data.last_name,
-      phone: parsed.data.phone?.trim() || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(adminProfileUpdatePayload)
     .eq("id", profileId);
+
+  if (error && isSchemaCacheColumnError(error)) {
+    const legacyAdminProfileUpdatePayload: Partial<
+      typeof adminProfileUpdatePayload
+    > = {
+      ...adminProfileUpdatePayload,
+    };
+    delete legacyAdminProfileUpdatePayload.volunteer_interests;
+    delete legacyAdminProfileUpdatePayload.volunteer_intro;
+    delete legacyAdminProfileUpdatePayload.date_of_birth;
+
+    const { error: legacyError } = await adminClient
+      .from("profiles")
+      .update(legacyAdminProfileUpdatePayload)
+      .eq("id", profileId);
+    error = legacyError;
+  }
 
   if (error) {
     return { error: error.message };

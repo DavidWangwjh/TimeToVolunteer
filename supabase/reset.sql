@@ -1,5 +1,35 @@
--- TimeToVolunteer complete Supabase schema
--- Run this file once in a fresh Supabase project SQL editor.
+-- TimeToVolunteer destructive database reset
+-- WARNING: Running this file removes all TimeToVolunteer app data.
+-- It drops and recreates the public app tables, app helper functions, and
+-- updates the organization image storage bucket settings.
+--
+-- This does not delete Supabase Auth users by default. If you also want to
+-- delete every auth user, uncomment the auth.users delete block below before
+-- running the script.
+
+begin;
+
+-- Optional full auth reset. Uncomment only if you want to delete all auth users.
+-- delete from auth.users;
+
+drop table if exists inbox_messages cascade;
+drop table if exists bookings cascade;
+drop table if exists volunteer_opportunities cascade;
+drop table if exists organization_memberships cascade;
+drop table if exists organizations cascade;
+drop table if exists organization_applications cascade;
+drop table if exists profiles cascade;
+drop table if exists volunteer_applications cascade;
+
+drop function if exists normalize_organization_description_fields() cascade;
+drop function if exists normalize_organization_description(text) cascade;
+drop function if exists update_updated_at() cascade;
+drop function if exists is_active_volunteer(uuid) cascade;
+drop function if exists is_admin(uuid) cascade;
+
+commit;
+
+-- Recreate the complete current app schema.
 
 create extension if not exists "pgcrypto";
 

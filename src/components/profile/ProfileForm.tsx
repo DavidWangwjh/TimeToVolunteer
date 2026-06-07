@@ -32,7 +32,11 @@ function parseInterests(value: unknown): OrganizationCategory[] {
 
 export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
   const isVolunteer = profile.role === "volunteer";
-  const initialInterests = parseInterests(userMetadata.volunteer_interests);
+  const initialInterests = parseInterests(
+    profile.volunteer_interests?.length
+      ? profile.volunteer_interests
+      : userMetadata.volunteer_interests
+  );
   const {
     register,
     handleSubmit,
@@ -46,8 +50,12 @@ export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
       last_name: profile.last_name,
       phone: profile.phone ?? "",
       volunteer_interests: initialInterests,
-      volunteer_intro: String(userMetadata.volunteer_intro ?? ""),
-      date_of_birth: String(userMetadata.date_of_birth ?? ""),
+      volunteer_intro: String(
+        profile.volunteer_intro ?? userMetadata.volunteer_intro ?? ""
+      ),
+      date_of_birth: String(
+        profile.date_of_birth ?? userMetadata.date_of_birth ?? ""
+      ),
     },
   });
   const [selectedInterests, setSelectedInterests] =
