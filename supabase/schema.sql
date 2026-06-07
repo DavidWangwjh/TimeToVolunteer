@@ -183,6 +183,41 @@ create trigger volunteer_opportunities_updated_at before update on volunteer_opp
 create trigger bookings_updated_at before update on bookings
   for each row execute function update_updated_at();
 
+create or replace function normalize_organization_description(value text)
+returns text
+language sql
+immutable
+as $$
+  select nullif(
+    btrim(regexp_replace(coalesce(value, ''), '\s*Category:\s*[^.]+\.?', ' ', 'gi')),
+    ''
+  );
+$$;
+
+create or replace function normalize_organization_description_fields()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_table_name = 'organizations' then
+    new.description := normalize_organization_description(new.description);
+  elsif tg_table_name = 'organization_applications' then
+    new.organization_description :=
+      normalize_organization_description(new.organization_description);
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger normalize_organizations_description
+before insert or update of description on organizations
+for each row execute function normalize_organization_description_fields();
+
+create trigger normalize_organization_applications_description
+before insert or update of organization_description on organization_applications
+for each row execute function normalize_organization_description_fields();
+
 -- RLS
 alter table profiles enable row level security;
 alter table organization_applications enable row level security;

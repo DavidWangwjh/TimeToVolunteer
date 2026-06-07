@@ -228,7 +228,7 @@ export function VolunteerExplore({
           No organizations or opportunities match these filters.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:auto-rows-[320px] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {visibleItems.map((item) =>
             item.kind === "organization" ? (
               <OrganizationCard

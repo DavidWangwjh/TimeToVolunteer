@@ -28,11 +28,6 @@ export function inferOrganizationCategory(...values: Array<unknown>) {
   }
 
   const text = values.join(" ").toLowerCase();
-  const fromDescription = knownCategories.find((category) =>
-    text.includes(`category: ${category.toLowerCase()}`)
-  );
-  if (fromDescription) return fromDescription;
-
   if (text.includes("trail") || text.includes("park") || text.includes("plant")) {
     return "Environment";
   }

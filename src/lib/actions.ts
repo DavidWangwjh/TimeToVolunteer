@@ -58,6 +58,15 @@ function normalizeOpportunityFields(
   };
 }
 
+function normalizeOrganizationDescription(description: string | null | undefined) {
+  const normalized = description
+    ?.replace(/\s*Category:\s*[^.]+\.?/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalized || null;
+}
+
 function getImageExtension(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (extension && /^[a-z0-9]+$/.test(extension)) return extension;
@@ -217,6 +226,14 @@ export async function submitOrganizationApplication(
     return { error: parsed.error.issues[0].message };
   }
 
+  const organizationDescription = normalizeOrganizationDescription(
+    parsed.data.organization_description
+  );
+
+  if (!organizationDescription || organizationDescription.length < 20) {
+    return { error: "Please share a short organization description" };
+  }
+
   const supabase = await createClient();
   const adminClient = createAdminClient();
 
@@ -227,7 +244,7 @@ export async function submitOrganizationApplication(
     phone: parsed.data.phone?.trim() || null,
     website: parsed.data.website?.trim() || null,
     image_url: parsed.data.image_url?.trim() || null,
-    organization_description: parsed.data.organization_description,
+    organization_description: organizationDescription,
     reason: parsed.data.reason,
     status: "pending",
   };
@@ -301,7 +318,7 @@ export async function submitOrganizationApplication(
     owner_id: userId,
     name: parsed.data.organization_name,
     category: parsed.data.category,
-    description: parsed.data.organization_description,
+    description: organizationDescription,
     image_url: parsed.data.image_url?.trim() || null,
     website: parsed.data.website?.trim() || null,
     contact_email: parsed.data.email,
@@ -518,7 +535,9 @@ export async function acceptOrganizationApplication(applicationId: string) {
       owner_id: ownerId,
       name: application.organization_name,
       category: application.category,
-      description: application.organization_description,
+      description: normalizeOrganizationDescription(
+        application.organization_description
+      ),
       image_url: application.image_url,
       website: application.website,
       contact_email: application.email,
@@ -1712,13 +1731,21 @@ export async function updateOrganizationSettings(data: OrganizationSettingsInput
     return { error: parsed.error.issues[0].message };
   }
 
+  const organizationDescription = normalizeOrganizationDescription(
+    parsed.data.description
+  );
+
+  if (!organizationDescription || organizationDescription.length < 20) {
+    return { error: "Please share a short organization description" };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("organizations")
     .update({
       name: parsed.data.name,
       category: parsed.data.category,
-      description: parsed.data.description,
+      description: organizationDescription,
       website: parsed.data.website?.trim() || null,
       contact_email: parsed.data.contact_email,
       contact_phone: parsed.data.contact_phone?.trim() || null,
@@ -1828,13 +1855,21 @@ export async function updateOrganizationByAdmin(
     return { error: parsed.error.issues[0].message };
   }
 
+  const organizationDescription = normalizeOrganizationDescription(
+    parsed.data.description
+  );
+
+  if (!organizationDescription || organizationDescription.length < 20) {
+    return { error: "Please share a short organization description" };
+  }
+
   const adminClient = createAdminClient();
   const { error } = await adminClient
     .from("organizations")
     .update({
       name: parsed.data.name,
       category: parsed.data.category,
-      description: parsed.data.description,
+      description: organizationDescription,
       website: parsed.data.website?.trim() || null,
       contact_email: parsed.data.contact_email,
       contact_phone: parsed.data.contact_phone?.trim() || null,

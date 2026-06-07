@@ -104,7 +104,7 @@ export function JoinedOrganizations({
           No joined organizations match these filters.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:auto-rows-[260px] md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredOrganizations.map((organization) => (
             <OrganizationCard
               key={organization.id}
