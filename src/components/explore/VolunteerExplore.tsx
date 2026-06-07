@@ -286,8 +286,8 @@ export function VolunteerExplore({
 
   return (
     <div className="space-y-4">
-      <div className="grid items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5 lg:grid-cols-[1fr_auto_auto]">
-        <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5 sm:grid-cols-[minmax(0,1fr)_minmax(17rem,auto)_auto]">
+        <label className="col-span-2 flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 sm:col-span-1">
           <Search className="size-4 text-slate-500" />
           <Input
             value={query}
@@ -295,18 +295,22 @@ export function VolunteerExplore({
               setVisibleCount(pageSize);
               setQuery(event.target.value);
             }}
-            placeholder="Search organizations and opportunities"
+            placeholder={
+              activeView === "organization"
+                ? "Search organizations"
+                : "Search opportunities"
+            }
             className="h-full border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
           />
         </label>
-        <div className="flex h-10 rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <div className="flex h-10 min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:w-full">
           {(["organization", "opportunity"] as const).map((view) => (
             <button
               key={view}
               type="button"
               onClick={() => setView(view)}
               className={cn(
-                "rounded-md px-3 text-sm font-semibold transition",
+                "flex-1 rounded-md px-3 text-sm font-semibold transition max-[420px]:px-2",
                 activeView === view
                   ? "bg-white text-slate-950 shadow-sm"
                   : "text-slate-500 hover:text-slate-900"
@@ -559,7 +563,7 @@ function OpportunityExploreCard({
     >
       <Card className="h-full overflow-hidden border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md hover:shadow-slate-950/5">
         <CardContent className="flex h-full min-h-0 flex-col gap-2.5 p-3">
-          <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-emerald-50 p-3">
+          <div className="rounded-lg border border-blue-100 bg-linear-to-br from-blue-50 via-white to-emerald-50 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-blue-800">
                 <CalendarDays className="size-4" />
