@@ -69,11 +69,16 @@ export function VolunteerCalendar({
           <span title={`${formatTime(opp.start_time)} - ${formatTime(opp.end_time)}`}>
             {formatTime(opp.start_time)} - {formatTime(opp.end_time)}
           </span>
+        </div>
+
+        <div className="fc-opportunity-event__title">{opp.title}</div>
+
+        <div className="fc-opportunity-event__bottomline">
+          <span className="capitalize">{opp.visibility}</span>
           <span>
             {approved}/{opp.max_volunteers}
           </span>
         </div>
-        <div className="fc-opportunity-event__title">{opp.title}</div>
       </div>
     );
   }
