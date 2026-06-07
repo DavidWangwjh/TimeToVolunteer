@@ -105,22 +105,24 @@ export function Sidebar({
     <>
       <div className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/90 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            <Link
-              href="/"
-              className="flex min-w-0 items-center gap-2 text-lg sm:text-xl font-bold text-emerald-800"
-            >
-              <Image
-                src="/logo-no-bg.png"
-                alt=""
-                width={28}
-                height={28}
-                className="size-8 sm:size-10 shrink-0 object-contain"
-              />
-              <span className="truncate">TimeToVolunteer</span>
-            </Link>
-            <p className="truncate text-xs font-medium text-slate-500 w-full text-center">{label}</p>
-          </div>
+          <Link href="/" className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/logo-no-bg.png"
+              alt=""
+              width={28}
+              height={28}
+              className="size-8 sm:size-10 shrink-0 object-contain"
+            />
+
+            <div className="min-w-0 text-left">
+              <p className="truncate text-lg font-bold leading-tight text-emerald-800 sm:text-xl">
+                TimeToVolunteer
+              </p>
+              <p className="truncate text-xs font-medium text-slate-500">
+                {label}
+              </p>
+            </div>
+          </Link>
           <SignOutButton />
         </div>
         <nav className="flex gap-2 overflow-x-auto px-4 pb-3">
@@ -150,7 +152,7 @@ export function Sidebar({
 
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-emerald-950/10 bg-white/85 p-4 shadow-xl shadow-slate-950/5 backdrop-blur lg:flex lg:flex-col">
         <div className="rounded-lg bg-emerald-900 p-3 text-white shadow-lg shadow-emerald-950/20">
-          <Link href="/" className="flex min-w-0 items-center gap-2 text-xl font-bold">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
             <Image
               src="/logo-no-bg.png"
               alt=""
@@ -158,11 +160,16 @@ export function Sidebar({
               height={32}
               className="size-10 shrink-0 object-contain"
             />
-            <span className="truncate">TimeToVolunteer</span>
+
+            <div className="min-w-0 text-left">
+              <p className="truncate text-xl font-bold leading-tight">
+                TimeToVolunteer
+              </p>
+              <p className="truncate text-xs font-medium text-emerald-50/70">
+                {label}
+              </p>
+            </div>
           </Link>
-          <p className="mt-1 text-xs font-medium text-emerald-50/70 w-full text-center">
-            {label}
-          </p>
         </div>
 
         <nav className="mt-5 flex-1 space-y-1">
