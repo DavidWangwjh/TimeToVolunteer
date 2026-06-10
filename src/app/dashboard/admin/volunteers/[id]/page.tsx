@@ -47,15 +47,45 @@ export default async function VolunteerDetailPage({ params }: Props) {
 
       <AdminVolunteerProfileForm volunteer={volunteer} />
 
-      <Card className="max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-base">Contact</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Email:</span> {volunteer.email}</p>
-          <p><span className="text-muted-foreground">Phone:</span> {volunteer.phone ?? "—"}</p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Contact</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>
+              <span className="text-muted-foreground">Email:</span>{" "}
+              {volunteer.email}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Phone:</span>{" "}
+              {volunteer.phone ?? "—"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Volunteer Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>
+              <span className="text-muted-foreground">Date of birth:</span>{" "}
+              {volunteer.date_of_birth ?? "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Interests:</span>{" "}
+              {volunteer.volunteer_interests?.length
+                ? volunteer.volunteer_interests.join(", ")
+                : "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Self introduction:</span>{" "}
+              {volunteer.volunteer_intro ?? "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div>
         <h2 className="text-lg font-semibold mb-4">Registration History</h2>

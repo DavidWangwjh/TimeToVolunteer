@@ -100,7 +100,7 @@ export default async function OrganizationVolunteerDetailPage({
                 : "-"}
             </p>
             <p>
-              <span className="text-muted-foreground">Introduction:</span>{" "}
+              <span className="text-muted-foreground">Self introduction:</span>{" "}
               {volunteer.volunteer_intro ?? "-"}
             </p>
           </CardContent>
