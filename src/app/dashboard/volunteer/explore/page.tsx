@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { VolunteerExplore } from "@/components/explore/VolunteerExplore";
+import { isOpportunityPast } from "@/lib/dates";
 import { inferOrganizationCategory } from "@/lib/organization-display";
 import type {
   BookingStatus,
@@ -48,6 +49,7 @@ export default async function VolunteerExplorePage() {
     { data: organizations },
     { data: memberships },
     { data: opportunities },
+    { data: userActiveBookings },
     { data: allUpcomingOpportunities },
   ] = await Promise.all([
     supabase
@@ -65,6 +67,11 @@ export default async function VolunteerExplorePage() {
       .eq("status", "published")
       .gte("date", today)
       .order("date", { ascending: true }),
+    supabase
+      .from("bookings")
+      .select("id, opportunity_id, volunteer_id, status, volunteer_opportunities(*, organizations(*))")
+      .eq("volunteer_id", profile.id)
+      .in("status", ["pending", "approved"]),
     adminClient
       .from("volunteer_opportunities")
       .select("id, organization_id")
@@ -82,11 +89,36 @@ export default async function VolunteerExplorePage() {
     );
   }
 
-  const opportunityRows = (opportunities ??
-    []) as VolunteerOpportunityWithOrganization[];
+  const registeredOpportunityRows = (userActiveBookings ?? [])
+    .map((booking) =>
+      Array.isArray(booking.volunteer_opportunities)
+        ? booking.volunteer_opportunities[0]
+        : booking.volunteer_opportunities
+    )
+    .filter(
+      (opportunity): opportunity is VolunteerOpportunityWithOrganization =>
+        Boolean(opportunity) && opportunity.status === "published"
+    );
+  const opportunityRowsById = new Map<string, VolunteerOpportunityWithOrganization>();
+
+  for (const opportunity of [
+    ...((opportunities ?? []) as VolunteerOpportunityWithOrganization[]),
+    ...registeredOpportunityRows,
+  ]) {
+    opportunityRowsById.set(opportunity.id, opportunity);
+  }
+
+  const opportunityRows = Array.from(opportunityRowsById.values());
+  const userRegisteredOpportunityIds = new Set(
+    (userActiveBookings ?? []).map((booking) => booking.opportunity_id)
+  );
 
   const visibleOpportunities = opportunityRows.filter((opportunity) => {
     const organization = normalizeOrganization(opportunity.organizations);
+    const isUserRegistered = userRegisteredOpportunityIds.has(opportunity.id);
+
+    if (!isUserRegistered && isOpportunityPast(opportunity)) return false;
+    if (isUserRegistered) return true;
 
     if (!organization) return true;
     if (organization.visibility !== "private") return true;
@@ -98,32 +130,37 @@ export default async function VolunteerExplorePage() {
     (opportunity) => opportunity.id
   );
 
-  const { data: bookings } = visibleOpportunityIds.length
-    ? await supabase
-        .from("bookings")
-        .select("id, opportunity_id, volunteer_id, status")
-        .in("opportunity_id", visibleOpportunityIds)
-    : { data: [] };
+  const [{ data: approvedBookings }, { data: userVisibleBookings }] =
+    visibleOpportunityIds.length
+      ? await Promise.all([
+          adminClient
+            .from("bookings")
+            .select("id, opportunity_id, status")
+            .in("opportunity_id", visibleOpportunityIds)
+            .eq("status", "approved"),
+          supabase
+            .from("bookings")
+            .select("id, opportunity_id, volunteer_id, status")
+            .in("opportunity_id", visibleOpportunityIds)
+            .eq("volunteer_id", profile.id)
+            .in("status", ["pending", "approved"]),
+        ])
+      : [{ data: [] }, { data: [] }];
 
   const approvedCounts: Record<string, number> = {};
   const userBookingOpportunityIds: string[] = [];
   const userBookingStatuses: Record<string, BookingStatus> = {};
   const userBookingIds: Record<string, string> = {};
 
-  for (const booking of bookings ?? []) {
-    if (booking.status === "approved") {
-      approvedCounts[booking.opportunity_id] =
-        (approvedCounts[booking.opportunity_id] ?? 0) + 1;
-    }
+  for (const booking of approvedBookings ?? []) {
+    approvedCounts[booking.opportunity_id] =
+      (approvedCounts[booking.opportunity_id] ?? 0) + 1;
+  }
 
-    if (
-      booking.volunteer_id === profile.id &&
-      ["pending", "approved"].includes(booking.status)
-    ) {
-      userBookingOpportunityIds.push(booking.opportunity_id);
-      userBookingStatuses[booking.opportunity_id] = booking.status as BookingStatus;
-      userBookingIds[booking.opportunity_id] = booking.id;
-    }
+  for (const booking of userVisibleBookings ?? []) {
+    userBookingOpportunityIds.push(booking.opportunity_id);
+    userBookingStatuses[booking.opportunity_id] = booking.status as BookingStatus;
+    userBookingIds[booking.opportunity_id] = booking.id;
   }
 
   const upcomingOpportunityCountByOrganization = new Map<string, number>();

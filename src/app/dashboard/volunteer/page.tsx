@@ -6,6 +6,7 @@ import {
   Hourglass,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { VolunteerScheduleSection } from "@/components/dashboard/VolunteerScheduleSection";
@@ -32,6 +33,7 @@ function bookingHours(booking: {
 export default async function VolunteerDashboardPage() {
   const profile = await getCurrentUserProfile();
   const supabase = await createClient();
+  const adminClient = createAdminClient();
 
   const { data: allBookings } = await supabase
     .from("bookings")
@@ -57,12 +59,22 @@ export default async function VolunteerDashboardPage() {
     );
   const opportunityIds = scheduleOpportunities.map((opportunity) => opportunity.id);
 
-  const { data: calendarBookings } = opportunityIds.length
-    ? await supabase
-    .from("bookings")
-    .select("id, opportunity_id, status, volunteer_id")
-        .in("opportunity_id", opportunityIds)
-    : { data: [] };
+  const [{ data: approvedCalendarBookings }, { data: userCalendarBookings }] =
+    opportunityIds.length
+      ? await Promise.all([
+          adminClient
+            .from("bookings")
+            .select("id, opportunity_id, status")
+            .in("opportunity_id", opportunityIds)
+            .eq("status", "approved"),
+          supabase
+            .from("bookings")
+            .select("id, opportunity_id, status, volunteer_id")
+            .in("opportunity_id", opportunityIds)
+            .eq("volunteer_id", profile!.id)
+            .in("status", ["pending", "approved"]),
+        ])
+      : [{ data: [] }, { data: [] }];
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -94,21 +106,16 @@ export default async function VolunteerDashboardPage() {
   const userBookingStatuses: Record<string, BookingStatus> = {};
   const userBookingIds: Record<string, string> = {};
 
-  for (const booking of calendarBookings ?? []) {
-    if (booking.status === "approved") {
-      approvedCounts[booking.opportunity_id] =
-        (approvedCounts[booking.opportunity_id] ?? 0) + 1;
-    }
+  for (const booking of approvedCalendarBookings ?? []) {
+    approvedCounts[booking.opportunity_id] =
+      (approvedCounts[booking.opportunity_id] ?? 0) + 1;
+  }
 
-    if (
-      booking.volunteer_id === profile!.id &&
-      ["pending", "approved"].includes(booking.status)
-    ) {
-      userBookingOpportunityIds.push(booking.opportunity_id);
-      userBookingStatuses[booking.opportunity_id] =
-        booking.status as BookingStatus;
-      userBookingIds[booking.opportunity_id] = booking.id;
-    }
+  for (const booking of userCalendarBookings ?? []) {
+    userBookingOpportunityIds.push(booking.opportunity_id);
+    userBookingStatuses[booking.opportunity_id] =
+      booking.status as BookingStatus;
+    userBookingIds[booking.opportunity_id] = booking.id;
   }
 
   return (

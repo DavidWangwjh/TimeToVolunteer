@@ -6,6 +6,7 @@ import { requireActiveVolunteer } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { OrganizationOpportunityCalendar } from "@/components/organizations/OrganizationOpportunityCalendar";
 import { OrganizationProfile } from "@/components/organizations/OrganizationProfile";
+import { isOpportunityPast } from "@/lib/dates";
 import type {
   BookingStatus,
   MembershipStatus,
@@ -28,6 +29,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
     { data: organization },
     { data: membership },
     { data: opportunities },
+    { data: userActiveBookings },
     { count: upcomingOpportunityCount },
   ] = await Promise.all([
       supabase
@@ -49,6 +51,12 @@ export default async function OrganizationDetailPage({ params }: Props) {
         .eq("status", "published")
         .gte("date", today)
         .order("date", { ascending: true }),
+      supabase
+        .from("bookings")
+        .select("id, opportunity_id, volunteer_id, status, volunteer_opportunities!inner(*, organizations(*))")
+        .eq("volunteer_id", profile.id)
+        .in("status", ["pending", "approved"])
+        .eq("volunteer_opportunities.organization_id", id),
       adminClient
         .from("volunteer_opportunities")
         .select("id", { count: "exact", head: true })
@@ -64,38 +72,69 @@ export default async function OrganizationDetailPage({ params }: Props) {
   const organizationVisibility = organizationRecord.visibility ?? "public";
   const canViewOpportunities =
     organizationVisibility === "public" || membershipStatus === "accepted";
-  const opportunityRows = (opportunities ??
-    []) as VolunteerOpportunityWithOrganization[];
-  const visibleOpportunities = canViewOpportunities
-    ? opportunityRows
-    : [];
+  const registeredOpportunityRows = (userActiveBookings ?? [])
+    .map((booking) =>
+      Array.isArray(booking.volunteer_opportunities)
+        ? booking.volunteer_opportunities[0]
+        : booking.volunteer_opportunities
+    )
+    .filter(
+      (opportunity): opportunity is VolunteerOpportunityWithOrganization =>
+        Boolean(opportunity) && opportunity.status === "published"
+    );
+  const opportunityRowsById = new Map<string, VolunteerOpportunityWithOrganization>();
+
+  for (const opportunity of [
+    ...((opportunities ?? []) as VolunteerOpportunityWithOrganization[]),
+    ...registeredOpportunityRows,
+  ]) {
+    opportunityRowsById.set(opportunity.id, opportunity);
+  }
+
+  const userRegisteredOpportunityIds = new Set(
+    (userActiveBookings ?? []).map((booking) => booking.opportunity_id)
+  );
+  const visibleOpportunities = Array.from(opportunityRowsById.values()).filter(
+    (opportunity) => {
+      const isUserRegistered = userRegisteredOpportunityIds.has(opportunity.id);
+
+      if (isUserRegistered) return true;
+      if (!canViewOpportunities) return false;
+      return !isOpportunityPast(opportunity);
+    }
+  );
   const opportunityIds = visibleOpportunities.map((opportunity) => opportunity.id);
-  const { data: bookings } = opportunityIds.length
-    ? await supabase
-        .from("bookings")
-        .select("id, opportunity_id, status, volunteer_id")
-        .in("opportunity_id", opportunityIds)
-    : { data: [] };
+  const [{ data: approvedBookings }, { data: userVisibleBookings }] =
+    opportunityIds.length
+      ? await Promise.all([
+          adminClient
+            .from("bookings")
+            .select("id, opportunity_id, status")
+            .in("opportunity_id", opportunityIds)
+            .eq("status", "approved"),
+          supabase
+            .from("bookings")
+            .select("id, opportunity_id, status, volunteer_id")
+            .in("opportunity_id", opportunityIds)
+            .eq("volunteer_id", profile.id)
+            .in("status", ["pending", "approved"]),
+        ])
+      : [{ data: [] }, { data: [] }];
   const approvedCounts: Record<string, number> = {};
   const userBookingOpportunityIds: string[] = [];
   const userBookingStatuses: Record<string, BookingStatus> = {};
   const userBookingIds: Record<string, string> = {};
 
-  for (const booking of bookings ?? []) {
-    if (booking.status === "approved") {
-      approvedCounts[booking.opportunity_id] =
-        (approvedCounts[booking.opportunity_id] ?? 0) + 1;
-    }
+  for (const booking of approvedBookings ?? []) {
+    approvedCounts[booking.opportunity_id] =
+      (approvedCounts[booking.opportunity_id] ?? 0) + 1;
+  }
 
-    if (
-      booking.volunteer_id === profile.id &&
-      ["pending", "approved"].includes(booking.status)
-    ) {
-      userBookingOpportunityIds.push(booking.opportunity_id);
-      userBookingStatuses[booking.opportunity_id] =
-        booking.status as BookingStatus;
-      userBookingIds[booking.opportunity_id] = booking.id;
-    }
+  for (const booking of userVisibleBookings ?? []) {
+    userBookingOpportunityIds.push(booking.opportunity_id);
+    userBookingStatuses[booking.opportunity_id] =
+      booking.status as BookingStatus;
+    userBookingIds[booking.opportunity_id] = booking.id;
   }
 
   return (

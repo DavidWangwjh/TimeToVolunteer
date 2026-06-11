@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { EditOpportunityForm } from "@/components/opportunities/EditOpportunityForm";
 import { RegisteredVolunteers } from "@/components/opportunities/RegisteredVolunteers";
 import { Button } from "@/components/ui/button";
+import type { AssignableVolunteer } from "@/components/opportunities/AssignVolunteerSearch";
 import type { Profile } from "@/types/database";
 
 interface RegisteredBooking {
@@ -41,28 +42,54 @@ export default async function EditOpportunityPage({ params }: Props) {
 
   if (!opportunity) notFound();
 
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(`
-      id,
-      profiles:profiles!bookings_volunteer_id_fkey (
+  const [{ data: bookings }, { data: memberships }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select(`
         id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        role,
         status,
-        must_reset_password,
-        created_at,
-        updated_at
-      )
-    `)
-    .eq("opportunity_id", id)
-    .eq("status", "approved")
-    .order("approved_at", { ascending: true });
+        volunteer_id,
+        profiles:profiles!bookings_volunteer_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          role,
+          status,
+          must_reset_password,
+          volunteer_interests,
+          volunteer_intro,
+          date_of_birth,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq("opportunity_id", id)
+      .in("status", ["pending", "approved"])
+      .order("approved_at", { ascending: true }),
+    supabase
+      .from("organization_memberships")
+      .select(`
+        profiles:profiles!organization_memberships_volunteer_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          role,
+          status,
+          volunteer_interests,
+          volunteer_intro,
+          date_of_birth
+        )
+      `)
+      .eq("organization_id", organization.id)
+      .eq("status", "accepted"),
+  ]);
 
   const registeredBookings: RegisteredBooking[] = (bookings ?? [])
+    .filter((booking) => booking.status === "approved")
     .map((booking) => ({
       id: booking.id,
       profiles: Array.isArray(booking.profiles)
@@ -72,6 +99,35 @@ export default async function EditOpportunityPage({ params }: Props) {
     .filter(
       (booking): booking is RegisteredBooking => Boolean(booking.profiles)
     );
+
+  const registeredVolunteerIds = new Set(
+    registeredBookings.map((booking) => booking.profiles.id)
+  );
+  const acceptedMemberProfiles = (memberships ?? [])
+    .map((membership) =>
+      Array.isArray(membership.profiles)
+        ? membership.profiles[0]
+        : membership.profiles
+    )
+    .filter(
+      (volunteer) =>
+        Boolean(volunteer) &&
+        volunteer.role === "volunteer" &&
+        volunteer.status === "active" &&
+        !registeredVolunteerIds.has(volunteer.id)
+    );
+  const assignableVolunteers: AssignableVolunteer[] = acceptedMemberProfiles.map(
+    (volunteer) => ({
+      id: volunteer.id,
+      first_name: volunteer.first_name,
+      last_name: volunteer.last_name,
+      email: volunteer.email,
+      phone: volunteer.phone,
+      date_of_birth: volunteer.date_of_birth,
+      volunteer_interests: volunteer.volunteer_interests,
+      volunteer_intro: volunteer.volunteer_intro,
+    })
+  );
 
   return (
     <div>
@@ -93,6 +149,8 @@ export default async function EditOpportunityPage({ params }: Props) {
         opportunity={opportunity}
         registeredBookings={registeredBookings}
         volunteerBasePath="/dashboard/organization/volunteers"
+        assignableVolunteers={assignableVolunteers}
+        showRemoveActions
       />
     </div>
   );

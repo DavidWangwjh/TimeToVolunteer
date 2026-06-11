@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AssignVolunteerSearch,
+  type AssignableVolunteer,
+} from "@/components/opportunities/AssignVolunteerSearch";
+import { RemoveRegisteredVolunteerButton } from "@/components/opportunities/RemoveRegisteredVolunteerButton";
 import type { Profile, VolunteerOpportunity } from "@/types/database";
 
 interface RegisteredBooking {
@@ -11,6 +16,8 @@ interface RegisteredVolunteersProps {
   opportunity: VolunteerOpportunity;
   registeredBookings: RegisteredBooking[];
   volunteerBasePath?: string;
+  assignableVolunteers?: AssignableVolunteer[];
+  showRemoveActions?: boolean;
 }
 
 function getVolunteerName(volunteer: Profile) {
@@ -26,6 +33,8 @@ export function RegisteredVolunteers({
   opportunity,
   registeredBookings,
   volunteerBasePath = "/dashboard/admin/volunteers",
+  assignableVolunteers,
+  showRemoveActions = false,
 }: RegisteredVolunteersProps) {
   return (
     <Card className="mt-8">
@@ -40,23 +49,46 @@ export function RegisteredVolunteers({
 
         {registeredBookings.length > 0 && (
           <ul className="divide-y rounded-lg border">
-            {registeredBookings.map((booking) => (
-              <li key={booking.id} className="px-4 py-3">
-                <Link
-                  href={`${volunteerBasePath}/${booking.profiles.id}`}
-                  className="text-sm font-medium text-slate-950 hover:text-emerald-800 hover:underline"
-                >
-                  {getVolunteerName(booking.profiles)}
-                </Link>
+            {registeredBookings.map((booking) => {
+              const volunteerName = getVolunteerName(booking.profiles);
 
-                {booking.profiles.email && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {booking.profiles.email}
-                  </p>
-                )}
-              </li>
-            ))}
+              return (
+                <li
+                  key={booking.id}
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`${volunteerBasePath}/${booking.profiles.id}`}
+                      className="text-sm font-medium text-slate-950 hover:text-emerald-800 hover:underline"
+                    >
+                      {volunteerName}
+                    </Link>
+
+                    {booking.profiles.email && (
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {booking.profiles.email}
+                      </p>
+                    )}
+                  </div>
+
+                  {showRemoveActions && (
+                    <RemoveRegisteredVolunteerButton
+                      bookingId={booking.id}
+                      volunteerName={volunteerName}
+                    />
+                  )}
+                </li>
+              );
+            })}
           </ul>
+        )}
+
+        {assignableVolunteers && (
+          <AssignVolunteerSearch
+            opportunityId={opportunity.id}
+            volunteers={assignableVolunteers}
+          />
         )}
       </CardContent>
     </Card>
