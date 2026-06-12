@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import {
   ArrowRight,
   Calendar,
-  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -14,7 +13,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Users,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/Navbar";
@@ -22,7 +20,7 @@ import { getAuthNavState } from "@/lib/auth";
 import { absoluteUrl, siteDescription, siteName } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Volunteer Opportunities That Fit Your Schedule",
+  title: "Volunteer Opportunities Near You",
   description: siteDescription,
   alternates: {
     canonical: "/",
@@ -62,8 +60,8 @@ export default async function HomePage() {
             <div className="absolute -bottom-28 left-0 h-52 w-full rounded-[50%] border-t border-emerald-200/50" />
           </div>
 
-          <div className="container relative mx-auto grid max-w-7xl items-center gap-10 xl:grid-cols-[0.72fr_1fr] xl:gap-12">
-            <div className="mx-auto max-w-2xl text-center xl:mx-0 xl:max-w-xl xl:text-left">
+          <div className="container relative mx-auto grid max-w-6xl items-center gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] xl:gap-10">
+            <div className="mx-auto max-w-2xl text-center xl:mx-0 xl:text-left">
               <div className="mb-6 inline-flex max-w-full items-center gap-3 rounded-full border border-emerald-800/20 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 sm:mb-7">
                 <Heart className="size-4 fill-emerald-800" />
                 <span className="truncate">Make a difference in your community</span>
@@ -77,7 +75,8 @@ export default async function HomePage() {
                   </>
                 ) : (
                   <>
-                    Find Your Place to <span className="italic text-emerald-800">Help</span>
+                    Find Volunteer Opportunities{" "}
+                    <span className="italic text-emerald-800">Near You</span>
                   </>
                 )}
               </h1>
@@ -89,7 +88,7 @@ export default async function HomePage() {
                     : auth.role === "organization" || auth.role === "admin"
                       ? "Manage organization opportunities, membership requests, and registrations from your dashboard."
                       : "Continue browsing sessions and managing your volunteer registrations."
-                  : "Create a volunteer profile, join trusted organizations, and find meaningful opportunities that fit your schedule."}
+                  : "Create a volunteer profile, join trusted volunteer organizations, and find volunteer programs, student volunteering opportunities, and ways to help near you."}
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center xl:justify-start">
@@ -157,19 +156,19 @@ export default async function HomePage() {
                   icon: Compass,
                   title: "Create Profile",
                   description:
-                    "Sign up as a volunteer and keep your interests and contact details current.",
+                    "Sign up as a volunteer and share your interests, availability, and student volunteer goals.",
                 },
                 {
                   icon: CheckCircle2,
                   title: "Join Organizations",
                   description:
-                    "Request access to private organizations or browse public opportunities.",
+                    "Browse volunteer organizations, request access, and discover programs near you.",
                 },
                 {
                   icon: Calendar,
                   title: "Book & Volunteer",
                   description:
-                    "Apply for sessions, track approvals, and show up ready to help.",
+                    "Register for volunteer jobs, track approvals, and show up ready to help.",
                 },
               ].map((item, index) => (
                 <div
@@ -202,24 +201,27 @@ export default async function HomePage() {
               {[
                 {
                   icon: Compass,
-                  title: "Meaningful Opportunities",
-                  description: "Find causes you care about and make a real impact.",
+                  title: "Volunteer Opportunities",
+                  description:
+                    "Find volunteering opportunities near you and make a real impact.",
                 },
                 {
                   icon: Calendar,
                   title: "Flexible & Convenient",
-                  description: "Choose times and places that work for your life.",
+                  description:
+                    "Choose volunteer programs and schedules that work for your life.",
                 },
                 {
                   icon: Users,
-                  title: "Stronger Communities",
-                  description: "Connect with local organizations and like-minded people.",
+                  title: "Student Friendly",
+                  description:
+                    "Find volunteering for students, service hours, and community projects.",
                 },
                 {
                   icon: ShieldCheck,
                   title: "Safe & Reliable",
                   description:
-                    "Background-checked organizations and secure data practices.",
+                    "Connect with trusted volunteer organizations and secure data practices.",
                 },
               ].map((item) => (
                 <div key={item.title} className="grid grid-cols-[auto_1fr] gap-5">
@@ -253,15 +255,24 @@ export default async function HomePage() {
 }
 
 function HeroCalendar() {
-  const days = [
-    ["SUN", "18"],
-    ["MON", "19"],
-    ["TUE", "20"],
-    ["WED", "21"],
-    ["THU", "22"],
-    ["FRI", "23"],
-    ["SAT", "24"],
-  ];
+  const today = new Date();
+  const visibleStart = new Date(today);
+  visibleStart.setDate(today.getDate() - 2);
+  const monthLabel = today.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const days = Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(visibleStart);
+    date.setDate(visibleStart.getDate() + index);
+
+    return {
+      key: date.toISOString(),
+      label: date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+      date: String(date.getDate()),
+      isToday: date.toDateString() === today.toDateString(),
+    };
+  });
 
   return (
     <div className="relative min-w-0">
@@ -271,13 +282,15 @@ function HeroCalendar() {
         ))}
       </div>
 
-      <div className="relative rounded-lg border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/10 sm:p-6">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="relative mx-auto max-w-[34rem] rounded-lg border border-slate-200 bg-white p-3 shadow-xl shadow-slate-950/10 sm:p-4">
+        <div className="grid gap-4">
           <div>
-            <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4 sm:gap-6">
-                <h2 className="text-lg font-bold text-slate-950">May 2025</h2>
-                <div className="flex items-center gap-4 text-slate-800">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <h2 className="text-base font-bold text-slate-950">
+                  {monthLabel}
+                </h2>
+                <div className="flex items-center gap-3 text-slate-800">
                   <button type="button" aria-label="Previous week">
                     <ChevronLeft className="size-4" />
                   </button>
@@ -285,7 +298,7 @@ function HeroCalendar() {
                     <ChevronRight className="size-4" />
                   </button>
                 </div>
-                <span className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
+                <span className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600">
                   Today
                 </span>
               </div>
@@ -296,25 +309,25 @@ function HeroCalendar() {
             </div>
 
             <div className="hidden overflow-x-auto pb-2 md:block">
-              <div className="grid min-w-[46rem] grid-cols-[3rem_repeat(7,minmax(6rem,1fr))] text-center text-xs xl:min-w-0">
+              <div className="grid min-w-[31rem] grid-cols-[2.75rem_repeat(5,minmax(4.9rem,1fr))] text-center text-xs xl:min-w-0">
                 <div />
-                {days.map(([day, date]) => (
-                  <div key={date} className="pb-4">
+                {days.map((day) => (
+                  <div key={day.key} className="pb-3">
                     <div
                       className={`font-semibold ${
-                        day === "WED" ? "text-emerald-800" : "text-slate-500"
+                        day.isToday ? "text-emerald-800" : "text-slate-500"
                       }`}
                     >
-                      {day}
+                      {day.label}
                     </div>
                     <div
-                      className={`mx-auto mt-2 flex size-8 items-center justify-center rounded-full font-bold ${
-                        day === "WED"
+                      className={`mx-auto mt-1.5 flex size-7 items-center justify-center rounded-full font-bold ${
+                        day.isToday
                           ? "bg-emerald-800 text-white shadow-lg shadow-emerald-900/20"
                           : "text-slate-700"
                       }`}
                     >
-                      {date}
+                      {day.date}
                     </div>
                   </div>
                 ))}
@@ -333,12 +346,12 @@ function HeroCalendar() {
                     <div className="border-t border-slate-200 pt-2 text-left text-xs font-medium text-slate-500">
                       {time}
                     </div>
-                    {days.map(([, date], column) => (
+                    {days.map((day, column) => (
                       <div
-                        key={`${time}-${date}`}
-                        className="relative min-h-14 border-l border-t border-slate-200"
+                        key={`${time}-${day.key}`}
+                        className="relative min-h-11 border-l border-t border-slate-200"
                       >
-                        {row === 1 && column === 1 ? (
+                        {row === 1 && column === 0 ? (
                           <CalendarEvent
                             className="border-emerald-300 bg-emerald-50"
                             title="Food Pantry"
@@ -346,7 +359,7 @@ function HeroCalendar() {
                             team="Helping Hands"
                           />
                         ) : null}
-                        {row === 4 && column === 1 ? (
+                        {row === 4 && column === 0 ? (
                           <CalendarEvent
                             className="border-amber-300 bg-amber-50"
                             title="Community Garden"
@@ -354,7 +367,7 @@ function HeroCalendar() {
                             team="Green City Project"
                           />
                         ) : null}
-                        {row === 2 && column === 5 ? (
+                        {row === 2 && column === 3 ? (
                           <CalendarEvent
                             className="border-sky-300 bg-sky-50"
                             title="Youth Tutoring"
@@ -362,7 +375,7 @@ function HeroCalendar() {
                             team="Bright Futures"
                           />
                         ) : null}
-                        {row === 5 && column === 5 ? (
+                        {row === 5 && column === 3 ? (
                           <CalendarEvent
                             className="border-emerald-300 bg-emerald-50"
                             title="Park Cleanup"
@@ -417,61 +430,42 @@ function HeroCalendar() {
             </div>
           </div>
 
-          <aside className="hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm xl:block">
-            <div className="relative h-28 overflow-hidden rounded-md bg-gradient-to-br from-emerald-200 via-sky-100 to-amber-100">
-              <div className="absolute inset-x-0 bottom-0 h-10 bg-emerald-700/35" />
-              <div className="absolute bottom-5 left-5 size-12 rounded-full bg-emerald-700/80" />
-              <div className="absolute bottom-7 left-14 h-16 w-5 rounded-full bg-emerald-800/70" />
-              <div className="absolute bottom-5 left-24 size-10 rounded-full bg-slate-700/70" />
-              <div className="absolute bottom-8 right-10 h-16 w-5 rounded-full bg-emerald-700/75" />
-              <button
-                className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm"
-                type="button"
-                aria-label="Close opportunity preview"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <h3 className="mt-5 text-xl font-bold text-slate-950">Park Cleanup</h3>
-            <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="size-4 fill-emerald-700 text-white" />
-              City Green Team
-              <Check className="size-3 text-emerald-700" />
-            </div>
-            <div className="mt-5 space-y-3 text-sm text-slate-600">
-              <div className="flex items-center gap-3">
-                <Calendar className="size-4 text-slate-600" />
-                Saturday, May 24, 2025
+          <aside className="hidden rounded-lg border border-slate-200 bg-slate-50/70 p-3 shadow-sm md:block">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800">
+                <CheckCircle2 className="size-5" />
               </div>
-              <div className="flex items-center gap-3">
-                <Clock className="size-4 text-slate-600" />
-                2:00 PM - 4:00 PM
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-bold leading-tight text-slate-950">
+                    Park Cleanup
+                  </h3>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                    Open
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  City Green Team · Riverside Park
+                </p>
               </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="mt-0.5 size-4 text-slate-600" />
-                <span>
-                  Riverside Park
-                  <br />
-                  123 Greenway Dr, Springfield
-                </span>
-              </div>
+              <Button className="h-8 shrink-0 bg-emerald-800 px-3 text-xs hover:bg-emerald-700">
+                View
+              </Button>
             </div>
-            <div className="my-5 border-t border-slate-200" />
-            <p className="text-sm leading-6 text-slate-600">
-              Help keep our parks beautiful. We&apos;ll be picking up litter,
-              clearing trails, and improving the community space.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+            <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3 text-xs text-slate-600 sm:grid-cols-3">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="size-3.5" />
+                May 24
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock className="size-3.5" />
+                2:00-4:00 PM
+              </span>
+              <span className="flex items-center gap-1.5">
+                <MapPin className="size-3.5" />
                 Outdoors
               </span>
-              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                Group Friendly
-              </span>
             </div>
-            <Button className="mt-6 h-10 w-full bg-emerald-800 hover:bg-emerald-700">
-              View & Sign Up
-            </Button>
           </aside>
         </div>
       </div>
@@ -492,12 +486,12 @@ function CalendarEvent({
 }) {
   return (
     <div
-      className={`absolute inset-x-1 top-0 z-10 rounded-md border p-2 text-left shadow-sm ${className}`}
+      className={`absolute inset-x-1 top-0 z-10 rounded-md border p-1.5 text-left shadow-sm ${className}`}
     >
-      <p className="text-xs font-bold text-slate-800">{title}</p>
-      <p className="mt-2 text-[0.68rem] font-medium text-slate-600">{time}</p>
-      <p className="mt-2 flex items-center gap-1 text-[0.68rem] text-slate-600">
-        <Heart className="size-3" />
+      <p className="text-[0.72rem] font-bold leading-tight text-slate-800">{title}</p>
+      <p className="mt-1.5 text-[0.63rem] font-medium leading-tight text-slate-600">{time}</p>
+      <p className="mt-1.5 flex items-center gap-1 text-[0.63rem] leading-tight text-slate-600">
+        <Heart className="size-2.5" />
         {team}
       </p>
     </div>

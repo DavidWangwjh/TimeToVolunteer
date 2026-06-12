@@ -39,6 +39,12 @@ export async function Navbar() {
           ) : (
             <>
               <Link
+                href="/about"
+                className="hidden text-sm font-semibold text-slate-700 transition-colors hover:text-emerald-800 sm:inline"
+              >
+                About
+              </Link>
+              <Link
                 href="/apply"
                 className="hidden text-sm font-semibold text-slate-700 transition-colors hover:text-emerald-800 sm:inline"
               >

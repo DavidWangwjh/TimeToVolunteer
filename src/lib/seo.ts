@@ -1,7 +1,7 @@
 export const siteName = "TimeToVolunteer";
 
 export const siteDescription =
-  "Find meaningful volunteer opportunities, join trusted organizations, and manage registrations around your schedule.";
+  "TimeToVolunteer helps people find volunteer opportunities near them, join volunteer programs and organizations, and helps organizations manage registrations and community impact in one place.";
 
 export function getSiteUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(
