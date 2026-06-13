@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import {
   Building2,
   CalendarCheck,
-  CheckCircle2,
   Compass,
   GraduationCap,
   HeartHandshake,

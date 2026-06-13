@@ -188,7 +188,7 @@ Platform admins can:
 - manage organizations
 - suspend accounts
 - view opportunities across all organizations
-- review memberships and registrations
+- review organization applications and manage platform records
 
 ## Access Model
 
@@ -219,7 +219,7 @@ src/app
 
 src/components
   Shared UI, dashboard widgets, calendars, profile forms, organization cards,
-  opportunity forms, inbox, bookings, and application review components
+  opportunity forms, inbox, registrations, and application review components
 
 src/lib
   Server actions, auth helpers, Supabase clients, validation, dates,
