@@ -20,7 +20,7 @@ import { getAuthNavState } from "@/lib/auth";
 import { absoluteUrl, siteDescription, siteName } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Volunteer Opportunities Near You",
+  title: "Volunteer Near Me & Student Volunteer Opportunities",
   description: siteDescription,
   alternates: {
     canonical: "/",
@@ -88,7 +88,7 @@ export default async function HomePage() {
                     : auth.role === "organization" || auth.role === "admin"
                       ? "Manage organization opportunities, membership requests, and registrations from your dashboard."
                       : "Continue browsing sessions and managing your volunteer registrations."
-                  : "Create a volunteer profile, join trusted volunteer organizations, and find volunteer programs, student volunteering opportunities, and ways to help near you."}
+                  : "Find volunteer opportunities near you, student volunteering programs, volunteer jobs, and trusted organizations. Sign up to register and manage your schedule in one place."}
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center xl:justify-start">

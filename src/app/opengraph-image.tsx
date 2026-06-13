@@ -56,7 +56,7 @@ export default function Image() {
               letterSpacing: -1,
             }}
           >
-            Volunteer opportunities that fit your schedule.
+            Volunteer opportunities near you.
           </div>
           <div
             style={{
