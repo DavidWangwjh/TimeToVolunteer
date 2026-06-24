@@ -1,22 +1,27 @@
 import { InboxClient } from "@/components/inbox/InboxClient";
 import { requireActiveVolunteer } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { InboxMessage } from "@/types/database";
 
 export default async function VolunteerInboxPage() {
   const profile = await requireActiveVolunteer();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: messages } = await supabase
     .from("inbox_messages")
-    .select("*")
+    .select(
+      "*, actor:profiles!inbox_messages_actor_id_fkey(first_name, last_name, email), organizations(id, name)"
+    )
     .eq("recipient_id", profile.id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   return (
     <div>
-            <InboxClient messages={(messages ?? []) as InboxMessage[]} />
+      <InboxClient
+        messages={(messages ?? []) as InboxMessage[]}
+        viewer="volunteer"
+      />
     </div>
   );
 }

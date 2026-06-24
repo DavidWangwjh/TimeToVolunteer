@@ -22,6 +22,7 @@ const volunteerLinks = [
 
 const platformAdminLinks = [
   { href: "/dashboard/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/admin/inbox", label: "Inbox", icon: Mail },
   { href: "/dashboard/admin/applications", label: "Applications", icon: ClipboardList },
   { href: "/dashboard/admin/volunteers", label: "Volunteers", icon: Users },
   { href: "/dashboard/admin/organizations", label: "Organizations", icon: Building2 },

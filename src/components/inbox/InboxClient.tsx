@@ -6,7 +6,6 @@ import {
   Archive,
   CheckCheck,
   Circle,
-  ExternalLink,
   Inbox,
   MailOpen,
   Trash2,
@@ -14,6 +13,12 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   deleteInboxMessages,
   markAllInboxMessagesRead,
@@ -23,6 +28,31 @@ import { cn } from "@/lib/utils";
 import type { InboxMessage, InboxMessageKind } from "@/types/database";
 
 type InboxFilter = "all" | "unread" | "read";
+type InboxViewer = "volunteer" | "organization" | "admin";
+type InboxMessageWithSender = InboxMessage & {
+  actor?:
+    | {
+        first_name: string | null;
+        last_name: string | null;
+        email: string | null;
+      }
+    | Array<{
+        first_name: string | null;
+        last_name: string | null;
+        email: string | null;
+      }>
+    | null;
+  organizations?:
+    | {
+        id: string | null;
+        name: string | null;
+      }
+    | Array<{
+        id: string | null;
+        name: string | null;
+      }>
+    | null;
+};
 
 const kindLabels: Record<InboxMessageKind, string> = {
   booking_requested: "Registration request",
@@ -32,6 +62,7 @@ const kindLabels: Record<InboxMessageKind, string> = {
   membership_requested: "Organization request",
   membership_accepted: "Access accepted",
   membership_rejected: "Access declined",
+  direct_message: "Message",
 };
 
 const kindStyles: Record<InboxMessageKind, string> = {
@@ -42,6 +73,7 @@ const kindStyles: Record<InboxMessageKind, string> = {
   membership_requested: "bg-violet-100 text-violet-800 hover:bg-violet-100",
   membership_accepted: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
   membership_rejected: "bg-rose-100 text-rose-800 hover:bg-rose-100",
+  direct_message: "bg-slate-100 text-slate-800 hover:bg-slate-100",
 };
 
 function formatMessageDate(value: string) {
@@ -53,13 +85,62 @@ function formatMessageDate(value: string) {
   }).format(new Date(value));
 }
 
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function getSenderLabel(message: InboxMessageWithSender) {
+  const organization = firstRelation(message.organizations);
+
+  if (organization?.name) {
+    return organization.name;
+  }
+
+  const actor = firstRelation(message.actor);
+  const actorName = `${actor?.first_name ?? ""} ${
+    actor?.last_name ?? ""
+  }`.trim();
+
+  if (actorName) {
+    return actorName;
+  }
+
+  if (actor?.email) {
+    return actor.email;
+  }
+
+  return "TimeToVolunteer";
+}
+
+function getOrganizationHref(
+  organizationId: string | null | undefined,
+  viewer: InboxViewer
+) {
+  if (!organizationId) return null;
+
+  if (viewer === "admin") {
+    return `/dashboard/admin/organizations/${organizationId}`;
+  }
+
+  if (viewer === "organization") {
+    return "/dashboard/organization/profile";
+  }
+
+  return `/dashboard/volunteer/organizations/${organizationId}`;
+}
+
 export function InboxClient({
   messages,
+  viewer,
 }: {
-  messages: InboxMessage[];
+  messages: InboxMessageWithSender[];
+  viewer: InboxViewer;
 }) {
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedMessage, setSelectedMessage] =
+    useState<InboxMessageWithSender | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const unreadCount = messages.filter((message) => !message.read_at).length;
@@ -153,6 +234,14 @@ export function InboxClient({
       () => deleteInboxMessages(ids),
       ids.length === 1 ? "Message deleted" : "Messages deleted"
     );
+  }
+
+  function openMessage(message: InboxMessageWithSender) {
+    setSelectedMessage(message);
+
+    if (!message.read_at) {
+      void markInboxMessageRead(message.id, true);
+    }
   }
 
   return (
@@ -251,13 +340,25 @@ export function InboxClient({
               return (
                 <li
                   key={message.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openMessage(message)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openMessage(message);
+                    }
+                  }}
                   className={cn(
-                    "grid gap-3 p-4 transition-colors sm:grid-cols-[auto_1fr_auto]",
+                    "grid cursor-pointer gap-3 p-4 transition-colors hover:bg-emerald-50/40 sm:grid-cols-[auto_1fr_auto]",
                     isUnread ? "bg-emerald-50/60" : "bg-white",
                     isSelected && "ring-2 ring-inset ring-emerald-300"
                   )}
                 >
-                  <label className="flex items-start gap-3 sm:block">
+                  <label
+                    className="flex items-start gap-3 sm:block"
+                    onClick={(event) => event.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       className="mt-1 size-4 rounded border-slate-300 accent-emerald-800"
@@ -267,7 +368,7 @@ export function InboxClient({
                     <span className="sr-only">Select message</span>
                   </label>
 
-                  <div className="min-w-0">
+                  <div className="min-w-0 overflow-hidden">
                     <div className="flex flex-wrap items-center gap-2">
                       {isUnread && (
                         <span className="size-2 rounded-full bg-emerald-700" />
@@ -279,31 +380,20 @@ export function InboxClient({
                         {formatMessageDate(message.created_at)}
                       </span>
                     </div>
+                    <SenderLine message={message} viewer={viewer} />
 
-                    <h2 className="mt-2 text-base font-bold text-slate-950">
+                    <h2 className="mt-2 line-clamp-1 text-base font-bold text-slate-950">
                       {message.title}
                     </h2>
-                    <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+                    <p className="mt-1 line-clamp-2 max-w-3xl text-sm leading-6 text-slate-600">
                       {message.body}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    {message.action_href && (
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={message.action_href}
-                          onClick={() => {
-                            if (isUnread) {
-                              void markInboxMessageRead(message.id, true);
-                            }
-                          }}
-                        >
-                          <ExternalLink className="size-4" />
-                          Open
-                        </Link>
-                      </Button>
-                    )}
+                  <div
+                    className="flex flex-wrap items-center gap-2 sm:justify-end"
+                    onClick={(event) => event.stopPropagation()}
+                  >
                     <Button
                       type="button"
                       size="sm"
@@ -340,6 +430,64 @@ export function InboxClient({
           </ul>
         </div>
       )}
+
+      <Dialog
+        open={Boolean(selectedMessage)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedMessage(null);
+        }}
+      >
+        {selectedMessage && (
+          <DialogContent className="max-h-[min(36rem,calc(100dvh-2rem))] grid-rows-[auto_minmax(0,1fr)] sm:max-w-2xl">
+            <DialogHeader>
+              <div className="flex flex-wrap items-center gap-2 pr-8">
+                <Badge className={kindStyles[selectedMessage.kind]}>
+                  {kindLabels[selectedMessage.kind]}
+                </Badge>
+                <span className="text-xs font-medium text-slate-500">
+                  {formatMessageDate(selectedMessage.created_at)}
+                </span>
+              </div>
+              <DialogTitle className="pr-8 text-xl font-bold leading-tight text-slate-950">
+                {selectedMessage.title}
+              </DialogTitle>
+              <SenderLine message={selectedMessage} viewer={viewer} />
+            </DialogHeader>
+            <div className="min-h-0 overflow-y-auto whitespace-pre-wrap text-sm leading-7 text-slate-700">
+              {selectedMessage.body}
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
+  );
+}
+
+function SenderLine({
+  message,
+  viewer,
+}: {
+  message: InboxMessageWithSender;
+  viewer: InboxViewer;
+}) {
+  const organization = firstRelation(message.organizations);
+  const href = getOrganizationHref(organization?.id, viewer);
+  const label = getSenderLabel(message);
+
+  return (
+    <p className="mt-1 text-xs font-semibold text-slate-500">
+      From{" "}
+      {href ? (
+        <Link
+          href={href}
+          className="text-emerald-800 underline-offset-2 hover:underline"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {label}
+        </Link>
+      ) : (
+        label
+      )}
+    </p>
   );
 }

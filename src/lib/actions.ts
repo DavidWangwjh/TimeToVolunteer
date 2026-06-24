@@ -47,6 +47,13 @@ interface InboxMessageInput {
   actionHref?: string | null;
 }
 
+export interface InboxReceiverOption {
+  id: string;
+  name: string;
+  email: string | null;
+  detail?: string | null;
+}
+
 function normalizeOpportunityFields(
   data: OpportunityCreateInput | OpportunityUpdateInput
 ) {
@@ -372,11 +379,62 @@ async function createInboxMessage({
   }
 }
 
+async function createInboxMessages(messages: InboxMessageInput[]) {
+  if (messages.length === 0) return { success: true };
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient.from("inbox_messages").insert(
+    messages.map((message) => ({
+      recipient_id: message.recipientId,
+      actor_id: message.actorId ?? null,
+      organization_id: message.organizationId ?? null,
+      opportunity_id: message.opportunityId ?? null,
+      booking_id: message.bookingId ?? null,
+      membership_id: message.membershipId ?? null,
+      kind: message.kind,
+      title: message.title,
+      body: message.body,
+      action_href: message.actionHref ?? null,
+    }))
+  );
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
+}
+
 function revalidateInbox() {
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/volunteer/inbox");
   revalidatePath("/dashboard/admin/inbox");
   revalidatePath("/dashboard/organization/inbox");
+}
+
+function normalizeMessageText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeMessageBody(value: string) {
+  return value.trim();
+}
+
+function uniqueIds(ids: string[]) {
+  return Array.from(new Set(ids.filter(Boolean)));
+}
+
+function clampSearchLimit(limit: number) {
+  return Math.min(Math.max(limit || 25, 1), 50);
+}
+
+function getProfileName(profile: {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}) {
+  const name = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
+  return name || profile.email || "Unnamed recipient";
 }
 
 function isSchemaCacheColumnError(error: { message?: string } | null) {
@@ -2164,6 +2222,320 @@ export async function cancelBooking(bookingId: string) {
   return { success: true };
 }
 
+export async function searchOrganizationMessageReceivers({
+  query = "",
+  offset = 0,
+  limit = 25,
+}: {
+  query?: string;
+  offset?: number;
+  limit?: number;
+}) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile || profile.role !== "organization") {
+    return { error: "Only organization accounts can search recipients" };
+  }
+
+  const { organization, error: organizationError } = await getOwnedOrganization(
+    profile.id
+  );
+
+  if (organizationError) {
+    return { error: organizationError.message };
+  }
+
+  if (!organization) {
+    return { error: "No active organization found" };
+  }
+
+  const adminClient = createAdminClient();
+  const pageSize = clampSearchLimit(limit);
+  const safeOffset = Math.max(offset, 0);
+  const normalizedQuery = query.trim();
+  let receiverQuery = adminClient
+    .from("profiles")
+    .select(
+      "id, first_name, last_name, email, organization_memberships!organization_memberships_volunteer_id_fkey!inner(organization_id, status)"
+    )
+    .eq("role", "volunteer")
+    .eq("status", "active")
+    .eq("organization_memberships.organization_id", organization.id)
+    .eq("organization_memberships.status", "accepted")
+    .order("first_name", { ascending: true })
+    .range(safeOffset, safeOffset + pageSize);
+
+  if (normalizedQuery) {
+    const escaped = normalizedQuery.replace(/[%_]/g, "\\$&");
+    receiverQuery = receiverQuery.or(
+      `first_name.ilike.%${escaped}%,last_name.ilike.%${escaped}%,email.ilike.%${escaped}%`
+    );
+  }
+
+  const { data, error } = await receiverQuery;
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const receivers: InboxReceiverOption[] = (data ?? [])
+    .slice(0, pageSize)
+    .map((receiver) => ({
+      id: receiver.id,
+      name: getProfileName(receiver),
+      email: receiver.email,
+      detail: "Volunteer",
+    }));
+
+  return {
+    receivers,
+    hasMore: (data ?? []).length > pageSize,
+  };
+}
+
+export async function searchAdminMessageReceivers({
+  receiverType = "volunteers",
+  query = "",
+  offset = 0,
+  limit = 25,
+}: {
+  receiverType?: "volunteers" | "organizations" | "both";
+  query?: string;
+  offset?: number;
+  limit?: number;
+}) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Only platform admins can search recipients" };
+  }
+
+  const adminClient = createAdminClient();
+  const pageSize = clampSearchLimit(limit);
+  const safeOffset = Math.max(offset, 0);
+  const normalizedQuery = query.trim();
+  const escaped = normalizedQuery.replace(/[%_]/g, "\\$&");
+  const searchProfiles = receiverType === "volunteers" || receiverType === "both";
+  const searchOrganizations =
+    receiverType === "organizations" || receiverType === "both";
+
+  const [volunteerResult, organizationResult] = await Promise.all([
+    searchProfiles
+      ? (() => {
+          let queryBuilder = adminClient
+            .from("profiles")
+            .select("id, first_name, last_name, email")
+            .eq("role", "volunteer")
+            .eq("status", "active")
+            .order("first_name", { ascending: true })
+            .range(safeOffset, safeOffset + pageSize);
+
+          if (normalizedQuery) {
+            queryBuilder = queryBuilder.or(
+              `first_name.ilike.%${escaped}%,last_name.ilike.%${escaped}%,email.ilike.%${escaped}%`
+            );
+          }
+
+          return queryBuilder;
+        })()
+      : Promise.resolve({ data: [], error: null }),
+    searchOrganizations
+      ? (() => {
+          let queryBuilder = adminClient
+            .from("organizations")
+            .select(
+              "id, name, contact_email, owner_id, profiles!organizations_owner_id_fkey(id, first_name, last_name, email, status)"
+            )
+            .eq("status", "active")
+            .eq("profiles.status", "active")
+            .order("name", { ascending: true })
+            .range(safeOffset, safeOffset + pageSize);
+
+          if (normalizedQuery) {
+            queryBuilder = queryBuilder.or(
+              `name.ilike.%${escaped}%,contact_email.ilike.%${escaped}%`
+            );
+          }
+
+          return queryBuilder;
+        })()
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (volunteerResult.error) {
+    return { error: volunteerResult.error.message };
+  }
+
+  if (organizationResult.error) {
+    return { error: organizationResult.error.message };
+  }
+
+  const volunteerReceivers: InboxReceiverOption[] = (
+    volunteerResult.data ?? []
+  )
+    .slice(0, pageSize)
+    .map((receiver) => ({
+      id: receiver.id,
+      name: getProfileName(receiver),
+      email: receiver.email,
+      detail: "Volunteer",
+    }));
+  const organizationReceivers: InboxReceiverOption[] = (
+    organizationResult.data ?? []
+  )
+    .slice(0, pageSize)
+    .map((organization) => {
+      const owner = Array.isArray(organization.profiles)
+        ? organization.profiles[0]
+        : organization.profiles;
+
+      return {
+        id: organization.owner_id,
+        name: organization.name,
+        email: owner?.email ?? organization.contact_email,
+        detail: "Organization",
+      };
+    });
+  const receivers =
+    receiverType === "both"
+      ? [...volunteerReceivers, ...organizationReceivers]
+      : receiverType === "organizations"
+        ? organizationReceivers
+        : volunteerReceivers;
+
+  return {
+    receivers,
+    hasMore:
+      (volunteerResult.data ?? []).length > pageSize ||
+      (organizationResult.data ?? []).length > pageSize,
+  };
+}
+
+export async function sendOrganizationInboxMessage(data: {
+  receiverIds: string[];
+  title: string;
+  body: string;
+}) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile || profile.role !== "organization") {
+    return { error: "Only organization accounts can send messages" };
+  }
+
+  const { organization, error: organizationError } = await getOwnedOrganization(
+    profile.id
+  );
+
+  if (organizationError) {
+    return { error: organizationError.message };
+  }
+
+  if (!organization) {
+    return { error: "No active organization found" };
+  }
+
+  const title = normalizeMessageText(data.title);
+  const body = normalizeMessageBody(data.body);
+  const receiverIds = uniqueIds(data.receiverIds);
+
+  if (!title) return { error: "Message title is required" };
+  if (!body) return { error: "Message is required" };
+  if (receiverIds.length === 0) return { error: "Select at least one recipient" };
+
+  const adminClient = createAdminClient();
+  const { data: eligibleRows, error } = await adminClient
+    .from("organization_memberships")
+    .select("volunteer_id")
+    .eq("organization_id", organization.id)
+    .eq("status", "accepted")
+    .in("volunteer_id", receiverIds);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const eligibleIds = new Set(
+    (eligibleRows ?? []).map((membership) => membership.volunteer_id)
+  );
+  const invalidCount = receiverIds.filter((id) => !eligibleIds.has(id)).length;
+
+  if (invalidCount > 0) {
+    return { error: "One or more recipients are not accepted members" };
+  }
+
+  const result = await createInboxMessages(
+    receiverIds.map((receiverId) => ({
+      recipientId: receiverId,
+      actorId: profile.id,
+      organizationId: organization.id,
+      kind: "direct_message",
+      title,
+      body,
+      actionHref: "/dashboard/volunteer/inbox",
+    }))
+  );
+
+  if (result.error) return result;
+
+  revalidateInbox();
+  return { success: true, sentCount: receiverIds.length };
+}
+
+export async function sendAdminInboxMessage(data: {
+  receiverIds: string[];
+  title: string;
+  body: string;
+}) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Only platform admins can send messages" };
+  }
+
+  const title = normalizeMessageText(data.title);
+  const body = normalizeMessageBody(data.body);
+  const receiverIds = uniqueIds(data.receiverIds);
+
+  if (!title) return { error: "Message title is required" };
+  if (!body) return { error: "Message is required" };
+  if (receiverIds.length === 0) return { error: "Select at least one recipient" };
+
+  const adminClient = createAdminClient();
+  const { data: activeProfiles, error } = await adminClient
+    .from("profiles")
+    .select("id, role")
+    .in("id", receiverIds)
+    .in("role", ["volunteer", "organization"])
+    .eq("status", "active");
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const eligibleIds = new Set((activeProfiles ?? []).map((item) => item.id));
+  const invalidCount = receiverIds.filter((id) => !eligibleIds.has(id)).length;
+
+  if (invalidCount > 0) {
+    return { error: "One or more recipients are not active users" };
+  }
+
+  const result = await createInboxMessages(
+    receiverIds.map((receiverId) => ({
+      recipientId: receiverId,
+      actorId: profile.id,
+      kind: "direct_message",
+      title,
+      body,
+      actionHref: "/dashboard",
+    }))
+  );
+
+  if (result.error) return result;
+
+  revalidateInbox();
+  return { success: true, sentCount: receiverIds.length };
+}
+
 export async function markInboxMessageRead(messageId: string, read = true) {
   const profile = await getCurrentUserProfile();
 
@@ -2232,12 +2604,9 @@ export async function deleteInboxMessages(messageIds: string[]) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("inbox_messages")
-    .update({
-      deleted_at: new Date().toISOString(),
-    })
+    .delete()
     .eq("recipient_id", profile.id)
-    .in("id", ids)
-    .is("deleted_at", null);
+    .in("id", ids);
 
   if (error) {
     return { error: error.message };

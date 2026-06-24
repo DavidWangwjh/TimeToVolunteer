@@ -21,6 +21,7 @@ export default async function PlatformAdminDashboardLayout({
     { count: activeVolunteers },
     { count: activeOrganizations },
     { count: publishedOpportunities },
+    { count: unreadMessages },
   ] = await Promise.all([
     supabase
       .from("organization_applications")
@@ -39,6 +40,12 @@ export default async function PlatformAdminDashboardLayout({
       .from("volunteer_opportunities")
       .select("*", { count: "exact", head: true })
       .eq("status", "published"),
+    supabase
+      .from("inbox_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_id", profile.id)
+      .is("read_at", null)
+      .is("deleted_at", null),
   ]);
 
   return (
@@ -46,6 +53,7 @@ export default async function PlatformAdminDashboardLayout({
       variant="admin"
       adminKind="platform"
       navCounts={{
+        "/dashboard/admin/inbox": unreadMessages ?? 0,
         "/dashboard/admin/applications": pendingApplications ?? 0,
         "/dashboard/admin/volunteers": activeVolunteers ?? 0,
         "/dashboard/admin/organizations": activeOrganizations ?? 0,

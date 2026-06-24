@@ -1,22 +1,31 @@
 import { InboxClient } from "@/components/inbox/InboxClient";
+import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import Link from "next/link";
 import type { InboxMessage } from "@/types/database";
 
 export default async function AdminInboxPage() {
   const profile = await requireAdmin();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: messages } = await supabase
     .from("inbox_messages")
-    .select("*")
+    .select(
+      "*, actor:profiles!inbox_messages_actor_id_fkey(first_name, last_name, email), organizations(id, name)"
+    )
     .eq("recipient_id", profile.id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   return (
-    <div>
-            <InboxClient messages={(messages ?? []) as InboxMessage[]} />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button asChild className="bg-emerald-800 hover:bg-emerald-700">
+          <Link href="/dashboard/admin/inbox/compose">Compose message</Link>
+        </Button>
+      </div>
+      <InboxClient messages={(messages ?? []) as InboxMessage[]} viewer="admin" />
     </div>
   );
 }

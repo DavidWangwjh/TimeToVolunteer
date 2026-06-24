@@ -15,7 +15,8 @@ export type InboxMessageKind =
   | "opportunity_updated"
   | "membership_requested"
   | "membership_accepted"
-  | "membership_rejected";
+  | "membership_rejected"
+  | "direct_message";
 
 export interface Profile {
   id: string;

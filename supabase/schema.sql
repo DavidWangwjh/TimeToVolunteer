@@ -264,7 +264,8 @@ create table inbox_messages (
       'opportunity_updated',
       'membership_requested',
       'membership_accepted',
-      'membership_rejected'
+      'membership_rejected',
+      'direct_message'
     )
   )
 );
@@ -575,6 +576,10 @@ create policy "Users can update own inbox messages"
 on inbox_messages for update
 using (recipient_id = auth.uid())
 with check (recipient_id = auth.uid());
+
+create policy "Users can delete own inbox messages"
+on inbox_messages for delete
+using (recipient_id = auth.uid());
 
 -- Seed a platform admin after creating the matching auth user in Supabase Auth:
 -- insert into profiles (id, first_name, last_name, email, role, status)
