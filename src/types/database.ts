@@ -3,6 +3,7 @@ export type ProfileStatus = "active" | "inactive" | "suspended";
 export type ApplicationStatus = "pending" | "contacted" | "accepted" | "rejected";
 export type OpportunityStatus = "draft" | "published" | "cancelled" | "completed";
 export type OpportunityVisibility = "public" | "private";
+export type RecurrenceFrequency = "weekly" | "biweekly" | "monthly";
 export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
 export type OrganizationStatus = "active" | "inactive" | "suspended";
 export type OrganizationVisibility = "public" | "private";
@@ -90,6 +91,9 @@ export interface VolunteerOpportunity {
   max_volunteers: number;
   status: OpportunityStatus;
   visibility: OpportunityVisibility;
+  recurring_group_id: string | null;
+  recurring_frequency: RecurrenceFrequency | null;
+  recurring_until: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -104,6 +108,8 @@ export interface Booking {
   admin_note: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  checked_in_by: string | null;
+  checked_in_at: string | null;
   rejected_at: string | null;
   cancelled_at: string | null;
   created_at: string;

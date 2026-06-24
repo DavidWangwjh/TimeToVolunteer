@@ -45,6 +45,9 @@ export default async function NewOpportunityPage({
         experience_required: opportunity.experience_required ?? "",
         max_volunteers: opportunity.max_volunteers,
         visibility: opportunity.visibility ?? "public",
+        recurrence_enabled: Boolean(opportunity.recurring_frequency),
+        recurrence_frequency: opportunity.recurring_frequency ?? "weekly",
+        recurrence_until: opportunity.recurring_until ?? "",
       };
     }
   }

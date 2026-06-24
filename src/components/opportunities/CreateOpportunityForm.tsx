@@ -40,6 +40,9 @@ const defaultValues: OpportunityCreateInput = {
   experience_required: "",
   max_volunteers: 1,
   visibility: "public",
+  recurrence_enabled: false,
+  recurrence_frequency: "weekly",
+  recurrence_until: "",
 };
 
 type CreateOpportunityInitialValues = Partial<OpportunityCreateInput>;
@@ -55,6 +58,9 @@ function toDraft(values: OpportunityCreateInput): OpportunityDraft {
     experience_required: values.experience_required ?? "",
     max_volunteers: values.max_volunteers ?? 1,
     visibility: values.visibility ?? "public",
+    recurrence_enabled: values.recurrence_enabled ?? false,
+    recurrence_frequency: values.recurrence_frequency ?? "weekly",
+    recurrence_until: values.recurrence_until ?? "",
   };
 }
 
@@ -90,6 +96,8 @@ export function CreateOpportunityForm({
 
   const values = useWatch({ control });
   const visibility = useWatch({ control, name: "visibility" });
+  const recurrenceEnabled = useWatch({ control, name: "recurrence_enabled" });
+  const recurrenceFrequency = useWatch({ control, name: "recurrence_frequency" });
 
   useEffect(() => {
     function setDraftNotice(visible: boolean) {
@@ -193,6 +201,77 @@ export function CreateOpportunityForm({
                 <p className="text-sm text-destructive">{errors.end_time.message}</p>
               )}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+            <label className="flex items-start gap-3">
+              <Input
+                type="checkbox"
+                className="mt-1 size-4"
+                {...register("recurrence_enabled")}
+              />
+              <span>
+                <span className="block text-sm font-semibold text-slate-950">
+                  Make this a recurring opportunity
+                </span>
+                <span className="mt-1 block text-sm text-slate-500">
+                  Creates separate opportunity dates with the same details.
+                </span>
+              </span>
+            </label>
+
+            {recurrenceEnabled && (
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Repeats</Label>
+                  <Select
+                    value={recurrenceFrequency ?? "weekly"}
+                    onValueChange={(val) =>
+                      setValue(
+                        "recurrence_frequency",
+                        val as OpportunityCreateInput["recurrence_frequency"]
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {(value: OpportunityCreateInput["recurrence_frequency"]) =>
+                          value === "biweekly"
+                            ? "Every 2 weeks"
+                            : value === "monthly"
+                            ? "Monthly"
+                            : "Weekly"
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.recurrence_frequency && (
+                    <p className="text-sm text-destructive">
+                      {errors.recurrence_frequency.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence_until">Repeat Until *</Label>
+                  <Input
+                    id="recurrence_until"
+                    type="date"
+                    {...register("recurrence_until")}
+                  />
+                  {errors.recurrence_until && (
+                    <p className="text-sm text-destructive">
+                      {errors.recurrence_until.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

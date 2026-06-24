@@ -59,11 +59,16 @@ export function EditOpportunityForm({
       max_volunteers: opportunity.max_volunteers,
       visibility: opportunity.visibility ?? "public",
       status: opportunity.status,
+      recurrence_enabled: Boolean(opportunity.recurring_frequency),
+      recurrence_frequency: opportunity.recurring_frequency ?? "weekly",
+      recurrence_until: opportunity.recurring_until ?? "",
     },
   });
 
   const status = useWatch({ control, name: "status" });
   const visibility = useWatch({ control, name: "visibility" });
+  const recurrenceEnabled = useWatch({ control, name: "recurrence_enabled" });
+  const recurrenceFrequency = useWatch({ control, name: "recurrence_frequency" });
 
   async function onSubmit(data: OpportunityUpdateInput) {
     const result = await updateOpportunity(opportunity.id, data);
@@ -111,6 +116,77 @@ export function EditOpportunityForm({
                 <p className="text-sm text-destructive">{errors.end_time.message}</p>
               )}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+            <label className="flex items-start gap-3">
+              <Input
+                type="checkbox"
+                className="mt-1 size-4"
+                {...register("recurrence_enabled")}
+              />
+              <span>
+                <span className="block text-sm font-semibold text-slate-950">
+                  Make this a recurring opportunity
+                </span>
+                <span className="mt-1 block text-sm text-slate-500">
+                  Generates missing future dates from this opportunity.
+                </span>
+              </span>
+            </label>
+
+            {recurrenceEnabled && (
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Repeats</Label>
+                  <Select
+                    value={recurrenceFrequency ?? "weekly"}
+                    onValueChange={(val) =>
+                      setValue(
+                        "recurrence_frequency",
+                        val as OpportunityUpdateInput["recurrence_frequency"]
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {(value: OpportunityUpdateInput["recurrence_frequency"]) =>
+                          value === "biweekly"
+                            ? "Every 2 weeks"
+                            : value === "monthly"
+                            ? "Monthly"
+                            : "Weekly"
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.recurrence_frequency && (
+                    <p className="text-sm text-destructive">
+                      {errors.recurrence_frequency.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence_until">Repeat Until *</Label>
+                  <Input
+                    id="recurrence_until"
+                    type="date"
+                    {...register("recurrence_until")}
+                  />
+                  {errors.recurrence_until && (
+                    <p className="text-sm text-destructive">
+                      {errors.recurrence_until.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

@@ -31,11 +31,17 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.local
+.env*.local
 
 # vercel
 .vercel
+
+# next build cache
+.next
+.next-stale-build
 
 # typescript
 *.tsbuildinfo
@@ -43,5 +49,4 @@ next-env.d.ts
 
 AGENTS.md
 CLAUDE.md
-instructions.md.next-stale-build
-.next
+instructions.md

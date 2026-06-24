@@ -51,10 +51,28 @@ export const opportunityFieldsSchema = z
     experience_required: z.string().optional(),
     max_volunteers: z.number().min(1, "At least 1 volunteer spot required"),
     visibility: z.enum(["public", "private"]),
+    recurrence_enabled: z.boolean().optional(),
+    recurrence_frequency: z.enum(["weekly", "biweekly", "monthly"]).optional(),
+    recurrence_until: z.string().optional(),
   })
   .refine((data) => data.end_time > data.start_time, {
     message: "End time must be after start time",
     path: ["end_time"],
+  })
+  .refine((data) => !data.recurrence_enabled || Boolean(data.recurrence_frequency), {
+    message: "Choose how often this opportunity repeats",
+    path: ["recurrence_frequency"],
+  })
+  .refine((data) => !data.recurrence_enabled || Boolean(data.recurrence_until), {
+    message: "Choose when the recurring opportunity ends",
+    path: ["recurrence_until"],
+  })
+  .refine((data) => {
+    if (!data.recurrence_enabled || !data.recurrence_until) return true;
+    return data.recurrence_until > data.date;
+  }, {
+    message: "Recurring end date must be after the first date",
+    path: ["recurrence_until"],
   });
 
 export const opportunityCreateSchema = opportunityFieldsSchema;

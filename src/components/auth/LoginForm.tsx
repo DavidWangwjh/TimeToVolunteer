@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -12,10 +13,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { signIn } from "@/lib/actions";
 import { loginSchema } from "@/lib/validators";
 
-export function LoginForm() {
+interface QuickLoginAccount {
+  label: string;
+  email: string;
+  password: string;
+}
+
+interface QuickLoginGroup {
+  role: string;
+  accounts: QuickLoginAccount[];
+}
+
+interface LoginFormProps {
+  quickLoginGroups?: QuickLoginGroup[];
+}
+
+export function LoginForm({ quickLoginGroups = [] }: LoginFormProps) {
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
   const redirectTo = searchParams.get("redirect");
+  const [quickLoginEmail, setQuickLoginEmail] = useState<string | null>(null);
 
   const {
     register,
@@ -29,6 +46,15 @@ export function LoginForm() {
     const result = await signIn(data.email, data.password, redirectTo);
     if (result?.error) {
       toast.error(result.error);
+    }
+  }
+
+  async function handleQuickLogin(account: QuickLoginAccount) {
+    setQuickLoginEmail(account.email);
+    const result = await signIn(account.email, account.password, redirectTo);
+    if (result?.error) {
+      toast.error(result.error);
+      setQuickLoginEmail(null);
     }
   }
 
@@ -79,6 +105,48 @@ export function LoginForm() {
             Apply here
           </Link>
         </p>
+
+        {quickLoginGroups.length > 0 && (
+          <div className="mt-6 border-t border-slate-200 pt-5">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-slate-950">
+                Dev quick login
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Seeded local accounts only. Hidden outside development.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {quickLoginGroups.map((group) => (
+                <div key={group.role} className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {group.role}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {group.accounts.map((account) => (
+                      <Button
+                        key={account.email}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="justify-start overflow-hidden"
+                        disabled={Boolean(quickLoginEmail)}
+                        onClick={() => handleQuickLogin(account)}
+                      >
+                        <span className="truncate">
+                          {quickLoginEmail === account.email
+                            ? "Signing in..."
+                            : account.label}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -9,7 +9,10 @@ import type { OrganizationVisibility, Profile } from "@/types/database";
 
 interface RegisteredBooking {
   id: string;
-  profiles: Profile;
+  volunteer_id: string;
+  checked_in_at: string | null;
+  checked_in_by: string | null;
+  profiles: Profile | null;
 }
 
 interface Props {
@@ -39,6 +42,9 @@ export default async function EditOpportunityPage({ params }: Props) {
     .from("bookings")
     .select(`
       id,
+      volunteer_id,
+      checked_in_at,
+      checked_in_by,
       profiles:profiles!bookings_volunteer_id_fkey (
         id,
         first_name,
@@ -48,6 +54,9 @@ export default async function EditOpportunityPage({ params }: Props) {
         role,
         status,
         must_reset_password,
+        volunteer_interests,
+        volunteer_intro,
+        date_of_birth,
         created_at,
         updated_at
       )
@@ -59,13 +68,13 @@ export default async function EditOpportunityPage({ params }: Props) {
   const registeredBookings: RegisteredBooking[] = (bookings ?? [])
     .map((booking) => ({
       id: booking.id,
+      volunteer_id: booking.volunteer_id,
+      checked_in_at: booking.checked_in_at,
+      checked_in_by: booking.checked_in_by,
       profiles: Array.isArray(booking.profiles)
         ? booking.profiles[0]
         : booking.profiles,
-    }))
-    .filter(
-      (booking): booking is RegisteredBooking => Boolean(booking.profiles)
-    );
+    }));
 
   return (
     <div>
@@ -86,6 +95,7 @@ export default async function EditOpportunityPage({ params }: Props) {
       <RegisteredVolunteers
         opportunity={opportunity}
         registeredBookings={registeredBookings}
+        registeredCount={registeredBookings.length}
       />
     </div>
   );

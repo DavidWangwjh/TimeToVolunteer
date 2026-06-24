@@ -49,6 +49,8 @@ interface InboxMessageInput {
 function normalizeOpportunityFields(
   data: OpportunityCreateInput | OpportunityUpdateInput
 ) {
+  const recurrenceEnabled = Boolean(data.recurrence_enabled);
+
   return {
     title: data.title,
     description: data.description?.trim() || null,
@@ -59,7 +61,104 @@ function normalizeOpportunityFields(
     experience_required: data.experience_required?.trim() || null,
     max_volunteers: data.max_volunteers,
     visibility: data.visibility,
+    recurring_frequency: recurrenceEnabled ? data.recurrence_frequency ?? null : null,
+    recurring_until: recurrenceEnabled ? data.recurrence_until || null : null,
   };
+}
+
+function addRecurrenceInterval(date: Date, frequency: "weekly" | "biweekly" | "monthly") {
+  const next = new Date(date);
+
+  if (frequency === "weekly") {
+    next.setUTCDate(next.getUTCDate() + 7);
+  } else if (frequency === "biweekly") {
+    next.setUTCDate(next.getUTCDate() + 14);
+  } else {
+    next.setUTCMonth(next.getUTCMonth() + 1);
+  }
+
+  return next;
+}
+
+function toDateString(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getRecurringDates(
+  startDate: string,
+  untilDate: string | null | undefined,
+  frequency: "weekly" | "biweekly" | "monthly" | null | undefined
+) {
+  if (!frequency || !untilDate) return [];
+
+  const dates: string[] = [];
+  let cursor = new Date(`${startDate}T00:00:00.000Z`);
+  const until = new Date(`${untilDate}T00:00:00.000Z`);
+
+  for (let index = 0; index < 52; index += 1) {
+    cursor = addRecurrenceInterval(cursor, frequency);
+    if (cursor > until) break;
+    dates.push(toDateString(cursor));
+  }
+
+  return dates;
+}
+
+async function createRecurringOccurrences({
+  supabase,
+  groupId,
+  baseData,
+  status,
+  adminId,
+  organizationId,
+  skipOpportunityId,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  groupId: string;
+  baseData: ReturnType<typeof normalizeOpportunityFields>;
+  status: "draft" | "published" | "cancelled" | "completed";
+  adminId: string;
+  organizationId: string | null;
+  skipOpportunityId?: string;
+}) {
+  const dates = getRecurringDates(
+    baseData.date,
+    baseData.recurring_until,
+    baseData.recurring_frequency
+  );
+
+  if (dates.length === 0) return { error: null };
+
+  const { data: existingOccurrences, error: existingError } = await supabase
+    .from("volunteer_opportunities")
+    .select("id, date")
+    .eq("recurring_group_id", groupId);
+
+  if (existingError) {
+    return { error: existingError.message };
+  }
+
+  const existingDates = new Set(
+    (existingOccurrences ?? [])
+      .filter((opportunity) => opportunity.id !== skipOpportunityId)
+      .map((opportunity) => opportunity.date)
+  );
+  const missingDates = dates.filter((date) => !existingDates.has(date));
+
+  if (missingDates.length === 0) return { error: null };
+
+  const { error } = await supabase.from("volunteer_opportunities").insert(
+    missingDates.map((date) => ({
+      ...baseData,
+      date,
+      status,
+      created_by: adminId,
+      organization_id: organizationId,
+      recurring_group_id: groupId,
+    }))
+  );
+
+  return { error: error?.message ?? null };
 }
 
 function normalizeOrganizationDescription(description: string | null | undefined) {
@@ -856,15 +955,48 @@ export async function createOpportunity(
     return { error: "Private opportunities must belong to an active organization" };
   }
 
-  const { error } = await supabase.from("volunteer_opportunities").insert({
-    ...normalizeOpportunityFields(parsed.data),
-    status,
-    created_by: admin.id,
-    organization_id: organization?.id ?? null,
-  });
+  const baseData = normalizeOpportunityFields(parsed.data);
+  const { data: createdOpportunity, error } = await supabase
+    .from("volunteer_opportunities")
+    .insert({
+      ...baseData,
+      status,
+      created_by: admin.id,
+      organization_id: organization?.id ?? null,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (baseData.recurring_frequency && baseData.recurring_until && createdOpportunity) {
+    const { error: groupError } = await supabase
+      .from("volunteer_opportunities")
+      .update({
+        recurring_group_id: createdOpportunity.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", createdOpportunity.id);
+
+    if (groupError) {
+      return { error: groupError.message };
+    }
+
+    const { error: recurrenceError } = await createRecurringOccurrences({
+      supabase,
+      groupId: createdOpportunity.id,
+      baseData,
+      status,
+      adminId: admin.id,
+      organizationId: organization?.id ?? null,
+      skipOpportunityId: createdOpportunity.id,
+    });
+
+    if (recurrenceError) {
+      return { error: recurrenceError };
+    }
   }
 
   revalidatePath("/dashboard/admin/opportunities");
@@ -902,7 +1034,7 @@ export async function updateOpportunity(
 
   let fetchQuery = supabase
     .from("volunteer_opportunities")
-    .select("id, title, status, organization_id")
+    .select("id, title, status, organization_id, recurring_group_id")
     .eq("id", id);
 
   if (ownershipFilter) {
@@ -920,11 +1052,18 @@ export async function updateOpportunity(
     return { error: "Opportunity not found" };
   }
 
+  const baseData = normalizeOpportunityFields(parsed.data);
+  const recurringGroupId =
+    baseData.recurring_frequency && baseData.recurring_until
+      ? existingOpportunity.recurring_group_id ?? id
+      : null;
+
   let updateQuery = supabase
     .from("volunteer_opportunities")
     .update({
-      ...normalizeOpportunityFields(parsed.data),
+      ...baseData,
       status: parsed.data.status,
+      recurring_group_id: recurringGroupId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -937,6 +1076,22 @@ export async function updateOpportunity(
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (recurringGroupId && baseData.recurring_frequency && baseData.recurring_until) {
+    const { error: recurrenceError } = await createRecurringOccurrences({
+      supabase,
+      groupId: recurringGroupId,
+      baseData,
+      status: parsed.data.status,
+      adminId: admin.id,
+      organizationId: existingOpportunity.organization_id,
+      skipOpportunityId: id,
+    });
+
+    if (recurrenceError) {
+      return { error: recurrenceError };
+    }
   }
 
   if (existingOpportunity.status === "published") {
@@ -1689,6 +1844,171 @@ export async function assignVolunteerToOpportunity({
   revalidateInbox();
 
   return { success: true };
+}
+
+export async function checkInBooking(bookingId: string) {
+  const admin = await requireAdmin();
+  const adminClient = createAdminClient();
+
+  const { data: booking, error: fetchError } = await adminClient
+    .from("bookings")
+    .select("id, status, opportunity_id, checked_in_at, volunteer_opportunities(*, organizations(id, owner_id))")
+    .eq("id", bookingId)
+    .single();
+
+  if (fetchError || !booking) {
+    return { error: "Registration not found" };
+  }
+
+  if (booking.status !== "approved") {
+    return { error: "Only approved registrations can be checked in" };
+  }
+
+  if (booking.checked_in_at) {
+    return { error: "Volunteer is already checked in" };
+  }
+
+  const opportunity = Array.isArray(booking.volunteer_opportunities)
+    ? booking.volunteer_opportunities[0]
+    : booking.volunteer_opportunities;
+  const organization = Array.isArray(opportunity?.organizations)
+    ? opportunity.organizations[0]
+    : opportunity?.organizations;
+
+  if (admin.role === "organization" && organization?.owner_id !== admin.id) {
+    return { error: "You can only check in volunteers for your organization" };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await adminClient
+    .from("bookings")
+    .update({
+      checked_in_by: admin.id,
+      checked_in_at: now,
+      updated_at: now,
+    })
+    .eq("id", bookingId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/organization/bookings");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${booking.opportunity_id}/edit`);
+  revalidatePath(`/dashboard/admin/opportunities/${booking.opportunity_id}/edit`);
+
+  return { success: true };
+}
+
+export async function cancelBookingCheckIn(bookingId: string) {
+  const admin = await requireAdmin();
+  const adminClient = createAdminClient();
+
+  const { data: booking, error: fetchError } = await adminClient
+    .from("bookings")
+    .select("id, status, opportunity_id, checked_in_at, volunteer_opportunities(*, organizations(id, owner_id))")
+    .eq("id", bookingId)
+    .single();
+
+  if (fetchError || !booking) {
+    return { error: "Registration not found" };
+  }
+
+  if (booking.status !== "approved") {
+    return { error: "Only approved registrations can have check-in changed" };
+  }
+
+  if (!booking.checked_in_at) {
+    return { error: "Volunteer is not checked in" };
+  }
+
+  const opportunity = Array.isArray(booking.volunteer_opportunities)
+    ? booking.volunteer_opportunities[0]
+    : booking.volunteer_opportunities;
+  const organization = Array.isArray(opportunity?.organizations)
+    ? opportunity.organizations[0]
+    : opportunity?.organizations;
+
+  if (admin.role === "organization" && organization?.owner_id !== admin.id) {
+    return { error: "You can only update check-ins for your organization" };
+  }
+
+  const { error } = await adminClient
+    .from("bookings")
+    .update({
+      checked_in_by: null,
+      checked_in_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/organization/bookings");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${booking.opportunity_id}/edit`);
+  revalidatePath(`/dashboard/admin/opportunities/${booking.opportunity_id}/edit`);
+
+  return { success: true };
+}
+
+export async function checkInAllBookingsForOpportunity(opportunityId: string) {
+  const admin = await requireAdmin();
+  const adminClient = createAdminClient();
+
+  const { data: opportunity, error: opportunityError } = await adminClient
+    .from("volunteer_opportunities")
+    .select("id, organizations(id, owner_id)")
+    .eq("id", opportunityId)
+    .single();
+
+  if (opportunityError || !opportunity) {
+    return { error: "Opportunity not found" };
+  }
+
+  const organization = Array.isArray(opportunity.organizations)
+    ? opportunity.organizations[0]
+    : opportunity.organizations;
+
+  if (admin.role === "organization" && organization?.owner_id !== admin.id) {
+    return { error: "You can only check in volunteers for your organization" };
+  }
+
+  const now = new Date().toISOString();
+  const { data: checkedInBookings, error } = await adminClient
+    .from("bookings")
+    .update({
+      checked_in_by: admin.id,
+      checked_in_at: now,
+      updated_at: now,
+    })
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "approved")
+    .is("checked_in_at", null)
+    .select("id");
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/organization/bookings");
+  revalidatePath("/dashboard/admin/opportunities");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${opportunityId}/edit`);
+  revalidatePath(`/dashboard/admin/opportunities/${opportunityId}/edit`);
+
+  return {
+    success: true,
+    count: checkedInBookings?.length ?? 0,
+  };
 }
 
 export async function rejectBooking(bookingId: string, adminNote?: string) {

@@ -216,7 +216,16 @@ export function VolunteerExplore({
           matchesOpportunityAccess
         );
       })
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => {
+        if (a.kind === "opportunity" && b.kind === "opportunity") {
+          const aTime = `${a.date}T${a.start_time}`;
+          const bTime = `${b.date}T${b.start_time}`;
+
+          return aTime.localeCompare(bTime) || b.score - a.score;
+        }
+
+        return b.score - a.score;
+      });
   }, [
     activeView,
     categoryFilters,

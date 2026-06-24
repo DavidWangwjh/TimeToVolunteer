@@ -29,7 +29,7 @@ TimeToVolunteer is a volunteer discovery and registration platform for volunteer
 - Public/private opportunity registration:
   - Public opportunities register directly
   - Private opportunities create pending registration requests
-- In-app inbox for booking, membership, and opportunity update notifications
+- In-app inbox for registration, membership, and opportunity update notifications
 - Platform admin analytics, volunteer management, organization management, application review, and opportunity browsing
 
 ## Database
@@ -188,7 +188,7 @@ Platform admins can:
 - manage organizations
 - suspend accounts
 - view opportunities across all organizations
-- review organization applications and manage platform records
+- manage platform records
 
 ## Access Model
 

@@ -10,6 +10,9 @@ export interface OpportunityDraft {
   experience_required: string;
   max_volunteers: number;
   visibility: "public" | "private";
+  recurrence_enabled?: boolean;
+  recurrence_frequency?: "weekly" | "biweekly" | "monthly";
+  recurrence_until?: string;
 }
 
 export function loadOpportunityDraft(): OpportunityDraft | null {

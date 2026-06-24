@@ -12,7 +12,10 @@ import type { Profile } from "@/types/database";
 
 interface RegisteredBooking {
   id: string;
-  profiles: Profile;
+  volunteer_id: string;
+  checked_in_at: string | null;
+  checked_in_by: string | null;
+  profiles: Profile | null;
 }
 
 interface Props {
@@ -49,6 +52,8 @@ export default async function EditOpportunityPage({ params }: Props) {
         id,
         status,
         volunteer_id,
+        checked_in_at,
+        checked_in_by,
         profiles:profiles!bookings_volunteer_id_fkey (
           id,
           first_name,
@@ -92,16 +97,16 @@ export default async function EditOpportunityPage({ params }: Props) {
     .filter((booking) => booking.status === "approved")
     .map((booking) => ({
       id: booking.id,
+      volunteer_id: booking.volunteer_id,
+      checked_in_at: booking.checked_in_at,
+      checked_in_by: booking.checked_in_by,
       profiles: Array.isArray(booking.profiles)
         ? booking.profiles[0]
         : booking.profiles,
-    }))
-    .filter(
-      (booking): booking is RegisteredBooking => Boolean(booking.profiles)
-    );
+    }));
 
   const registeredVolunteerIds = new Set(
-    registeredBookings.map((booking) => booking.profiles.id)
+    registeredBookings.map((booking) => booking.volunteer_id)
   );
   const acceptedMemberProfiles = (memberships ?? [])
     .map((membership) =>
@@ -148,9 +153,11 @@ export default async function EditOpportunityPage({ params }: Props) {
       <RegisteredVolunteers
         opportunity={opportunity}
         registeredBookings={registeredBookings}
+        registeredCount={registeredBookings.length}
         volunteerBasePath="/dashboard/organization/volunteers"
         assignableVolunteers={assignableVolunteers}
         showRemoveActions
+        showCheckInActions
       />
     </div>
   );

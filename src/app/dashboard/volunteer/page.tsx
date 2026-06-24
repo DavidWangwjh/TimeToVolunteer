@@ -90,11 +90,7 @@ export default async function VolunteerDashboardPage() {
   const pending = upcoming.filter((booking) => booking.status === "pending");
   const approved = upcoming.filter((booking) => booking.status === "approved");
   const completed = (allBookings ?? []).filter((booking) => {
-    const opportunity = booking.volunteer_opportunities;
-    return (
-      booking.status === "completed" ||
-      (booking.status === "approved" && opportunity && opportunity.date < today)
-    );
+    return booking.status === "approved" && Boolean(booking.checked_in_at);
   });
   const completedHours = completed.reduce(
     (total, booking) => total + bookingHours(booking),

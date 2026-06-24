@@ -195,6 +195,9 @@ create table volunteer_opportunities (
   max_volunteers integer not null default 1,
   status text not null default 'draft',
   visibility text not null default 'public',
+  recurring_group_id uuid,
+  recurring_frequency text,
+  recurring_until date,
   created_by uuid references profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -203,6 +206,10 @@ create table volunteer_opportunities (
   ),
   constraint volunteer_opportunities_visibility_check check (
     visibility in ('public', 'private')
+  ),
+  constraint volunteer_opportunities_recurring_frequency_check check (
+    recurring_frequency is null
+    or recurring_frequency in ('weekly', 'biweekly', 'monthly')
   ),
   constraint volunteer_opportunities_max_volunteers_check check (max_volunteers >= 1),
   constraint volunteer_opportunities_time_check check (end_time > start_time)
@@ -214,6 +221,9 @@ on volunteer_opportunities (organization_id, date);
 create index volunteer_opportunities_status_date_idx
 on volunteer_opportunities (status, date);
 
+create index volunteer_opportunities_recurring_group_idx
+on volunteer_opportunities (recurring_group_id, date);
+
 -- Registrations and registration requests.
 create table bookings (
   id uuid primary key default gen_random_uuid(),
@@ -224,6 +234,8 @@ create table bookings (
   admin_note text,
   approved_by uuid references profiles(id),
   approved_at timestamptz,
+  checked_in_by uuid references profiles(id),
+  checked_in_at timestamptz,
   rejected_at timestamptz,
   cancelled_at timestamptz,
   created_at timestamptz not null default now(),
@@ -279,6 +291,20 @@ where deleted_at is null;
 create index inbox_messages_recipient_unread_idx
 on inbox_messages (recipient_id, created_at desc)
 where read_at is null and deleted_at is null;
+
+-- Supabase API roles need table privileges before RLS policies can apply.
+grant usage on schema public to anon, authenticated, service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
+grant select, insert, update, delete on
+  profiles,
+  organization_applications,
+  organizations,
+  organization_memberships,
+  volunteer_opportunities,
+  bookings,
+  inbox_messages
+to authenticated;
+grant insert on organization_applications to anon;
 
 -- Shared helpers
 create or replace function update_updated_at()
