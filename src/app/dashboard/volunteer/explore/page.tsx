@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireActiveVolunteer } from "@/lib/auth";
 import { VolunteerExplore } from "@/components/explore/VolunteerExplore";
-import { isOpportunityPast } from "@/lib/dates";
+import { getAppDateString, isOpportunityPast } from "@/lib/dates";
 import { inferOrganizationCategory } from "@/lib/organization-display";
 import type {
   BookingStatus,
@@ -43,7 +43,7 @@ export default async function VolunteerExplorePage() {
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
   const adminClient = createAdminClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = getAppDateString();
 
   const [
     { data: organizations },

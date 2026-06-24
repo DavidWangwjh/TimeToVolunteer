@@ -6,7 +6,7 @@ import { requireActiveVolunteer } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { OrganizationOpportunityCalendar } from "@/components/organizations/OrganizationOpportunityCalendar";
 import { OrganizationProfile } from "@/components/organizations/OrganizationProfile";
-import { isOpportunityPast } from "@/lib/dates";
+import { getAppDateString, isOpportunityPast } from "@/lib/dates";
 import type {
   BookingStatus,
   MembershipStatus,
@@ -23,7 +23,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
   const profile = await requireActiveVolunteer();
   const supabase = await createClient();
   const adminClient = createAdminClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = getAppDateString();
 
   const [
     { data: organization },

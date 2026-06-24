@@ -34,13 +34,19 @@ TimeToVolunteer is a volunteer discovery and registration platform for volunteer
 
 ## Database
 
-The database is defined by one file:
+The full database schema is defined by one file:
 
 ```txt
 supabase/schema.sql
 ```
 
-There are no incremental migration files in this project anymore. For a new Supabase project, run the full contents of `supabase/schema.sql` once in the Supabase SQL Editor.
+For a new Supabase project, run the full contents of `supabase/schema.sql` once in the Supabase SQL Editor.
+
+Incremental migration files for existing databases live in:
+
+```txt
+supabase/migrations
+```
 
 There is also a destructive reset script:
 
@@ -60,6 +66,7 @@ The schema creates:
 - `organization_memberships`
 - `volunteer_opportunities`
 - `bookings`
+- `booking_email_reminders`
 - `inbox_messages`
 - the public `organization-images` storage bucket
 - triggers for `updated_at`
@@ -82,20 +89,17 @@ cp .env.local.example .env.local
 Required variables:
 
 ```env
+APP_ENV=development
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-Optional variables currently kept for future custom email flows:
-
-```env
 RESEND_API_KEY=
-RESEND_FROM_EMAIL=
+RESEND_FROM_EMAIL="TimeToVolunteer <support@timetovolunteer.org>"
+CRON_SECRET=
 ```
 
-The service role key is used only in server actions for admin-level operations such as creating accounts and uploading organization images. Never expose it to client components.
+The service role key, Resend API key, and cron secret are server-only. Never expose them to client components.
 
 ## Supabase Setup
 

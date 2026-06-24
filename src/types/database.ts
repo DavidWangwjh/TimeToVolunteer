@@ -116,6 +116,16 @@ export interface Booking {
   updated_at: string;
 }
 
+export interface BookingEmailReminder {
+  id: string;
+  booking_id: string;
+  reminder_date: string;
+  sent_at: string | null;
+  resend_email_id: string | null;
+  error: string | null;
+  created_at: string;
+}
+
 export interface InboxMessage {
   id: string;
   recipient_id: string;

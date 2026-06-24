@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAppDateString } from "@/lib/dates";
 import { requireAdmin, getCurrentUserProfile } from "@/lib/auth";
 import {
   MAX_ORGANIZATION_IMAGE_SIZE,
@@ -1402,7 +1403,7 @@ export async function leaveOrganizationMembership(
     ? membership.organizations[0]
     : membership.organizations;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getAppDateString();
   const { data: upcomingBookings, error: upcomingError } = await supabase
     .from("bookings")
     .select(

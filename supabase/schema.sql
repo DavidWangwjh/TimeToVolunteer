@@ -225,6 +225,21 @@ on bookings (volunteer_id, created_at desc);
 create index bookings_opportunity_status_idx
 on bookings (opportunity_id, status);
 
+-- Server-side email reminder delivery log.
+create table booking_email_reminders (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references bookings(id) on delete cascade,
+  reminder_date date not null,
+  sent_at timestamptz,
+  resend_email_id text,
+  error text,
+  created_at timestamptz not null default now(),
+  constraint booking_email_reminders_booking_date_unique unique (booking_id, reminder_date)
+);
+
+create index booking_email_reminders_date_idx
+on booking_email_reminders (reminder_date);
+
 -- In-app inbox notifications.
 create table inbox_messages (
   id uuid primary key default gen_random_uuid(),
@@ -372,6 +387,7 @@ alter table organizations enable row level security;
 alter table organization_memberships enable row level security;
 alter table volunteer_opportunities enable row level security;
 alter table bookings enable row level security;
+alter table booking_email_reminders enable row level security;
 alter table inbox_messages enable row level security;
 
 create policy "Users can view own profile"

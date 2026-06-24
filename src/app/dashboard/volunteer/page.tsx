@@ -8,6 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/auth";
+import { getAppDateString } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import { VolunteerScheduleSection } from "@/components/dashboard/VolunteerScheduleSection";
 import type {
@@ -76,7 +77,7 @@ export default async function VolunteerDashboardPage() {
         ])
       : [{ data: [] }, { data: [] }];
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getAppDateString();
 
   const upcoming = (allBookings ?? []).filter((booking) => {
     const opportunity = booking.volunteer_opportunities;
