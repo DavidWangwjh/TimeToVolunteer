@@ -140,7 +140,6 @@ export interface InboxMessage {
   body: string;
   action_href: string | null;
   read_at: string | null;
-  deleted_at: string | null;
   created_at: string;
 }
 

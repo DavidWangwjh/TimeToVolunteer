@@ -50,10 +50,14 @@ export function LoginForm({ quickLoginGroups = [] }: LoginFormProps) {
   }
 
   async function handleQuickLogin(account: QuickLoginAccount) {
+    if (quickLoginEmail || isSubmitting) return;
     setQuickLoginEmail(account.email);
-    const result = await signIn(account.email, account.password, redirectTo);
-    if (result?.error) {
-      toast.error(result.error);
+    try {
+      const result = await signIn(account.email, account.password, redirectTo);
+      if (result?.error) toast.error(result.error);
+    } catch {
+      toast.error("Unable to log in. Please try again.");
+    } finally {
       setQuickLoginEmail(null);
     }
   }
@@ -131,7 +135,7 @@ export function LoginForm({ quickLoginGroups = [] }: LoginFormProps) {
                         variant="outline"
                         size="sm"
                         className="justify-start overflow-hidden"
-                        disabled={Boolean(quickLoginEmail)}
+                        disabled={Boolean(quickLoginEmail) || isSubmitting}
                         onClick={() => handleQuickLogin(account)}
                       >
                         <span className="truncate">

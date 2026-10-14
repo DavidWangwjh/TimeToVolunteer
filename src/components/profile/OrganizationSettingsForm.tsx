@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getOrganizationImageUrl } from "@/lib/organization-display";
 import {
   updateOrganizationByAdmin,
   updateOrganizationSettings,
@@ -210,14 +211,12 @@ export function OrganizationSettingsForm({
               <p className="text-xs text-slate-500">
                 Upload an image up to {ORGANIZATION_IMAGE_SIZE_LABEL}.
               </p>
-              {imagePreview && (
-                // eslint-disable-next-line @next/next/no-img-element
+              {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={imagePreview}
+                  src={getOrganizationImageUrl(imagePreview)}
                   alt="Organization profile"
                   className="mt-2 h-44 w-full rounded-lg object-cover sm:h-56 lg:h-64"
                 />
-              )}
             </div>
           </div>
 

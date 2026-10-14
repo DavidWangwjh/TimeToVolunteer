@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { ApplicationActions } from "@/components/applications/ApplicationActions";
 import { formatDate } from "@/lib/dates";
 import {
-  fallbackOrganizationImage,
+  getOrganizationImageUrl,
   inferOrganizationCategory,
 } from "@/lib/organization-display";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,7 @@ export default async function ApplicationDetailPage({ params }: Props) {
 
   if (!application) notFound();
 
-  const imageUrl = application.image_url?.trim() || fallbackOrganizationImage;
+  const imageUrl = getOrganizationImageUrl(application.image_url);
   const description =
     application.organization_description?.trim() ||
     "A volunteer organization applying to publish community opportunities.";
@@ -101,8 +101,8 @@ export default async function ApplicationDetailPage({ params }: Props) {
             </div>
             {application.admin_notes && (
               <div>
-                <p className="text-muted-foreground mb-1">Admin Notes</p>
-                <p>{application.admin_notes}</p>
+                <p className="text-muted-foreground mb-1">{application.status === "rejected" ? "Rejection Reason" : "Admin Notes"}</p>
+                <p className="whitespace-pre-wrap">{application.admin_notes}</p>
               </div>
             )}
           </CardContent>

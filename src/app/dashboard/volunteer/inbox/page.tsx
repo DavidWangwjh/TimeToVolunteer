@@ -13,7 +13,6 @@ export default async function VolunteerInboxPage() {
       "*, actor:profiles!inbox_messages_actor_id_fkey(first_name, last_name, email), organizations(id, name)"
     )
     .eq("recipient_id", profile.id)
-    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   return (

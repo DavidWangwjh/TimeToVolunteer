@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Resend } from "resend";
+import { sendNewOrganizationApplicationEmail, sendOrganizationApprovalEmail, sendOrganizationRejectionEmail } from "@/lib/organization-approval-email";
+import { canAccessOrganizationApplication, getOwnOrganizationApplication } from "@/lib/organization-application-access";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppDateString } from "@/lib/dates";
@@ -466,6 +468,7 @@ export async function submitOrganizationApplication(
   const adminClient = createAdminClient();
 
   const applicationPayload = {
+    id: crypto.randomUUID(),
     organization_name: parsed.data.organization_name,
     category: parsed.data.category,
     email: parsed.data.email,
@@ -598,6 +601,14 @@ export async function submitOrganizationApplication(
     return { error: error.message };
   }
 
+  const notification = await sendNewOrganizationApplicationEmail(applicationPayload);
+  if (notification.error) {
+    console.error("Failed to send new application notification:", {
+      applicationId: applicationPayload.id,
+      error: notification.error,
+    });
+  }
+
   const { error: signInError } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
@@ -714,6 +725,10 @@ export async function acceptOrganizationApplication(applicationId: string) {
     return { error: "Application not found" };
   }
 
+  if (application.status === "accepted") {
+    return { error: "This organization has already been approved" };
+  }
+
   const { user: foundUser, error: listError } = await findAuthUserByEmail(
     adminClient,
     application.email
@@ -822,37 +837,42 @@ export async function acceptOrganizationApplication(applicationId: string) {
     return { error: updateError.message };
   }
 
+  const warnings: string[] = [];
   if (!foundUser) {
-    const redirectTo = getPasswordSetupRedirectUrl();
-    const { error: resetEmailError } =
-      await adminClient.auth.resetPasswordForEmail(application.email, {
-        redirectTo,
-      });
+    try {
+      const redirectTo = getPasswordSetupRedirectUrl();
+      const { error: resetEmailError } =
+        await adminClient.auth.resetPasswordForEmail(application.email, {
+          redirectTo,
+        });
 
-    if (resetEmailError) {
-      if (isSupabaseMailerError(resetEmailError.message)) {
-        const fallbackResult = await sendPasswordResetEmailFallback(
-          application.email,
-          redirectTo
-        );
+      if (resetEmailError) {
+        if (isSupabaseMailerError(resetEmailError.message)) {
+          const fallbackResult = await sendPasswordResetEmailFallback(
+            application.email,
+            redirectTo
+          );
 
-        if (fallbackResult.error) {
-          return {
-            error:
-              "Organization was approved, but the password setup email failed to send.",
-          };
+          if (fallbackResult.error) {
+            warnings.push("The password setup email failed to send.");
+          } else {
+            console.warn(
+              "Supabase password setup email failed; sent organization setup email through Resend fallback."
+            );
+          }
+        } else {
+          warnings.push("The password setup email failed to send.");
         }
-
-        console.warn(
-          "Supabase password setup email failed; sent organization setup email through Resend fallback."
-        );
-      } else {
-        return {
-          error:
-            "Organization was approved, but the password setup email failed to send.",
-        };
       }
+    } catch {
+      warnings.push("The password setup email failed to send.");
     }
+  }
+
+  const approvalEmail = await sendOrganizationApprovalEmail(application);
+  if (approvalEmail.error) {
+    console.error("Failed to send organization approval email:", approvalEmail.error);
+    warnings.push("The approval email failed to send. Check the email service configuration and logs.");
   }
 
   await createInboxMessage({
@@ -871,17 +891,26 @@ export async function acceptOrganizationApplication(applicationId: string) {
   revalidatePath("/dashboard/organization");
   revalidateInbox();
 
-  return { success: true };
+  return {
+    success: true,
+    warning: warnings.length ? `Organization approved. ${warnings.join(" ")}` : undefined,
+  };
 }
 
 export async function rejectOrganizationApplication(
   applicationId: string,
-  adminNotes?: string
+  rejectionReason: string
 ) {
   const reviewer = await requireAdmin();
 
   if (reviewer.role !== "admin") {
     return { error: "Only platform admins can reject organization accounts" };
+  }
+
+  const reason = typeof rejectionReason === "string" ? rejectionReason.trim() : "";
+  if (!reason) return { error: "Please provide a reason for rejection" };
+  if (reason.length > 2000) {
+    return { error: "The rejection reason must be 2,000 characters or fewer" };
   }
 
   const supabase = await createClient();
@@ -897,17 +926,24 @@ export async function rejectOrganizationApplication(
     return { error: "Application not found" };
   }
 
-  const { error } = await supabase
+  const { data: rejectedApplication, error } = await supabase
     .from("organization_applications")
     .update({
       status: "rejected",
-      admin_notes: adminNotes,
+      admin_notes: reason,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", applicationId);
+    .eq("id", applicationId)
+    .in("status", ["pending", "contacted"])
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (!rejectedApplication) {
+    return { error: "Only pending or contacted applications can be rejected" };
   }
 
   const { user: existingUser } = await findAuthUserByEmail(
@@ -940,8 +976,16 @@ export async function rejectOrganizationApplication(
       organizationId: organization?.id ?? null,
       kind: "membership_rejected",
       title: "Organization application declined",
-      body: "Your organization application was declined.",
+      body: `Your organization application was declined.\n\nReason: ${reason}`,
       actionHref: "/dashboard/organization/inbox",
+    });
+  }
+
+  const rejectionEmail = await sendOrganizationRejectionEmail(application, reason);
+  if (rejectionEmail.error) {
+    console.error("Failed to send organization rejection email:", {
+      applicationId,
+      error: rejectionEmail.error,
     });
   }
 
@@ -950,7 +994,52 @@ export async function rejectOrganizationApplication(
   revalidatePath("/dashboard/admin/organizations");
   revalidateInbox();
 
-  return { success: true };
+  return {
+    success: true,
+    warning: rejectionEmail.error
+      ? "Application rejected, but the rejection email failed to send. Check the email service configuration and logs."
+      : undefined,
+  };
+}
+
+export async function resubmitOrganizationApplication(explanation: string) {
+  const profile = await getCurrentUserProfile();
+  if (!profile || profile.role !== "organization") return { error: "Sign in to your organization account to resubmit" };
+  const reason = typeof explanation === "string" ? explanation.trim() : "";
+  if (!reason || reason.length > 2000) return { error: "Explain your updates in 1–2,000 characters" };
+  const application = await getOwnOrganizationApplication(profile);
+  if (!application || application.status !== "rejected") return { error: "Only rejected applications can be resubmitted" };
+
+  const adminClient = createAdminClient();
+  const { data: organization, error: organizationError } = await adminClient.from("organizations")
+    .select("*").eq("owner_id", profile.id).maybeSingle();
+  if (organizationError || !organization || organization.status === "active") return { error: "Unable to resubmit this organization" };
+  const description = normalizeOrganizationDescription(organization.description);
+  if (!organization.name?.trim() || !description || description.length < 20) return { error: "Save your organization name and a description of at least 20 characters before resubmitting" };
+
+  const submittedAt = new Date().toISOString();
+  const { data: updated, error } = await adminClient.from("organization_applications").update({
+    organization_name: organization.name,
+    category: organization.category,
+    organization_description: description,
+    phone: organization.contact_phone,
+    website: organization.website,
+    image_url: organization.image_url,
+    reason,
+    status: "pending",
+    updated_at: submittedAt,
+    // Keep the previous review reason for the admin; it is not reused in emails.
+  }).eq("id", application.id).eq("status", "rejected").select("id").maybeSingle();
+  if (error) return { error: error.message };
+  if (!updated) return { error: "Your application has already been updated. Refresh to check its status." };
+
+  const notification = await sendNewOrganizationApplicationEmail({ id: application.id, organization_name: organization.name }, submittedAt);
+  if (notification.error) console.error("Failed to send resubmitted application notification:", { applicationId: application.id, error: notification.error });
+  revalidatePath("/dashboard/organization");
+  revalidatePath("/dashboard/organization/profile");
+  revalidatePath("/dashboard/admin/applications");
+  revalidatePath(`/dashboard/admin/applications/${application.id}`);
+  return { success: true, warning: notification.error ? "Application resubmitted, but the admin email could not be sent. Your application is in the review queue." : undefined };
 }
 
 export async function updateOrganizationApplicationStatus(
@@ -1581,6 +1670,10 @@ export async function requestBooking(data: {
     ? opportunity.organizations[0]
     : opportunity.organizations;
 
+  if (organization && organization.status !== "active") {
+    return { error: "This organization is not accepting registrations" };
+  }
+
   if (organization?.visibility === "private") {
     const { data: membership } = await supabase
       .from("organization_memberships")
@@ -1631,7 +1724,7 @@ export async function requestBooking(data: {
   const requestedStatus =
     opportunity.visibility === "public" ? "approved" : "pending";
 
-  const { data: newBooking, error } = await supabase
+  const { data: newBooking, error } = await createAdminClient()
     .from("bookings")
     .insert({
       opportunity_id: parsed.data.opportunity_id,
@@ -2550,8 +2643,7 @@ export async function markInboxMessageRead(messageId: string, read = true) {
       read_at: read ? new Date().toISOString() : null,
     })
     .eq("id", messageId)
-    .eq("recipient_id", profile.id)
-    .is("deleted_at", null);
+    .eq("recipient_id", profile.id);
 
   if (error) {
     return { error: error.message };
@@ -2576,8 +2668,7 @@ export async function markAllInboxMessagesRead() {
       read_at: new Date().toISOString(),
     })
     .eq("recipient_id", profile.id)
-    .is("read_at", null)
-    .is("deleted_at", null);
+    .is("read_at", null);
 
   if (error) {
     return { error: error.message };
@@ -3032,7 +3123,7 @@ export async function updatePassword(password: string, confirmPassword: string) 
     return { error: error.message };
   }
 
-  const { error: profileUpdateError } = await supabase
+  const { error: profileUpdateError } = await createAdminClient()
     .from("profiles")
     .update({
       must_reset_password: false,
@@ -3105,9 +3196,11 @@ export async function signIn(
   }
 
   if (profile.role !== "admin" && profile.status !== "active") {
-    return {
-      error: "Your account is not active yet. Please contact an administrator.",
-    };
+    if (!(await canAccessOrganizationApplication(profile))) {
+      return {
+        error: "Your account is not active yet. Please contact an administrator.",
+      };
+    }
   }
 
   redirectAfterLogin(profile, redirectTo);

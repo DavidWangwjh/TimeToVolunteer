@@ -78,6 +78,14 @@ For an existing Supabase project, reset or carefully reconcile your database bef
 
 If you want to intentionally wipe the current app database and rebuild it, run `supabase/reset.sql` instead of `supabase/schema.sql`.
 
+## Reset development test data
+
+Run `npm run db:seed` to replace app data with development fixtures. The script requires `APP_ENV=development`, `NEXT_PUBLIC_APP_URL=http://localhost:3000`, and the explicitly allowlisted dev Supabase project `hdsevwlvtlpxjikynkof`. It clears app activity, recreates accounts ending in `@timetovolunteer.test` and the dev admin `support@timetovolunteer.org`, and preserves other Auth accounts and their profiles. It does not reset the schema or clear uploaded storage files.
+
+All seeded logins use `password123`: admin `support@timetovolunteer.org`, organization `org.codeninjas@timetovolunteer.test` or `org.greencity@timetovolunteer.test`, and volunteers `ava.volunteer@timetovolunteer.test`, `ben.volunteer@timetovolunteer.test`, `maya.volunteer@timetovolunteer.test`, and `jordan.volunteer@timetovolunteer.test`.
+
+Fixtures cover public/private organizations and opportunities; pending/contacted/accepted/rejected applications; pending/accepted/rejected memberships; every registration and opportunity status; today's check-in session; a full session; completed hours; a three-session weekly series; and read/unread inbox messages. Pending organization logins include `apply.newroots@timetovolunteer.test` and `apply.servicelab@timetovolunteer.test`. Seeding sends no emails. For actual email delivery tests, submit a new application with an address you control; the seeded `.test` addresses are not delivery inboxes.
+
 ## Environment Variables
 
 Create `.env.local` from `.env.local.example`:
@@ -181,6 +189,14 @@ Organizations apply through the organization application form. The application i
 - reason for joining
 
 Organization users can log in while pending approval, but only profile and inbox features are unlocked until a platform admin approves the application. Approved organizations can create and manage opportunities, review memberships, review registration requests, and edit their organization profile.
+
+New organization applications submitted through the website send an admin email to `support@timetovolunteer.org` through Resend, with a link to the saved application. Development emails have a `[Development]` subject prefix. The same Resend and app URL configuration below is required. Notification failures are logged without rejecting the application; there is no automatic retry. Seeded applications do not send notifications.
+
+Approving an organization sends an approval email through Resend and creates an in-app inbox message. Production must configure `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (an authorized Resend sender), and `NEXT_PUBLIC_APP_URL` (the public site URL). Accounts created during approval also receive the existing Supabase password setup email. If an email fails, approval still completes and the admin sees a warning. There is no automatic retry or backfill for previously approved organizations.
+
+Rejecting a pending or contacted organization application sends a rejection email through Resend to the application's email address, with replies directed to `support@timetovolunteer.org`. The admin must enter a rejection reason (1–2,000 characters). This reason is saved in `admin_notes` and shared in the rejection email and inbox message; existing notes are not automatically used. If delivery fails, the rejection still completes and the admin sees a warning. Previously rejected applications are not emailed retroactively, and there is no automatic retry.
+
+Rejected organizations can sign in to a limited dashboard, read the rejection reason, edit and save their organization profile, and resubmit with an explanation of their updates. Resubmission copies the saved profile into the application, returns it to `pending`, retains the previous review reason for the admin, and sends a fresh admin email alert. Organization features stay locked until approval. Suspended organizations whose latest application is already accepted do not gain this login exception. No schema migration is required.
 
 ### Platform Admin
 

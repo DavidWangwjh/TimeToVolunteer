@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { devQuickLoginGroups, DEV_SUPABASE_PROJECT_REF } from "@/lib/dev-login-accounts";
 import { getAuthNavState } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -17,59 +18,9 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
   const auth = await getAuthNavState();
   const quickLoginAccounts =
-    process.env.APP_ENV === "development"
-      ? [
-          {
-            role: "Admin",
-            accounts: [
-              {
-                label: "Platform Admin",
-                email: "admin@timetovolunteer.test",
-                password: "password123",
-              },
-            ],
-          },
-          {
-            role: "Organizations",
-            accounts: [
-              {
-                label: "Code Ninjas",
-                email: "org.codeninjas@timetovolunteer.test",
-                password: "password123",
-              },
-              {
-                label: "Green City",
-                email: "org.greencity@timetovolunteer.test",
-                password: "password123",
-              },
-            ],
-          },
-          {
-            role: "Volunteers",
-            accounts: [
-              {
-                label: "Ava Martinez",
-                email: "ava.volunteer@timetovolunteer.test",
-                password: "password123",
-              },
-              {
-                label: "Ben Carter",
-                email: "ben.volunteer@timetovolunteer.test",
-                password: "password123",
-              },
-              {
-                label: "Maya Johnson",
-                email: "maya.volunteer@timetovolunteer.test",
-                password: "password123",
-              },
-              {
-                label: "Jordan Lee",
-                email: "jordan.volunteer@timetovolunteer.test",
-                password: "password123",
-              },
-            ],
-          },
-        ]
+    process.env.APP_ENV === "development" &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL === `https://${DEV_SUPABASE_PROJECT_REF}.supabase.co`
+      ? devQuickLoginGroups
       : [];
 
   if (

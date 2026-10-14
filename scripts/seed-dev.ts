@@ -2,17 +2,20 @@ import { loadEnvConfig } from "@next/env";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { organizationCategories } from "../src/lib/organization-options";
 
+import { DEV_ADMIN_EMAIL, DEV_LOGIN_PASSWORD, DEV_SUPABASE_PROJECT_REF, devQuickLoginGroups } from "../src/lib/dev-login-accounts";
+
 loadEnvConfig(process.cwd());
 
+const DEVELOPMENT_PROJECT_REF = DEV_SUPABASE_PROJECT_REF;
 const PRODUCTION_PROJECT_REF = "chdnlpkoqoadqnmdpqrx";
-const PASSWORD = "password123";
+const PASSWORD = DEV_LOGIN_PASSWORD;
 const SEEDED_EMAIL_DOMAIN = "@timetovolunteer.test";
 
 type ProfileRole = "admin" | "organization" | "volunteer";
 type OrganizationVisibility = "public" | "private";
 type OpportunityVisibility = "public" | "private";
-type BookingStatus = "pending" | "approved";
-type MembershipStatus = "pending" | "accepted";
+type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
+type MembershipStatus = "pending" | "accepted" | "rejected";
 type InboxKind =
   | "booking_requested"
   | "booking_approved"
@@ -37,7 +40,7 @@ interface SeedOrganization {
   category: (typeof organizationCategories)[number];
   description: string;
   visibility: OrganizationVisibility;
-  imageUrl: string;
+  imageUrl: string | null;
   website: string;
   contactPhone: string;
 }
@@ -53,6 +56,8 @@ interface SeedOpportunity {
   location: string;
   maxVolunteers: number;
   visibility: OpportunityVisibility;
+  status?: "draft" | "published" | "cancelled" | "completed";
+  recurringGroupId?: string;
 }
 
 interface SeedMembership {
@@ -98,12 +103,17 @@ function validateSafeEnvironment() {
     );
   }
 
+  if (new URL(supabaseUrl).hostname !== `${DEVELOPMENT_PROJECT_REF}.supabase.co`) {
+    throw new Error("Refusing to seed an unrecognized development project.");
+  }
+
   return { supabaseUrl, serviceRoleKey };
 }
 
 function addDays(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const date = new Date(`${today}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
@@ -151,7 +161,7 @@ async function assertServiceRoleTableAccess(supabase: SupabaseClient) {
 }
 
 const adminUser: SeedUser = {
-  email: "admin@timetovolunteer.test",
+  email: DEV_ADMIN_EMAIL,
   firstName: "Alex",
   lastName: "Admin",
   role: "admin",
@@ -248,7 +258,7 @@ const organizations: SeedOrganization[] = [
     description:
       "STEM enrichment center helping students build confidence through coding, robotics, and creative technology projects.",
     visibility: "public",
-    imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://www.codeninjas.com/ca-union-city",
     contactPhone: "555-3101",
   },
@@ -260,7 +270,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Neighborhood cleanup, planting, and park stewardship programs that make public spaces healthier and more welcoming.",
     visibility: "private",
-    imageUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://greencity.example.org",
     contactPhone: "555-3102",
   },
@@ -272,7 +282,7 @@ const organizations: SeedOrganization[] = [
     description:
       "After-school tutoring and mentorship for middle and high school students preparing for academic success.",
     visibility: "public",
-    imageUrl: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://brightfutures.example.org",
     contactPhone: "555-3103",
   },
@@ -284,7 +294,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Food pantry, meal prep, and grocery delivery programs for families experiencing food insecurity.",
     visibility: "public",
-    imageUrl: "https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://communitytable.example.org",
     contactPhone: "555-3104",
   },
@@ -296,7 +306,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Weekend trail maintenance, habitat restoration, and outdoor safety education led by local volunteers.",
     visibility: "private",
-    imageUrl: "https://images.unsplash.com/photo-1476231682828-37e571bc172f?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://trailkeepers.example.org",
     contactPhone: "555-3105",
   },
@@ -308,7 +318,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Technology help, social visits, and errand support programs that help older adults stay connected.",
     visibility: "public",
-    imageUrl: "https://images.unsplash.com/photo-1581579438747-104c53d7fbc4?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://seniorconnect.example.org",
     contactPhone: "555-3106",
   },
@@ -320,7 +330,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Animal shelter support with enrichment, adoption events, donation sorting, and community pet care outreach.",
     visibility: "public",
-    imageUrl: "https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://pawscare.example.org",
     contactPhone: "555-3107",
   },
@@ -332,7 +342,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Housing navigation, supply drives, and renter support clinics for neighbors seeking stable housing.",
     visibility: "private",
-    imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://homefirst.example.org",
     contactPhone: "555-3108",
   },
@@ -344,7 +354,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Community arts workshops, youth showcases, and cultural events powered by creative volunteers.",
     visibility: "public",
-    imageUrl: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://artsbridge.example.org",
     contactPhone: "555-3109",
   },
@@ -356,7 +366,7 @@ const organizations: SeedOrganization[] = [
     description:
       "Health fairs, wellness workshops, and community resource events focused on practical prevention and support.",
     visibility: "private",
-    imageUrl: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: null,
     website: "https://wellnesstogether.example.org",
     contactPhone: "555-3110",
   },
@@ -526,8 +536,7 @@ const applicationRows = [
     website: "https://newroots.example.org",
     organization_description:
       "Urban farming and neighborhood education programs that connect residents with fresh produce and practical gardening skills.",
-    image_url:
-      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1200&q=80",
+    image_url: null,
     reason: "We want to coordinate recurring garden volunteer shifts more efficiently.",
     status: "pending",
   },
@@ -539,37 +548,48 @@ const applicationRows = [
     website: "https://studentsservicelab.example.org",
     organization_description:
       "Student-led volunteer projects connecting schools with local nonprofits and service-learning mentors.",
-    image_url:
-      "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",
+    image_url: null,
     reason: "We need a simple way to publish service opportunities for students.",
     status: "contacted",
   },
 ];
 
+// Edge cases complement the discovery and registration fixtures above.
+const recurringGroupId = crypto.randomUUID();
+for (const fixture of [
+  { key: "today-shift", title: "Today: Robotics Check-in", daysFromNow: 0 },
+  { key: "full-shift", title: "Full Robotics Session", daysFromNow: 2, maxVolunteers: 1 },
+  { key: "draft-shift", title: "Draft Workshop", daysFromNow: 4, status: "draft" as const },
+  { key: "cancelled-shift", title: "Cancelled Workshop", daysFromNow: 6, status: "cancelled" as const },
+  { key: "completed-shift", title: "Completed Robotics Workshop", daysFromNow: -7, status: "completed" as const },
+  ...[7, 14, 21].map(daysFromNow => ({ key: `weekly-${daysFromNow}`, title: `Weekly Mentoring: Session ${daysFromNow / 7}`, daysFromNow, recurringGroupId })),
+]) {
+  opportunities.push({ organizationKey: "code-ninjas", description: "Development fixture for testing schedules, capacity, and lifecycle states.", startTime: "16:00", endTime: "18:00", location: "Code Ninjas Union City", maxVolunteers: 6, visibility: "public", ...fixture });
+}
+bookings.push(
+  { opportunityKey: "today-shift", volunteerEmail: "ava.volunteer@timetovolunteer.test", status: "approved" },
+  { opportunityKey: "full-shift", volunteerEmail: "ben.volunteer@timetovolunteer.test", status: "approved" },
+  { opportunityKey: "cancelled-shift", volunteerEmail: "ava.volunteer@timetovolunteer.test", status: "cancelled" },
+  { opportunityKey: "completed-shift", volunteerEmail: "ava.volunteer@timetovolunteer.test", status: "completed", checkedIn: true },
+  { opportunityKey: "coding-camp", volunteerEmail: "maya.volunteer@timetovolunteer.test", status: "rejected" },
+  { opportunityKey: "lego-robotics", volunteerEmail: "jordan.volunteer@timetovolunteer.test", status: "cancelled" },
+);
+memberships.push({ organizationKey: "green-city", volunteerEmail: "maya.volunteer@timetovolunteer.test", status: "rejected" });
+applicationRows.push({ ...applicationRows[0], organization_name: "Archived Test Application", email: "apply.rejected@timetovolunteer.test", status: "rejected" });
+
 async function deleteSeedAuthUsers(supabase: SupabaseClient) {
-  let page = 1;
-  const perPage = 1000;
-  let deleted = 0;
-
-  while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+  const seedUserIds: string[] = [];
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
     if (error) throw new Error(`Listing auth users: ${error.message}`);
-
-    for (const user of data.users) {
-      if (user.email?.endsWith(SEEDED_EMAIL_DOMAIN)) {
-        const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
-        if (deleteError) {
-          throw new Error(`Deleting auth user ${user.email}: ${deleteError.message}`);
-        }
-        deleted += 1;
-      }
-    }
-
-    if (data.users.length < perPage) break;
-    page += 1;
+    seedUserIds.push(...data.users.filter(user => user.email?.endsWith(SEEDED_EMAIL_DOMAIN) || user.email === adminUser.email).map(user => user.id));
+    if (data.users.length < 1000) break;
   }
-
-  return deleted;
+  for (const id of seedUserIds) {
+    const { error } = await supabase.auth.admin.deleteUser(id);
+    if (error) throw new Error(`Deleting seeded auth user: ${error.message}`);
+  }
+  return seedUserIds.length;
 }
 
 async function createAuthUser(supabase: SupabaseClient, user: SeedUser) {
@@ -608,21 +628,26 @@ async function seed() {
 
   await assertServiceRoleTableAccess(supabase);
 
-  const deletedAuthUsers = await deleteSeedAuthUsers(supabase);
   await clearTable(supabase, "inbox_messages");
   await clearTable(supabase, "bookings");
   await clearTable(supabase, "organization_memberships");
   await clearTable(supabase, "volunteer_opportunities");
   await clearTable(supabase, "organizations");
   await clearTable(supabase, "organization_applications");
-  await clearTable(supabase, "profiles");
+  const deletedAuthUsers = await deleteSeedAuthUsers(supabase);
 
-  const users = [
+  const users: SeedUser[] = [
     adminUser,
     ...primaryOrganizationOwners,
     ...additionalOrganizationOwners,
     ...volunteerUsers,
+    ...applicationRows.map(application => ({ email: application.email, firstName: application.organization_name, lastName: "Admin", role: "organization" as const })),
   ];
+  for (const account of devQuickLoginGroups.flatMap(group => group.accounts)) {
+    if (!users.some(user => user.email === account.email)) {
+      throw new Error(`Quick-login account is missing from seed data: ${account.email}`);
+    }
+  }
   const userIds = new Map<string, string>();
 
   for (const user of users) {
@@ -724,7 +749,10 @@ async function seed() {
             location: opportunity.location,
             experience_required: "No prior experience required.",
             max_volunteers: opportunity.maxVolunteers,
-            status: "published",
+            status: opportunity.status ?? "published",
+            recurring_group_id: opportunity.recurringGroupId ?? null,
+            recurring_frequency: opportunity.recurringGroupId ? "weekly" : null,
+            recurring_until: opportunity.recurringGroupId ? addDays(28) : null,
             visibility: opportunity.visibility,
             created_by: userIds.get(organization.ownerEmail),
           };
@@ -764,15 +792,17 @@ async function seed() {
                 ? "I am available and would like to register."
                 : null,
             approved_by:
-              booking.status === "approved" && organization
+              ["approved", "completed"].includes(booking.status) && organization
                 ? userIds.get(organization.ownerEmail)
                 : null,
-            approved_at: booking.status === "approved" ? now : null,
+            approved_at: ["approved", "completed"].includes(booking.status) ? now : null,
+            rejected_at: booking.status === "rejected" ? now : null,
+            cancelled_at: booking.status === "cancelled" ? now : null,
             checked_in_by:
               booking.checkedIn && organization
                 ? userIds.get(organization.ownerEmail)
                 : null,
-            checked_in_at: booking.checkedIn ? now : null,
+            checked_in_at: booking.checkedIn ? `${addDays(opportunity?.daysFromNow ?? 0)}T17:00:00Z` : null,
           };
         })
       )
@@ -785,7 +815,7 @@ async function seed() {
   );
 
   const inboxRows = [
-    ...insertedBookings.map((booking) => {
+    ...insertedBookings.filter(booking => ["pending", "approved"].includes(booking.status)).map((booking) => {
       const opportunity = opportunities.find(
         (item) => opportunityIds.get(item.key) === booking.opportunity_id
       );
@@ -854,6 +884,19 @@ async function seed() {
     "Inserting inbox messages",
     supabase.from("inbox_messages").insert(inboxRows)
   );
+
+  await failOnError("Inserting pending organization accounts", supabase.from("organizations").insert(
+    applicationRows.map(application => ({ owner_id: userIds.get(application.email), name: application.organization_name, category: application.category, description: application.organization_description, contact_email: application.email, visibility: "public", status: "inactive" }))
+  ));
+  await failOnError("Inserting accepted application history", supabase.from("organization_applications").insert({ ...applicationRows[0], organization_name: organizations[0].name, email: organizations[0].ownerEmail, status: "accepted" }));
+  await failOnError("Inserting direct messages", supabase.from("inbox_messages").insert(
+    [null, now].map(read_at => ({ recipient_id: userIds.get("ava.volunteer@timetovolunteer.test"), actor_id: userIds.get(adminUser.email), kind: "direct_message", title: read_at ? "Read: Welcome to testing" : "Unread: Welcome to testing", body: "Development fixture. No email was sent.", read_at, action_href: "/dashboard/volunteer/inbox" }))
+  ));
+  for (const table of ["profiles", "organizations", "organization_applications", "organization_memberships", "volunteer_opportunities", "bookings", "inbox_messages", "booking_email_reminders"]) {
+    const { count, error } = await supabase.from(table).select("id", { count: "exact", head: true });
+    if (error) throw new Error(`Verifying ${table}: ${error.message}`);
+    console.log(`${table}: ${count}`);
+  }
 
   console.log("\nSeed complete.");
   console.log(`Deleted seeded auth users: ${deletedAuthUsers}`);

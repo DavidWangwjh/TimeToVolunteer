@@ -47,8 +47,7 @@ export default async function OrganizationDashboardLayout({
         .from("inbox_messages")
         .select("*", { count: "exact", head: true })
         .eq("recipient_id", profile.id)
-        .is("read_at", null)
-        .is("deleted_at", null),
+        .is("read_at", null),
     ]);
 
   const { count: pendingBookings } = ownedOpportunityIds.length
