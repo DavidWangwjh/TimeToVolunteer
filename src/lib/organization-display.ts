@@ -13,23 +13,6 @@ const knownCategories = [
 
 export const fallbackOrganizationImage = "/organization-placeholder.svg";
 
-// Stock photos from older seed data are placeholders, not organization uploads.
-const legacyOrganizationImages = new Set([
-  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1476231682828-37e571bc172f?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1581579438747-104c53d7fbc4?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80"
-]);
-
 export function inferOrganizationCategory(...values: Array<unknown>) {
   const explicit = values.find(
     (value) => typeof value === "string" && value.trim().length > 0
@@ -86,6 +69,5 @@ export function getOrganizationVisibilityBadgeClassName(visibility: unknown) {
 }
 
 export function getOrganizationImageUrl(imageUrl?: string | null) {
-  const value = imageUrl?.trim();
-  return !value || legacyOrganizationImages.has(value) ? fallbackOrganizationImage : value;
+  return imageUrl?.trim() || fallbackOrganizationImage;
 }
