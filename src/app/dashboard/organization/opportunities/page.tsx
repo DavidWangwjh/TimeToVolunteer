@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { OpportunityViewTabs } from "@/components/opportunities/OpportunityViewTabs";
+import { OrganizationOpportunities } from "@/components/opportunities/OrganizationOpportunities";
 import { Button } from "@/components/ui/button";
 
 export default async function OpportunitiesPage() {
@@ -19,16 +19,18 @@ export default async function OpportunitiesPage() {
     redirect("/dashboard/organization");
   }
 
-  const [{ data: opportunities }, { data: bookings }] = await Promise.all([
+  const { data: opportunities, error } = await
     supabase
       .from("volunteer_opportunities")
       .select("*")
       .eq("organization_id", organization?.id ?? "00000000-0000-0000-0000-000000000000")
-      .order("date", { ascending: false }),
-    supabase
+      .order("date", { ascending: false });
+  if (error) throw new Error("Unable to load opportunities");
+  const ids = (opportunities ?? []).map((opportunity) => opportunity.id);
+  const { data: bookings, error: bookingsError } = ids.length ? await supabase
       .from("bookings")
-      .select("opportunity_id, status"),
-  ]);
+      .select("opportunity_id, status").in("opportunity_id", ids) : { data: [], error: null };
+  if (bookingsError) throw new Error("Unable to load registration counts");
 
   const counts = (bookings ?? []).reduce<Record<string, { approved: number; pending: number }>>(
     (counts, booking) => {
@@ -49,13 +51,6 @@ export default async function OpportunitiesPage() {
     {}
   );
 
-  const registeredCounts = Object.fromEntries(
-    Object.entries(counts).map(([opportunityId, value]) => [
-      opportunityId,
-      value.approved,
-    ])
-  );
-
   const opportunitiesWithCounts = (opportunities ?? []).map((opportunity) => ({
     ...opportunity,
     approved_count: counts[opportunity.id]?.approved ?? 0,
@@ -64,7 +59,8 @@ export default async function OpportunitiesPage() {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div><h1 className="text-2xl font-bold text-slate-950">Opportunities</h1><p className="mt-1 text-sm text-slate-600">Manage your opportunities and volunteer registrations.</p></div>
         <Button asChild>
           <Link href="/dashboard/organization/opportunities/new">
             <Plus className="size-4" />
@@ -73,10 +69,8 @@ export default async function OpportunitiesPage() {
         </Button>
       </div>
 
-      <OpportunityViewTabs
+      <OrganizationOpportunities
         opportunities={opportunitiesWithCounts}
-        registeredCounts={registeredCounts}
-        basePath="/dashboard/organization/opportunities"
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -25,7 +26,12 @@ type MembershipRow = OrganizationMembership & {
   profiles: Profile | null;
 };
 
-export default async function MembershipsPage() {
+export default async function MembershipsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const showReview = (await searchParams).view === "review";
   const profile = await requireAdmin();
   const supabase = await createClient();
 
@@ -39,34 +45,39 @@ export default async function MembershipsPage() {
     redirect("/dashboard/organization");
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("organization_memberships")
     .select(
       "*, organizations(*), profiles:profiles!organization_memberships_volunteer_id_fkey(*)"
     )
     .eq("organization_id", organization?.id ?? "00000000-0000-0000-0000-000000000000")
-    .order("created_at", { ascending: false });
+    .in("status", ["pending", "accepted"])
+    .order("reviewed_at", { ascending: false, nullsFirst: false });
+
+  if (error) throw new Error("Unable to load memberships");
 
   const memberships = (data ?? []) as MembershipRow[];
   const pending = memberships.filter((membership) => membership.status === "pending");
-  const reviewed = memberships.filter((membership) => membership.status !== "pending");
+  const joined = memberships.filter((membership) => membership.status === "accepted");
 
   return (
-    <div>
-      
-      <section className="space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">
-          Awaiting Review
-        </h2>
-        <MembershipTable memberships={pending} showActions />
-      </section>
-
-      <section className="mt-8 space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">
-          Reviewed
-        </h2>
-        <MembershipTable memberships={reviewed} />
-      </section>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-950">
+            {showReview ? "Awaiting review" : "Memberships"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            {showReview ? "Review volunteers who would like to join your organization." : "Volunteers who have joined your organization."}
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href={showReview ? "/dashboard/organization/memberships" : "/dashboard/organization/memberships?view=review"}>
+            {showReview ? "Back to members" : `Awaiting review (${pending.length})`}
+          </Link>
+        </Button>
+      </div>
+      <MembershipTable memberships={showReview ? pending : joined} showActions={showReview} />
     </div>
   );
 }
@@ -81,7 +92,7 @@ function MembershipTable({
   if (memberships.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-white/70 py-10 text-center text-sm text-slate-500">
-        No membership requests found.
+        {showActions ? "No volunteers awaiting review." : "No joined volunteers yet."}
       </div>
     );
   }
@@ -94,7 +105,7 @@ function MembershipTable({
             <TableHead>Volunteer</TableHead>
             <TableHead>Organization</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Requested</TableHead>
+            <TableHead>{showActions ? "Requested" : "Member since"}</TableHead>
             {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -104,7 +115,7 @@ function MembershipTable({
               <TableCell>
                 {membership.profiles ? (
                   <Link
-                    href={`/dashboard/organization/volunteers/${membership.profiles.id}`}
+                    href={`/dashboard/organization/volunteers/${membership.profiles.id}${showActions ? "?from=review" : ""}`}
                     className="font-semibold text-slate-950 hover:text-emerald-800 hover:underline"
                   >
                     {membership.profiles.first_name} {membership.profiles.last_name}
@@ -123,7 +134,11 @@ function MembershipTable({
                 <StatusBadge status={membership.status as MembershipStatus} />
               </TableCell>
               <TableCell className="text-slate-600">
-                {formatDate(membership.created_at.split("T")[0])}
+                {showActions
+                  ? formatDate(membership.created_at.split("T")[0])
+                  : membership.reviewed_at
+                    ? formatDate(membership.reviewed_at.split("T")[0])
+                    : "—"}
               </TableCell>
               {showActions && (
                 <TableCell>

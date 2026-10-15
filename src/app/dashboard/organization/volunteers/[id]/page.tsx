@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { appTimeZone, getAppDateString } from "@/lib/dates";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
@@ -7,12 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }
 
 export default async function OrganizationVolunteerDetailPage({
   params,
+  searchParams,
 }: Props) {
   const { id } = await params;
+  const fromReview = (await searchParams).from === "review";
   const profile = await requireAdmin();
 
   if (profile.role !== "organization") {
@@ -56,8 +62,28 @@ export default async function OrganizationVolunteerDetailPage({
     notFound();
   }
 
+  const now = new Date();
+  const today = getAppDateString(now);
+  const currentTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: appTimeZone,
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).format(now);
+  const history = (registrations ?? []).flatMap((booking) => {
+    const opportunity = Array.isArray(booking.volunteer_opportunities)
+      ? booking.volunteer_opportunities[0]
+      : booking.volunteer_opportunities;
+    if (!opportunity || opportunity.status !== "completed" ||
+        !["approved", "completed"].includes(booking.status)) return [];
+    const ended = opportunity.date < today ||
+      (opportunity.date === today && opportunity.end_time < currentTime);
+    return ended ? [{ booking, opportunity, volunteer }] : [];
+  }).sort((a, b) => `${b.opportunity.date}T${b.opportunity.end_time}`.localeCompare(`${a.opportunity.date}T${a.opportunity.end_time}`));
+
   return (
     <div className="space-y-6">
+      <Link href={fromReview ? "/dashboard/organization/memberships?view=review" : "/dashboard/organization/memberships"} className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:underline">
+        <ArrowLeft className="size-4" />{fromReview ? "Back to awaiting review" : "Back to memberships"}
+      </Link>
       <div>
         <h1 className="text-2xl font-bold text-slate-950">
           {volunteer.first_name} {volunteer.last_name}
@@ -108,19 +134,15 @@ export default async function OrganizationVolunteerDetailPage({
       </div>
 
       <div>
-        <h2 className="mb-4 text-lg font-semibold">Registration History</h2>
-        <BookingTable
+        <h2 className="mb-4 text-lg font-semibold">Volunteer History</h2>
+        {history.length === 0 ? (
+          <p className="rounded-lg border border-dashed bg-white p-8 text-center text-sm text-slate-500">No completed past opportunities with your organization yet.</p>
+        ) : <BookingTable
           variant="admin"
           showActions={false}
           volunteerBasePath="/dashboard/organization/volunteers"
-          bookings={(registrations ?? []).map((booking) => ({
-            booking,
-            opportunity: Array.isArray(booking.volunteer_opportunities)
-              ? booking.volunteer_opportunities[0]
-              : booking.volunteer_opportunities,
-            volunteer,
-          }))}
-        />
+          bookings={history}
+        />}
       </div>
     </div>
   );

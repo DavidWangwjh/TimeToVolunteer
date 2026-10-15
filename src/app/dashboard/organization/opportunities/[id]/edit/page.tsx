@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { redirect } from "next/navigation";
-import { Copy } from "lucide-react";
+import { ArrowLeft, Copy } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EditOpportunityForm } from "@/components/opportunities/EditOpportunityForm";
 import { RegisteredVolunteers } from "@/components/opportunities/RegisteredVolunteers";
 import { Button } from "@/components/ui/button";
-import type { AssignableVolunteer } from "@/components/opportunities/AssignVolunteerSearch";
+import { AssignVolunteerSearch, type AssignableVolunteer } from "@/components/opportunities/AssignVolunteerSearch";
+import { BookingTable, type BookingRow } from "@/components/bookings/BookingTable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Profile } from "@/types/database";
 
 interface RegisteredBooking {
@@ -20,9 +22,11 @@ interface RegisteredBooking {
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }
 
-export default async function EditOpportunityPage({ params }: Props) {
+export default async function EditOpportunityPage({ params, searchParams }: Props) {
+  const showReview = (await searchParams).view === "review";
   const { id } = await params;
   const profile = await requireAdmin();
   const supabase = createAdminClient();
@@ -45,15 +49,11 @@ export default async function EditOpportunityPage({ params }: Props) {
 
   if (!opportunity) notFound();
 
-  const [{ data: bookings }, { data: memberships }] = await Promise.all([
+  const [{ data: bookings, error: bookingsError }, { data: memberships, error: membershipsError }] = await Promise.all([
     supabase
       .from("bookings")
       .select(`
-        id,
-        status,
-        volunteer_id,
-        checked_in_at,
-        checked_in_by,
+        *,
         profiles:profiles!bookings_volunteer_id_fkey (
           id,
           first_name,
@@ -92,6 +92,8 @@ export default async function EditOpportunityPage({ params }: Props) {
       .eq("organization_id", organization.id)
       .eq("status", "accepted"),
   ]);
+
+  if (bookingsError || membershipsError) throw new Error("Unable to load volunteers");
 
   const registeredBookings: RegisteredBooking[] = (bookings ?? [])
     .filter((booking) => booking.status === "approved")
@@ -134,10 +136,18 @@ export default async function EditOpportunityPage({ params }: Props) {
     })
   );
 
+  const pendingRows: BookingRow[] = (bookings ?? []).filter((booking) => booking.status === "pending").map((booking) => ({
+    booking,
+    opportunity,
+    volunteer: (Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles) ?? undefined,
+  }));
+
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button asChild variant="outline">
+      <Link href="/dashboard/organization/opportunities" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-emerald-800"><ArrowLeft className="size-4" />All opportunities</Link>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="min-w-0 break-words text-2xl font-bold text-slate-950">{opportunity.title}</h1>
+        <Button asChild variant="outline" className="shrink-0">
           <Link href={`/dashboard/organization/opportunities/new?duplicate=${opportunity.id}`}>
             <Copy className="size-4" />
             Duplicate
@@ -145,20 +155,56 @@ export default async function EditOpportunityPage({ params }: Props) {
         </Button>
       </div>
 
-      <EditOpportunityForm
-        opportunity={opportunity}
-        organizationVisibility={organization.visibility}
-      />
+      <Tabs key={showReview ? "review" : "manage"} defaultValue="volunteers">
+        <TabsList className="mb-5">
+          <TabsTrigger value="volunteers">Volunteers{pendingRows.length > 0 ? ` (${pendingRows.length} pending)` : ""}</TabsTrigger>
+          <TabsTrigger value="details">Edit details</TabsTrigger>
+        </TabsList>
+        <TabsContent value="details" keepMounted>
+          <EditOpportunityForm
+            opportunity={opportunity}
+            organizationVisibility={organization.visibility}
+          />
 
-      <RegisteredVolunteers
-        opportunity={opportunity}
-        registeredBookings={registeredBookings}
-        registeredCount={registeredBookings.length}
-        volunteerBasePath="/dashboard/organization/volunteers"
-        assignableVolunteers={assignableVolunteers}
-        showRemoveActions
-        showCheckInActions
-      />
+        </TabsContent>
+        <TabsContent value="volunteers" className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">
+              {showReview ? "Registration requests" : "Volunteer registrations"}
+            </h2>
+            <Button asChild variant="outline">
+              <Link href={`/dashboard/organization/opportunities/${opportunity.id}/edit${showReview ? "" : "?view=review"}`}>
+                {showReview ? "Back to registered volunteers" : `Review requests (${pendingRows.length})`}
+              </Link>
+            </Button>
+          </div>
+          {showReview ? (
+            <BookingTable
+              bookings={pendingRows}
+              variant="admin"
+              showOpportunity={false}
+              volunteerBasePath="/dashboard/organization/volunteers"
+            />
+          ) : (
+            <>
+              <RegisteredVolunteers
+                opportunity={opportunity}
+                registeredBookings={registeredBookings}
+                registeredCount={registeredBookings.length}
+                volunteerBasePath="/dashboard/organization/volunteers"
+                showRemoveActions
+                showCheckInActions
+              />
+              <section className="rounded-lg border bg-white p-6">
+                <AssignVolunteerSearch
+                  opportunityId={opportunity.id}
+                  volunteers={assignableVolunteers}
+                />
+              </section>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

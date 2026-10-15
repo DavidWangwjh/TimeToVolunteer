@@ -66,7 +66,7 @@ export default async function OrganizationDashboardLayout({
       navCounts={{
         "/dashboard/organization/inbox": unreadMessages ?? 0,
         "/dashboard/organization/memberships": pendingMemberships ?? 0,
-        "/dashboard/organization/bookings": pendingBookings ?? 0,
+        "/dashboard/organization/opportunities": pendingBookings ?? 0,
       }}
     >
       {children}

@@ -1755,7 +1755,7 @@ export async function requestBooking(data: {
       kind: "booking_requested",
       title: "New registration request",
       body: `${profile.first_name} ${profile.last_name} requested ${opportunity.title}.`,
-      actionHref: "/dashboard/organization/bookings",
+      actionHref: `/dashboard/organization/opportunities/${opportunity.id}/edit?view=review`,
     });
   }
 

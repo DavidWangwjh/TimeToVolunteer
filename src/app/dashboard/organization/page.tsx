@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { AdminScheduleSection } from "@/components/dashboard/AdminScheduleSection";
+import { AdminCalendar } from "@/components/calendar/AdminCalendar";
 import { AdminOrganizationProfilePanel } from "@/components/organizations/AdminOrganizationProfilePanel";
 import { OrganizationPendingNotice } from "@/components/organizations/OrganizationPendingNotice";
 import type { Organization } from "@/types/database";
@@ -59,13 +59,6 @@ export default async function OrganizationOverviewPage() {
     return result;
   }, {});
 
-  const registeredCounts = Object.fromEntries(
-    Object.entries(counts).map(([opportunityId, value]) => [
-      opportunityId,
-      value.approved,
-    ])
-  );
-
   const opportunitiesWithCounts = (opportunities ?? []).map((opportunity) => ({
     ...opportunity,
     organizations: Array.isArray(opportunity.organizations)
@@ -78,12 +71,9 @@ export default async function OrganizationOverviewPage() {
   return (
     <div className="space-y-6">
       <AdminOrganizationProfilePanel organization={organization as Organization} />
-      <AdminScheduleSection
+      <AdminCalendar
         opportunities={opportunitiesWithCounts}
-        registeredCounts={registeredCounts}
-        createHref="/dashboard/organization/opportunities/new"
         editBasePath="/dashboard/organization/opportunities"
-        showFilters={false}
       />
     </div>
   );
