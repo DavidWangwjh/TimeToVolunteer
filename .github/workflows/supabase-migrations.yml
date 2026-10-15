@@ -1,4 +1,5 @@
 name: Supabase migrations
+run-name: Supabase · ${{ inputs.environment }} · ${{ inputs.operation }}
 on:
   workflow_dispatch:
     inputs:
