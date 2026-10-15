@@ -261,3 +261,20 @@ public
 - Opportunity `visibility` controls registration behavior: public means direct registration, private means request required.
 - Organization descriptions should not contain embedded `Category: ...` text. Category is stored in the dedicated `category` column.
 - In-app notifications are stored in `inbox_messages`; custom Resend email notifications are not currently part of the active registration workflow.
+
+## GitHub Actions
+
+`CI` runs on pull requests, pushes to main, and manual dispatch. It installs the locked dependencies with Node 22.13.0 / npm 10.9.2, runs ESLint, generates Next.js route types, checks TypeScript, and builds the app. It uses dummy build credentials; it cannot access hosted databases or send email. Vercel continues handling application deployments through its Git integration. CI does not automatically block Vercel deployments; require the `Lint, types, and build` check in a main-branch ruleset and merge via PRs to enforce it.
+
+`Supabase migrations` is manually triggered from Actions, on main only. Select `development` or `production`, then `plan` (default), `apply`, or the one-time `baseline` operation. No local Docker setup is needed for these remote operations.
+
+### One-time database automation setup
+
+1. Create GitHub environments named `supabase-development` and `supabase-production` (separate from Vercel’s existing Production environment). Restrict their deployment branches to main; configure a required reviewer for production where your GitHub plan supports it.
+2. In **each environment**, add the secret `SUPABASE_DB_URL`. Use the matching Supabase project's **Connect → Session pooler** Postgres URL (port 5432, database postgres). Replace the password placeholder with the URL-encoded database password and use `sslmode=require`. Session pooling supports GitHub-hosted IPv4 runners. This is a database connection string, not a Supabase API/service-role key. Never commit it or paste it into workflow inputs.
+3. Run `baseline` once for development, then production. It checks the existing schema and records migrations 001, 002, and 003 as already applied; it does not rerun them. These projects were previously upgraded through the SQL Editor. Do not use baseline against a fresh database.
+4. Run `plan` and confirm that nothing is pending before adding new migrations.
+
+For future changes, add a new timestamp-prefixed SQL file under `supabase/migrations` (for example via `supabase migration new descriptive_name`); do not edit already-applied migrations. Run plan/apply on development and test the application. Deploy any required compatible app version to production first, then run plan/apply for production and verify the affected workflows. Apply does not wait for or verify Vercel readiness. The baseline files do not reconstruct a brand-new database; `schema.sql` remains the fresh-install definition. Never use `reset.sql` or development seeds in production.
+
+The workflows do not reset, seed, or automatically repair migration history during normal deployment. If history diverges, investigate before using any repair command. Secrets are scoped to the selected GitHub environment; the target check rejects a connection string for the other project.
