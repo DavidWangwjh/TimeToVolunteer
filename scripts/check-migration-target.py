@@ -15,7 +15,7 @@ try:
     direct = url.hostname == f"db.{expected}.supabase.co" and url.username == "postgres"
     pooler = (url.hostname or "").endswith(".pooler.supabase.com") and unquote(url.username or "") == f"postgres.{expected}"
     valid = expected and url.scheme in ("postgres", "postgresql") and url.password and url.path == "/postgres" and url.port == 5432 and (direct or pooler)
-    query = parse_qs(url.query)
+    query = parse_qs(url.query, keep_blank_values=True)
     valid = valid and set(query).issubset({"sslmode"})
     sslmode = query.get("sslmode", ["require"])
     valid = valid and all(mode in ("require", "verify-ca", "verify-full") for mode in sslmode)
