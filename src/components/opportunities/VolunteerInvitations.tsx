@@ -40,7 +40,6 @@ export function VolunteerInvitations({ invitations }: {
   return (
     <section id="invitations" className="mt-6 scroll-mt-6 space-y-3" aria-labelledby="invitations-heading">
       <h2 id="invitations-heading" className="text-xl font-semibold">Opportunity invitations ({remaining.length})</h2>
-      <p className="text-sm text-slate-600">Choose whether to join. A place is confirmed when you accept, subject to availability.</p>
       {remaining.map(({ id, opportunity, canAccept }) => (
         <article key={id} className="space-y-3 rounded-lg border border-violet-200 bg-white p-5">
           <div>
