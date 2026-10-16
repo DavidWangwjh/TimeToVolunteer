@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -66,11 +67,14 @@ function toDraft(values: OpportunityCreateInput): OpportunityDraft {
 
 export function CreateOpportunityForm({
   initialValues,
+  cancelHref,
   organizationVisibility = "public",
 }: {
   initialValues?: CreateOpportunityInitialValues;
+  cancelHref?: string;
   organizationVisibility?: OrganizationVisibility;
 }) {
+  const router = useRouter();
   const opportunityVisibilityLabels =
     getOpportunityVisibilityLabels(organizationVisibility);
   const [showDraftNotice, setShowDraftNotice] = useState(false);
@@ -331,6 +335,20 @@ export function CreateOpportunityForm({
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
+            {cancelHref && (
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={pendingAction !== null}
+                onClick={() => {
+                  skipDraftSave.current = true;
+                  clearOpportunityDraft();
+                  router.push(cancelHref);
+                }}
+              >
+                Cancel
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"

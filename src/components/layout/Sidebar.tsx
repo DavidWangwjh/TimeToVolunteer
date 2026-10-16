@@ -31,16 +31,14 @@ const platformAdminLinks = [
 
 const organizationAdminLinks = [
   { href: "/dashboard/organization", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/organization/inbox", label: "Inbox", icon: Mail },
   { href: "/dashboard/organization/memberships", label: "Memberships", icon: Users },
-  { href: "/dashboard/organization/bookings", label: "Registrations", icon: ClipboardList },
-  { href: "/dashboard/organization/profile", label: "Profile", icon: User },
+  { href: "/dashboard/organization/opportunities", label: "Opportunities", icon: ClipboardList },
+  { href: "/dashboard/organization/inbox", label: "Inbox", icon: Mail },
 ];
 
 const lockedOrganizationLinks = [
   { href: "/dashboard/organization", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/organization/inbox", label: "Inbox", icon: Mail },
-  { href: "/dashboard/organization/profile", label: "Profile", icon: User },
 ];
 
 interface SidebarProps {

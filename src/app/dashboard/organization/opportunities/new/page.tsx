@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -53,8 +55,17 @@ export default async function NewOpportunityPage({
   }
 
   return (
-    <div>
+    <div className="space-y-5">
+      <Link
+        href="/dashboard/organization/opportunities"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:underline"
+      >
+        <ArrowLeft className="size-4" />
+        Back to opportunities
+      </Link>
+      <h1 className="text-2xl font-bold text-slate-950">Create Opportunity</h1>
       <CreateOpportunityForm
+        cancelHref="/dashboard/organization/opportunities"
         initialValues={initialValues}
         organizationVisibility={ownedOrganization.visibility}
       />

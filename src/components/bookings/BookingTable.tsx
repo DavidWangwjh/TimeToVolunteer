@@ -31,6 +31,7 @@ interface BookingTableProps {
   variant: "volunteer" | "admin";
   showActions?: boolean;
   volunteerBasePath?: string;
+  showOpportunity?: boolean;
 }
 
 export type { BookingRow };
@@ -39,6 +40,7 @@ export function BookingTable({
   bookings,
   variant,
   showActions = true,
+  showOpportunity = true,
   volunteerBasePath = "/dashboard/admin/volunteers",
 }: BookingTableProps) {
   if (bookings.length === 0) {
@@ -82,9 +84,8 @@ export function BookingTable({
         <TableHeader className="bg-slate-50">
           <TableRow>
             {variant === "admin" && <TableHead>Volunteer</TableHead>}
-            <TableHead>Session</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Time</TableHead>
+            {showOpportunity && <><TableHead>Session</TableHead><TableHead>Date</TableHead><TableHead>Time</TableHead></>}
+            {!showOpportunity && <TableHead>Volunteer note</TableHead>}
             <TableHead>Status</TableHead>
             {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
@@ -106,6 +107,7 @@ export function BookingTable({
                   )}
                 </TableCell>
               )}
+              {showOpportunity && <>
               <TableCell className="font-semibold text-slate-950">
                 <div>{opportunity?.title ?? "—"}</div>
                 {variant === "volunteer" && opportunity?.organizations && (
@@ -125,6 +127,8 @@ export function BookingTable({
                   ? `${formatTime(opportunity.start_time)} – ${formatTime(opportunity.end_time)}`
                   : "—"}
               </TableCell>
+              </>}
+              {!showOpportunity && <TableCell className="max-w-sm whitespace-normal text-slate-600">{booking.volunteer_note || "—"}</TableCell>}
               <TableCell>
                 <StatusBadge status={booking.status} />
               </TableCell>

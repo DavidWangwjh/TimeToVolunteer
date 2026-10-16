@@ -124,7 +124,7 @@ function getOrganizationHref(
   }
 
   if (viewer === "organization") {
-    return "/dashboard/organization/profile";
+    return "/dashboard/organization";
   }
 
   return `/dashboard/volunteer/organizations/${organizationId}`;
