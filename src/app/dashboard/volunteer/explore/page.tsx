@@ -71,7 +71,7 @@ export default async function VolunteerExplorePage() {
       .from("bookings")
       .select("id, opportunity_id, volunteer_id, status, volunteer_opportunities(*, organizations(*))")
       .eq("volunteer_id", profile.id)
-      .in("status", ["pending", "approved"]),
+      .in("status", ["pending", "approved", "invited"]),
     adminClient
       .from("volunteer_opportunities")
       .select("id, organization_id")
@@ -143,7 +143,7 @@ export default async function VolunteerExplorePage() {
             .select("id, opportunity_id, volunteer_id, status")
             .in("opportunity_id", visibleOpportunityIds)
             .eq("volunteer_id", profile.id)
-            .in("status", ["pending", "approved"]),
+            .in("status", ["pending", "approved", "invited"]),
         ])
       : [{ data: [] }, { data: [] }];
 

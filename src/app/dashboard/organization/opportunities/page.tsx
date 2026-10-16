@@ -71,6 +71,7 @@ export default async function OpportunitiesPage() {
 
       <OrganizationOpportunities
         opportunities={opportunitiesWithCounts}
+        initialNow={new Date().toISOString()}
       />
     </div>
   );

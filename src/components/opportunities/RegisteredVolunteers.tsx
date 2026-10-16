@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  AssignVolunteerSearch,
-  type AssignableVolunteer,
-} from "@/components/opportunities/AssignVolunteerSearch";
-import {
   CheckInAllButton,
   CheckInButton,
 } from "@/components/opportunities/CheckInActions";
@@ -23,7 +19,6 @@ interface RegisteredVolunteersProps {
   opportunity: VolunteerOpportunity;
   registeredBookings: RegisteredBooking[];
   volunteerBasePath?: string;
-  assignableVolunteers?: AssignableVolunteer[];
   showRemoveActions?: boolean;
   showCheckInActions?: boolean;
   registeredCount?: number;
@@ -44,7 +39,6 @@ export function RegisteredVolunteers({
   opportunity,
   registeredBookings,
   volunteerBasePath = "/dashboard/admin/volunteers",
-  assignableVolunteers,
   showRemoveActions = false,
   showCheckInActions = false,
   registeredCount = registeredBookings.length,
@@ -129,12 +123,7 @@ export function RegisteredVolunteers({
           </ul>
         )}
 
-        {assignableVolunteers && (
-          <AssignVolunteerSearch
-            opportunityId={opportunity.id}
-            volunteers={assignableVolunteers}
-          />
-        )}
+
       </CardContent>
     </Card>
   );

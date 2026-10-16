@@ -8,7 +8,8 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/auth";
-import { getAppDateString } from "@/lib/dates";
+import { VolunteerInvitations } from "@/components/opportunities/VolunteerInvitations";
+import { getAppDateString, hasOpportunityStarted } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import { VolunteerScheduleSection } from "@/components/dashboard/VolunteerScheduleSection";
 import type {
@@ -41,6 +42,13 @@ export default async function VolunteerDashboardPage() {
     .select("*, volunteer_opportunities(*, organizations(*))")
     .eq("volunteer_id", profile!.id)
     .order("created_at", { ascending: false });
+
+  const invitations = (allBookings ?? []).filter((booking) => booking.status === "invited").flatMap((booking) => {
+    const opportunity = Array.isArray(booking.volunteer_opportunities)
+      ? booking.volunteer_opportunities[0] : booking.volunteer_opportunities;
+    if (!opportunity) return [];
+    return [{ id: booking.id, opportunity, canAccept: opportunity.status === "published" && !hasOpportunityStarted(opportunity) }];
+  });
 
   const scheduleOpportunities = (allBookings ?? [])
     .filter(
@@ -145,6 +153,8 @@ export default async function VolunteerDashboardPage() {
           />
         </div>
       </section>
+
+      <VolunteerInvitations invitations={invitations} />
 
       <div className="mt-6">
         <VolunteerScheduleSection

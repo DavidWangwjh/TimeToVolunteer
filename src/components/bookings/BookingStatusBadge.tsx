@@ -14,6 +14,7 @@ type StatusType =
   | ProfileStatus;
 
 const statusStyles: Record<string, string> = {
+  invited: "bg-violet-100 text-violet-800 hover:bg-violet-100",
   pending: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
   approved: "bg-green-100 text-green-800 hover:bg-green-100",
   accepted: "bg-green-100 text-green-800 hover:bg-green-100",

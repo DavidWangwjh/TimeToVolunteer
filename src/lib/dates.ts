@@ -3,6 +3,26 @@ import type { VolunteerOpportunity } from "@/types/database";
 
 export const appTimeZone = "America/Los_Angeles";
 
+export type OpportunityCategory = "active" | "draft" | "past" | "cancelled";
+
+export function getOpportunityLifecycle(
+  opportunity: Pick<VolunteerOpportunity, "status" | "date" | "start_time" | "end_time">,
+  now: Date,
+): { category: OpportunityCategory; ongoing: boolean } {
+  if (opportunity.status === "cancelled") return { category: "cancelled", ongoing: false };
+  if (opportunity.status === "draft") return { category: "draft", ongoing: false };
+  if (opportunity.status === "completed") return { category: "past", ongoing: false };
+  const today = getAppDateString(now);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: appTimeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).format(now);
+  const ended = opportunity.date < today || (opportunity.date === today && opportunity.end_time <= time);
+  return {
+    category: ended ? "past" : "active",
+    ongoing: !ended && opportunity.date === today && opportunity.start_time <= time,
+  };
+}
+
 export function formatDate(dateStr: string) {
   return format(parseISO(dateStr), "MMMM d, yyyy");
 }
@@ -35,4 +55,13 @@ export function isOpportunityPast(opportunity: VolunteerOpportunity) {
 
 export function getFullName(firstName: string, lastName: string) {
   return `${firstName} ${lastName}`;
+}
+
+// Opportunity dates/times are wall-clock values in the application's time zone.
+export function hasOpportunityStarted(opportunity: Pick<VolunteerOpportunity, "date" | "start_time">, now = new Date()) {
+  const today = getAppDateString(now);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: appTimeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).format(now);
+  return opportunity.date < today || (opportunity.date === today && opportunity.start_time <= time);
 }

@@ -278,3 +278,11 @@ public
 For future changes, add a new timestamp-prefixed SQL file under `supabase/migrations` (for example via `supabase migration new descriptive_name`); do not edit already-applied migrations. Run plan/apply on development and test the application. Deploy any required compatible app version to production first, then run plan/apply for production and verify the affected workflows. Apply does not wait for or verify Vercel readiness. The baseline files do not reconstruct a brand-new database; `schema.sql` remains the fresh-install definition. Never use `reset.sql` or development seeds in production.
 
 The workflows do not reset, seed, or automatically repair migration history during normal deployment. If history diverges, investigate before using any repair command. Secrets are scoped to the selected GitHub environment; the target check rejects a connection string for the other project.
+
+### Opportunity invitations
+
+Migration `004_opportunity_invitations.sql` adds invitations and the authenticated invite/respond RPCs. It has been applied to development. Before using this feature in production, run the production migration `plan`, review that 004 is pending, and run `apply`. Do not run the reset or seed scripts in production.
+
+Organizations can invite accepted members to published opportunities whose start time has not passed (America/Los_Angeles). Invitations appear in the volunteer dashboard and inbox; they do not send email or reserve a place. Acceptance confirms registration subject to capacity. Removing a registration allows the volunteer to register again or receive another invitation. Existing registrations remain registered.
+
+The transactional database regression test is `supabase/tests/opportunity_invitations.sql`. Run it with `psql -v ON_ERROR_STOP=1 -f supabase/tests/opportunity_invitations.sql` against an isolated test database with the schema installed. It creates fixtures inside a transaction and rolls them back, covering authorization, consent, capacity, duplicate invitations, and registration/invitation after removal.
