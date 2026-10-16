@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -174,7 +175,11 @@ export function OpportunityDetailsDialog({
             </div>
           )}
 
-          {canBook ? (
+          {existingBookingStatus === "invited" ? (
+            <Button asChild className="w-full">
+              <Link href="/dashboard/volunteer#invitations">Review invitation</Link>
+            </Button>
+          ) : canBook ? (
             <Button
               className="w-full"
               onClick={handleRequestBooking}

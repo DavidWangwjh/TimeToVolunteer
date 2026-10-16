@@ -55,7 +55,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
         .from("bookings")
         .select("id, opportunity_id, volunteer_id, status, volunteer_opportunities!inner(*, organizations(*))")
         .eq("volunteer_id", profile.id)
-        .in("status", ["pending", "approved"])
+        .in("status", ["pending", "approved", "invited"])
         .eq("volunteer_opportunities.organization_id", id),
       adminClient
         .from("volunteer_opportunities")
@@ -117,7 +117,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
             .select("id, opportunity_id, status, volunteer_id")
             .in("opportunity_id", opportunityIds)
             .eq("volunteer_id", profile.id)
-            .in("status", ["pending", "approved"]),
+            .in("status", ["pending", "approved", "invited"]),
         ])
       : [{ data: [] }, { data: [] }];
   const approvedCounts: Record<string, number> = {};

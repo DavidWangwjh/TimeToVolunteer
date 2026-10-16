@@ -55,6 +55,7 @@ type InboxMessageWithSender = InboxMessage & {
 };
 
 const kindLabels: Record<InboxMessageKind, string> = {
+  opportunity_invited: "Opportunity invitation",
   booking_requested: "Registration request",
   booking_approved: "Registration accepted",
   booking_rejected: "Registration declined",
@@ -66,6 +67,7 @@ const kindLabels: Record<InboxMessageKind, string> = {
 };
 
 const kindStyles: Record<InboxMessageKind, string> = {
+  opportunity_invited: "bg-violet-100 text-violet-800 hover:bg-violet-100",
   booking_requested: "bg-sky-100 text-sky-800 hover:bg-sky-100",
   booking_approved: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
   booking_rejected: "bg-rose-100 text-rose-800 hover:bg-rose-100",

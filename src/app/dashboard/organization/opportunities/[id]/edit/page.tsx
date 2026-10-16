@@ -7,7 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { EditOpportunityForm } from "@/components/opportunities/EditOpportunityForm";
 import { RegisteredVolunteers } from "@/components/opportunities/RegisteredVolunteers";
 import { Button } from "@/components/ui/button";
-import { AssignVolunteerSearch, type AssignableVolunteer } from "@/components/opportunities/AssignVolunteerSearch";
+import { InviteVolunteers, type InvitableVolunteer } from "@/components/opportunities/InviteVolunteers";
+import { hasOpportunityStarted } from "@/lib/dates";
 import { BookingTable, type BookingRow } from "@/components/bookings/BookingTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Profile } from "@/types/database";
@@ -71,7 +72,7 @@ export default async function EditOpportunityPage({ params, searchParams }: Prop
         )
       `)
       .eq("opportunity_id", id)
-      .in("status", ["pending", "approved"])
+      .in("status", ["pending", "approved", "invited", "completed"])
       .order("approved_at", { ascending: true }),
     supabase
       .from("organization_memberships")
@@ -107,34 +108,18 @@ export default async function EditOpportunityPage({ params, searchParams }: Prop
         : booking.profiles,
     }));
 
-  const registeredVolunteerIds = new Set(
-    registeredBookings.map((booking) => booking.volunteer_id)
-  );
-  const acceptedMemberProfiles = (memberships ?? [])
-    .map((membership) =>
-      Array.isArray(membership.profiles)
-        ? membership.profiles[0]
-        : membership.profiles
-    )
-    .filter(
-      (volunteer) =>
-        Boolean(volunteer) &&
-        volunteer.role === "volunteer" &&
-        volunteer.status === "active" &&
-        !registeredVolunteerIds.has(volunteer.id)
-    );
-  const assignableVolunteers: AssignableVolunteer[] = acceptedMemberProfiles.map(
-    (volunteer) => ({
+  const memberVolunteers: InvitableVolunteer[] = (memberships ?? [])
+    .map((membership) => Array.isArray(membership.profiles) ? membership.profiles[0] : membership.profiles)
+    .filter((volunteer) => Boolean(volunteer) && volunteer.role === "volunteer")
+    .map((volunteer) => ({
       id: volunteer.id,
       first_name: volunteer.first_name,
       last_name: volunteer.last_name,
       email: volunteer.email,
-      phone: volunteer.phone,
-      date_of_birth: volunteer.date_of_birth,
-      volunteer_interests: volunteer.volunteer_interests,
-      volunteer_intro: volunteer.volunteer_intro,
-    })
-  );
+      status: volunteer.status,
+      bookingStatus: bookings?.find((booking) => booking.volunteer_id === volunteer.id)?.status,
+    }))
+    .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
 
   const pendingRows: BookingRow[] = (bookings ?? []).filter((booking) => booking.status === "pending").map((booking) => ({
     booking,
@@ -195,12 +180,13 @@ export default async function EditOpportunityPage({ params, searchParams }: Prop
                 showRemoveActions
                 showCheckInActions
               />
-              <section className="rounded-lg border bg-white p-6">
-                <AssignVolunteerSearch
+              {opportunity.status === "published" && !hasOpportunityStarted(opportunity) && (
+                <InviteVolunteers
                   opportunityId={opportunity.id}
-                  volunteers={assignableVolunteers}
+                  volunteers={memberVolunteers}
+                  canInvite
                 />
-              </section>
+              )}
             </>
           )}
         </TabsContent>

@@ -556,7 +556,9 @@ function OpportunityExploreCard({
     opportunity.title
   );
   const registrationLabel =
-    bookingStatus === "approved"
+    bookingStatus === "invited"
+      ? "Invited"
+      : bookingStatus === "approved"
       ? "Registered"
       : bookingStatus === "pending"
       ? "Requested"

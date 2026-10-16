@@ -36,3 +36,12 @@ export function isOpportunityPast(opportunity: VolunteerOpportunity) {
 export function getFullName(firstName: string, lastName: string) {
   return `${firstName} ${lastName}`;
 }
+
+// Opportunity dates/times are wall-clock values in the application's time zone.
+export function hasOpportunityStarted(opportunity: Pick<VolunteerOpportunity, "date" | "start_time">, now = new Date()) {
+  const today = getAppDateString(now);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: appTimeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).format(now);
+  return opportunity.date < today || (opportunity.date === today && opportunity.start_time <= time);
+}

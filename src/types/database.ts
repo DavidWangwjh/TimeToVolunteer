@@ -4,11 +4,12 @@ export type ApplicationStatus = "pending" | "contacted" | "accepted" | "rejected
 export type OpportunityStatus = "draft" | "published" | "cancelled" | "completed";
 export type OpportunityVisibility = "public" | "private";
 export type RecurrenceFrequency = "weekly" | "biweekly" | "monthly";
-export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
+export type BookingStatus = "invited" | "pending" | "approved" | "rejected" | "cancelled" | "completed";
 export type OrganizationStatus = "active" | "inactive" | "suspended";
 export type OrganizationVisibility = "public" | "private";
 export type MembershipStatus = "pending" | "accepted" | "rejected";
 export type InboxMessageKind =
+  | "opportunity_invited"
   | "booking_requested"
   | "booking_approved"
   | "booking_rejected"

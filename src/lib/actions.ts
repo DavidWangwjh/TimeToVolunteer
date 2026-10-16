@@ -1714,11 +1714,11 @@ export async function requestBooking(data: {
     .select("id")
     .eq("opportunity_id", opportunity.id)
     .eq("volunteer_id", profile.id)
-    .in("status", ["pending", "approved"])
+    .in("status", ["pending", "approved", "invited"])
     .maybeSingle();
 
   if (existingBooking) {
-    return { error: "You already have a registration for this session" };
+    return { error: "You already have a registration or invitation for this session. Review invitations on your dashboard." };
   }
 
   const requestedStatus =
@@ -1739,7 +1739,7 @@ export async function requestBooking(data: {
 
   if (error) {
     if (error.code === "23505") {
-      return { error: "You already have a registration for this session" };
+      return { error: "You already have a registration or invitation for this session. Review invitations on your dashboard." };
     }
 
     return { error: error.message };
@@ -1857,144 +1857,36 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
   return { success: true };
 }
 
-export async function assignVolunteerToOpportunity({
-  opportunityId,
-  volunteerId,
-}: {
-  opportunityId: string;
-  volunteerId: string;
-}) {
-  const admin = await requireAdmin();
-
-  if (admin.role !== "organization") {
-    return { error: "Only organization accounts can assign volunteers" };
+export async function inviteVolunteersToOpportunity(opportunityId: string, volunteerIds: string[]) {
+  const profile = await requireAdmin();
+  if (profile.role !== "organization") return { error: "Only organizations can invite volunteers" };
+  if (!Array.isArray(volunteerIds) || volunteerIds.length === 0 || volunteerIds.length > 100) {
+    return { error: "Select between 1 and 100 volunteers per batch" };
   }
-
-  const adminClient = createAdminClient();
-  const { data: opportunity, error: opportunityError } = await adminClient
-    .from("volunteer_opportunities")
-    .select("*, organizations(id, name, owner_id, status)")
-    .eq("id", opportunityId)
-    .single();
-
-  if (opportunityError || !opportunity) {
-    return { error: "Opportunity not found" };
-  }
-
-  const organization = Array.isArray(opportunity.organizations)
-    ? opportunity.organizations[0]
-    : opportunity.organizations;
-
-  if (
-    !organization ||
-    organization.owner_id !== admin.id ||
-    organization.status !== "active"
-  ) {
-    return { error: "You can only assign volunteers to your organization" };
-  }
-
-  const { data: volunteer } = await adminClient
-    .from("profiles")
-    .select("id, first_name, last_name, role, status")
-    .eq("id", volunteerId)
-    .eq("role", "volunteer")
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!volunteer) {
-    return { error: "Volunteer not found" };
-  }
-
-  const { data: membership } = await adminClient
-    .from("organization_memberships")
-    .select("id")
-    .eq("organization_id", opportunity.organization_id)
-    .eq("volunteer_id", volunteerId)
-    .eq("status", "accepted")
-    .maybeSingle();
-
-  if (!membership) {
-    return { error: "Volunteer is not a member of this organization" };
-  }
-
-  const { data: existingBooking } = await adminClient
-    .from("bookings")
-    .select("id, status")
-    .eq("opportunity_id", opportunityId)
-    .eq("volunteer_id", volunteerId)
-    .in("status", ["pending", "approved"])
-    .maybeSingle();
-
-  if (existingBooking?.status === "approved") {
-    return { error: "Volunteer is already registered for this opportunity" };
-  }
-
-  const { count: approvedCount } = await adminClient
-    .from("bookings")
-    .select("*", { count: "exact", head: true })
-    .eq("opportunity_id", opportunityId)
-    .eq("status", "approved");
-
-  if ((approvedCount ?? 0) >= opportunity.max_volunteers) {
-    return { error: "This opportunity is full" };
-  }
-
-  const now = new Date().toISOString();
-  let bookingId = existingBooking?.id ?? null;
-  let errorMessage: string | null = null;
-
-  if (existingBooking?.status === "pending") {
-    const { error } = await adminClient
-      .from("bookings")
-      .update({
-        status: "approved",
-        approved_by: admin.id,
-        approved_at: now,
-        updated_at: now,
-      })
-      .eq("id", existingBooking.id);
-
-    errorMessage = error?.message ?? null;
-  } else {
-    const { data: booking, error } = await adminClient
-      .from("bookings")
-      .insert({
-        opportunity_id: opportunityId,
-        volunteer_id: volunteerId,
-        status: "approved",
-        approved_by: admin.id,
-        approved_at: now,
-      })
-      .select("id")
-      .single();
-
-    bookingId = booking?.id ?? null;
-    errorMessage = error?.message ?? null;
-  }
-
-  if (errorMessage) {
-    return { error: errorMessage };
-  }
-
-  await createInboxMessage({
-    recipientId: volunteerId,
-    actorId: admin.id,
-    organizationId: opportunity.organization_id,
-    opportunityId,
-    bookingId,
-    kind: "booking_approved",
-    title: "Assigned to opportunity",
-    body: `${organization.name} assigned you to ${opportunity.title}.`,
-    actionHref: "/dashboard/volunteer",
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("invite_opportunity_volunteers", {
+    p_opportunity_id: opportunityId,
+    p_volunteer_ids: volunteerIds,
   });
-
-  revalidatePath("/dashboard/organization");
-  revalidatePath("/dashboard/organization/bookings");
-  revalidatePath("/dashboard/organization/opportunities");
+  if (error) return { error: error.message };
   revalidatePath(`/dashboard/organization/opportunities/${opportunityId}/edit`);
-  revalidatePath("/dashboard/volunteer");
   revalidateInbox();
+  return { results: data as { volunteer_id: string; outcome: "invited" | "unavailable" }[] };
+}
 
+export async function respondToOpportunityInvitation(bookingId: string, accept: boolean) {
+  const profile = await getCurrentUserProfile();
+  if (!profile || profile.role !== "volunteer" || profile.status !== "active") {
+    return { error: "You must be an active volunteer to respond" };
+  }
+  if (typeof accept !== "boolean") return { error: "Invalid invitation response" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("respond_to_opportunity_invitation", {
+    p_booking_id: bookingId,
+    p_accept: accept,
+  });
+  if (error) return { error: error.message };
+  revalidateInbox();
   return { success: true };
 }
 
