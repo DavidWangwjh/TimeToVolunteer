@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { respondToOpportunityInvitation } from "@/lib/actions";
@@ -43,7 +44,7 @@ export function VolunteerInvitations({ invitations }: {
       {remaining.map(({ id, opportunity, canAccept }) => (
         <article key={id} className="space-y-3 rounded-lg border border-violet-200 bg-white p-5">
           <div>
-            <p className="text-sm text-slate-500">{opportunity.organizations?.name}</p>
+            <p className="text-sm text-slate-500">{opportunity.organizations && <Link href={`/dashboard/volunteer/organizations/${opportunity.organizations.id}`} className="font-medium text-emerald-800 hover:underline">{opportunity.organizations.name}</Link>}</p>
             <h3 className="text-lg font-semibold">{opportunity.title}</h3>
             <p className="mt-1 text-sm text-slate-600">{formatDate(opportunity.date)} · {formatTime(opportunity.start_time)} – {formatTime(opportunity.end_time)}</p>
             <p className="text-sm text-slate-600">{opportunity.location}</p>

@@ -3,7 +3,6 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
   ClipboardList,
-  User,
   LayoutDashboard,
   Users,
   Building2,
@@ -15,9 +14,9 @@ import { SignOutButton } from "@/components/layout/SignOutButton";
 const volunteerLinks = [
   { href: "/dashboard/volunteer", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/volunteer/organizations", label: "My Organizations", icon: Building2 },
+  { href: "/dashboard/volunteer/opportunities", label: "My Opportunities", icon: ClipboardList },
   { href: "/dashboard/volunteer/explore", label: "Explore", icon: Search },
   { href: "/dashboard/volunteer/inbox", label: "Inbox", icon: Mail },
-  { href: "/dashboard/volunteer/profile", label: "Profile", icon: User },
 ];
 
 const platformAdminLinks = [

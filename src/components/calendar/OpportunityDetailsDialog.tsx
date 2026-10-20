@@ -177,7 +177,7 @@ export function OpportunityDetailsDialog({
 
           {existingBookingStatus === "invited" ? (
             <Button asChild className="w-full">
-              <Link href="/dashboard/volunteer#invitations">Review invitation</Link>
+              <Link href="/dashboard/volunteer/opportunities#invitations">Review invitation</Link>
             </Button>
           ) : canBook ? (
             <Button

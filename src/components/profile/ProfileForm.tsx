@@ -20,6 +20,7 @@ import type { Profile } from "@/types/database";
 interface ProfileFormProps {
   profile: Profile;
   userMetadata?: Record<string, unknown>;
+  onSaved?: () => void;
 }
 
 function parseInterests(value: unknown): OrganizationCategory[] {
@@ -30,7 +31,7 @@ function parseInterests(value: unknown): OrganizationCategory[] {
   );
 }
 
-export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
+export function ProfileForm({ profile, userMetadata = {}, onSaved }: ProfileFormProps) {
   const isVolunteer = profile.role === "volunteer";
   const initialInterests = parseInterests(
     profile.volunteer_interests?.length
@@ -75,6 +76,7 @@ export function ProfileForm({ profile, userMetadata = {} }: ProfileFormProps) {
       toast.error(result.error);
     } else {
       toast.success("Profile updated");
+      onSaved?.();
     }
   }
 
