@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { appTimeZone, getAppDateString } from "@/lib/dates";
+import { appTimeZone, getAppDateString, getAge } from "@/lib/dates";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
 import { BookingTable } from "@/components/bookings/BookingTable";
-import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { VolunteerProfilePanel } from "@/components/profile/VolunteerProfilePanel";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -62,6 +61,15 @@ export default async function OrganizationVolunteerDetailPage({
     notFound();
   }
 
+  // Only resolve the private photo after the organization relationship check above.
+  const { data: authData } = await adminClient.auth.admin.getUserById(id);
+  const avatarPath = authData.user?.user_metadata.volunteer_avatar_path;
+  let avatarSrc: string | undefined;
+  if (typeof avatarPath === "string" && new RegExp(`^${id}/[a-f0-9-]+\\.webp$`).test(avatarPath)) {
+    const { data: signedPhoto } = await adminClient.storage.from("volunteer-avatars").createSignedUrl(avatarPath, 3600);
+    avatarSrc = signedPhoto?.signedUrl;
+  }
+
   const now = new Date();
   const today = getAppDateString(now);
   const currentTime = new Intl.DateTimeFormat("en-GB", {
@@ -84,54 +92,7 @@ export default async function OrganizationVolunteerDetailPage({
       <Link href={fromReview ? "/dashboard/organization/memberships?view=review" : "/dashboard/organization/memberships"} className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:underline">
         <ArrowLeft className="size-4" />{fromReview ? "Back to awaiting review" : "Back to memberships"}
       </Link>
-      <div>
-        <h1 className="text-2xl font-bold text-slate-950">
-          {volunteer.first_name} {volunteer.last_name}
-        </h1>
-        <div className="mt-2">
-          <StatusBadge status={volunteer.status} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Contact</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              <span className="text-muted-foreground">Email:</span>{" "}
-              {volunteer.email}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Phone:</span>{" "}
-              {volunteer.phone ?? "-"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Volunteer Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              <span className="text-muted-foreground">Date of birth:</span>{" "}
-              {volunteer.date_of_birth ?? "-"}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Interests:</span>{" "}
-              {volunteer.volunteer_interests?.length
-                ? volunteer.volunteer_interests.join(", ")
-                : "-"}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Self introduction:</span>{" "}
-              {volunteer.volunteer_intro ?? "-"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <VolunteerProfilePanel key={volunteer.id} profile={volunteer} readOnly avatarSrc={avatarSrc} age={getAge(volunteer.date_of_birth, now)} />
 
       <div>
         <h2 className="mb-4 text-lg font-semibold">Volunteer History</h2>

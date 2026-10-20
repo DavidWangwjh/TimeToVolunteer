@@ -128,3 +128,17 @@
     @apply font-sans;
   }
 }
+/* Keep pointer affordances consistent for native and custom controls. */
+:where(a[href], button, select, summary, input[type="button"], input[type="submit"],
+  input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"],
+  input[type="range"], input[type="color"], [role="button"], [role="link"],
+  [role="tab"], [role="checkbox"], [role="radio"], [role="switch"],
+  [role="option"], [role="menuitem"], [role="menuitemcheckbox"],
+  [role="menuitemradio"], [role="combobox"], label[for],
+  label:has(input[type="checkbox"], input[type="radio"]), .fc-event):not(:disabled):not([aria-disabled="true"]):not([data-disabled]) {
+  cursor: pointer;
+}
+
+:where(button, select, input, [role="button"], [role="tab"], [role="option"]):is(:disabled, [aria-disabled="true"], [data-disabled]) {
+  cursor: not-allowed;
+}

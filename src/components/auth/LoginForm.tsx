@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { unstable_rethrow, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,7 +55,9 @@ export function LoginForm({ quickLoginGroups = [] }: LoginFormProps) {
     try {
       const result = await signIn(account.email, account.password, redirectTo);
       if (result?.error) toast.error(result.error);
-    } catch {
+    } catch (error) {
+      // Successful sign-in redirects use a Next.js control-flow exception.
+      unstable_rethrow(error);
       toast.error("Unable to log in. Please try again.");
     } finally {
       setQuickLoginEmail(null);

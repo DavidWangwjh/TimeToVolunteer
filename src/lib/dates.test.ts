@@ -27,3 +27,12 @@ test("uses Pacific winter time rather than a fixed UTC offset or browser timezon
   assert.deepEqual(getOpportunityLifecycle(winter, new Date("2026-12-02T00:00:00Z")), { category: "active", ongoing: true });
   assert.deepEqual(getOpportunityLifecycle(winter, new Date("2026-12-02T02:00:00Z")), { category: "past", ongoing: false });
 });
+
+test("age respects birthdays in Pacific time and handles missing or invalid birth dates", async () => {
+  const { getAge } = await import("./dates");
+  assert.equal(getAge("2008-10-20", new Date("2026-10-20T06:59:59Z")), 17);
+  assert.equal(getAge("2008-10-20", new Date("2026-10-20T07:00:00Z")), 18);
+  assert.equal(getAge(null), null);
+  assert.equal(getAge("2026-02-30"), null);
+  assert.equal(getAge("2099-01-01"), null);
+});

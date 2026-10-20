@@ -65,3 +65,12 @@ export function hasOpportunityStarted(opportunity: Pick<VolunteerOpportunity, "d
   }).format(now);
   return opportunity.date < today || (opportunity.date === today && opportunity.start_time <= time);
 }
+
+export function getAge(dateOfBirth: string | null | undefined, now = new Date()): number | null {
+  if (!dateOfBirth || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return null;
+  const parsed = new Date(`${dateOfBirth}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dateOfBirth) return null;
+  const today = getAppDateString(now);
+  if (dateOfBirth > today) return null;
+  return Number(today.slice(0, 4)) - Number(dateOfBirth.slice(0, 4)) - (today.slice(5) < dateOfBirth.slice(5) ? 1 : 0);
+}

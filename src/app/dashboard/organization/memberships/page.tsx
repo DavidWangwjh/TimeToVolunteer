@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
 import { MembershipActions } from "@/components/organizations/MembershipActions";
 import {
   Table,
@@ -13,9 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate } from "@/lib/dates";
+import { formatDate, getAge } from "@/lib/dates";
 import type {
-  MembershipStatus,
   Organization,
   OrganizationMembership,
   Profile,
@@ -103,8 +101,9 @@ function MembershipTable({
         <TableHeader className="bg-slate-50">
           <TableRow>
             <TableHead>Volunteer</TableHead>
-            <TableHead>Organization</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Age</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Phone number</TableHead>
             <TableHead>{showActions ? "Requested" : "Member since"}</TableHead>
             {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
@@ -123,16 +122,10 @@ function MembershipTable({
                 ) : (
                   <div className="font-semibold text-slate-950">Volunteer</div>
                 )}
-                <div className="text-sm text-slate-500">
-                  {membership.profiles?.email ?? "No email available"}
-                </div>
               </TableCell>
-              <TableCell className="text-slate-600">
-                {membership.organizations?.name ?? "Organization"}
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={membership.status as MembershipStatus} />
-              </TableCell>
+              <TableCell className="text-slate-600">{getAge(membership.profiles?.date_of_birth) ?? "—"}</TableCell>
+              <TableCell className="text-slate-600">{membership.profiles?.email ?? "—"}</TableCell>
+              <TableCell className="text-slate-600">{membership.profiles?.phone || "—"}</TableCell>
               <TableCell className="text-slate-600">
                 {showActions
                   ? formatDate(membership.created_at.split("T")[0])
