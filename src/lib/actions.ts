@@ -1272,6 +1272,7 @@ export async function updateOpportunity(
   revalidatePath("/dashboard/organization/opportunities");
   revalidatePath(`/dashboard/organization/opportunities/${id}/edit`);
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidateInbox();
 
   redirect(admin.role === "admin" ? "/dashboard/admin/opportunities" : "/dashboard/organization/opportunities");
@@ -1455,6 +1456,7 @@ export async function approveOrganizationMembership(membershipId: string) {
   revalidatePath("/dashboard/organization/memberships");
   revalidatePath("/dashboard/volunteer/organizations");
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidateInbox();
 
   return { success: true };
@@ -1623,6 +1625,7 @@ export async function leaveOrganizationMembership(
   }
 
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidatePath("/dashboard/volunteer/explore");
   revalidatePath("/dashboard/volunteer/organizations");
   revalidatePath(`/dashboard/volunteer/organizations/${organizationId}`);
@@ -1774,6 +1777,7 @@ export async function requestBooking(data: {
   }
 
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidatePath("/dashboard/organization/bookings");
   revalidateInbox();
 
@@ -1852,6 +1856,7 @@ export async function approveBooking(bookingId: string, adminNote?: string) {
   revalidatePath("/dashboard/organization/opportunities");
   revalidatePath(`/dashboard/organization/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidateInbox();
 
   return { success: true };
@@ -1938,6 +1943,7 @@ export async function checkInBooking(bookingId: string) {
   }
 
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidatePath("/dashboard/organization/bookings");
   revalidatePath("/dashboard/admin/opportunities");
   revalidatePath("/dashboard/organization/opportunities");
@@ -1994,6 +2000,7 @@ export async function cancelBookingCheckIn(bookingId: string) {
   }
 
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidatePath("/dashboard/organization/bookings");
   revalidatePath("/dashboard/admin/opportunities");
   revalidatePath("/dashboard/organization/opportunities");
@@ -2043,6 +2050,7 @@ export async function checkInAllBookingsForOpportunity(opportunityId: string) {
   }
 
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidatePath("/dashboard/organization/bookings");
   revalidatePath("/dashboard/admin/opportunities");
   revalidatePath("/dashboard/organization/opportunities");
@@ -2116,6 +2124,7 @@ export async function rejectBooking(bookingId: string, adminNote?: string) {
   revalidatePath("/dashboard/organization/opportunities");
   revalidatePath(`/dashboard/organization/opportunities/${booking.opportunity_id}/edit`);
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidateInbox();
 
   return { success: true };
@@ -2199,6 +2208,7 @@ export async function cancelBooking(bookingId: string) {
   }
 
   revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
   revalidatePath("/dashboard/organization/bookings");
   revalidatePath("/dashboard/admin/opportunities");
   revalidatePath("/dashboard/organization/opportunities");
@@ -2680,6 +2690,7 @@ export async function updateProfile(data: ProfileUpdateInput) {
   }
 
   revalidatePath("/dashboard/volunteer/profile");
+  revalidatePath("/dashboard/volunteer");
   revalidatePath("/dashboard/volunteer/organizations");
 
   return { success: true };

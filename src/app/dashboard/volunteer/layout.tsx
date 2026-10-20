@@ -36,7 +36,7 @@ export default async function VolunteerDashboardLayout({
     <DashboardShell
       variant="volunteer"
       navCounts={{
-        "/dashboard/volunteer": pendingBookings ?? 0,
+        "/dashboard/volunteer/opportunities": pendingBookings ?? 0,
         "/dashboard/volunteer/inbox": unreadMessages ?? 0,
         "/dashboard/volunteer/organizations": acceptedOrganizations ?? 0,
       }}

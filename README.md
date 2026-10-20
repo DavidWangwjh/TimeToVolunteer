@@ -286,3 +286,9 @@ Migration `004_opportunity_invitations.sql` adds invitations and the authenticat
 Organizations can invite accepted members to published opportunities whose start time has not passed (America/Los_Angeles). Invitations appear in the volunteer dashboard and inbox; they do not send email or reserve a place. Acceptance confirms registration subject to capacity. Removing a registration allows the volunteer to register again or receive another invitation. Existing registrations remain registered.
 
 The transactional database regression test is `supabase/tests/opportunity_invitations.sql`. Run it with `psql -v ON_ERROR_STOP=1 -f supabase/tests/opportunity_invitations.sql` against an isolated test database with the schema installed. It creates fixtures inside a transaction and rolls them back, covering authorization, consent, capacity, duplicate invitations, and registration/invitation after removal.
+
+### Volunteer profile photos
+
+Volunteers edit their profile from Overview; the old `/dashboard/volunteer/profile` URL redirects there. Photos are optional and are not part of signup. The authenticated `/api/volunteer/avatar` endpoint accepts JPEG, PNG, and WebP files up to 3 MB, validates and re-encodes them to a 512×512 WebP, and strips EXIF metadata. It serves only the signed-in volunteer's own photo with private, non-cacheable responses.
+
+No SQL migration is required. On the first upload in each environment, the server provisions a private `volunteer-avatars` Supabase Storage bucket using the existing service-role key. The object path is stored in Supabase Auth user metadata (`volunteer_avatar_path`). No public bucket or client storage policies are needed. Replacement/removal cleans up the previous object. These photos currently appear on the volunteer's own Overview.
