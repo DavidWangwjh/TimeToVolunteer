@@ -31,6 +31,7 @@ interface BookingTableProps {
   variant: "volunteer" | "admin";
   showActions?: boolean;
   volunteerBasePath?: string;
+  volunteerReturnTo?: string;
   showOpportunity?: boolean;
 }
 
@@ -42,6 +43,7 @@ export function BookingTable({
   showActions = true,
   showOpportunity = true,
   volunteerBasePath = "/dashboard/admin/volunteers",
+  volunteerReturnTo,
 }: BookingTableProps) {
   if (bookings.length === 0) {
     return (
@@ -97,7 +99,7 @@ export function BookingTable({
                 <TableCell className="font-medium text-slate-800">
                   {volunteer ? (
                     <Link
-                      href={`${volunteerBasePath}/${volunteer.id}`}
+                      href={`${volunteerBasePath}/${volunteer.id}${volunteerReturnTo ? `?returnTo=${encodeURIComponent(volunteerReturnTo)}` : ""}`}
                       className="hover:text-emerald-800 hover:underline"
                     >
                       {volunteer.first_name} {volunteer.last_name}

@@ -1,3 +1,4 @@
+import { getVolunteerStats } from "@/lib/volunteer-rank-data";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { appTimeZone, getAppDateString, getAge } from "@/lib/dates";
@@ -9,7 +10,7 @@ import { VolunteerProfilePanel } from "@/components/profile/VolunteerProfilePane
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; returnTo?: string }>;
 }
 
 export default async function OrganizationVolunteerDetailPage({
@@ -17,7 +18,11 @@ export default async function OrganizationVolunteerDetailPage({
   searchParams,
 }: Props) {
   const { id } = await params;
-  const fromReview = (await searchParams).from === "review";
+  const query = await searchParams;
+  const fromReview = query.from === "review";
+  const opportunityReturn = /^\/dashboard\/organization\/opportunities\/[a-f0-9-]+\/edit(?:\?view=review)?$/.test(query.returnTo ?? "") ? query.returnTo : undefined;
+  const backHref = opportunityReturn ?? (fromReview ? "/dashboard/organization/memberships?view=review" : "/dashboard/organization/memberships");
+  const backLabel = opportunityReturn ? (opportunityReturn.endsWith("?view=review") ? "Back to registration requests" : "Back to opportunity") : (fromReview ? "Back to awaiting review" : "Back to memberships");
   const profile = await requireAdmin();
 
   if (profile.role !== "organization") {
@@ -70,6 +75,7 @@ export default async function OrganizationVolunteerDetailPage({
     avatarSrc = signedPhoto?.signedUrl;
   }
 
+  const volunteerStats = await getVolunteerStats(id);
   const now = new Date();
   const today = getAppDateString(now);
   const currentTime = new Intl.DateTimeFormat("en-GB", {
@@ -89,10 +95,10 @@ export default async function OrganizationVolunteerDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link href={fromReview ? "/dashboard/organization/memberships?view=review" : "/dashboard/organization/memberships"} className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:underline">
-        <ArrowLeft className="size-4" />{fromReview ? "Back to awaiting review" : "Back to memberships"}
+      <Link href={backHref} className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:underline">
+        <ArrowLeft className="size-4" />{backLabel}
       </Link>
-      <VolunteerProfilePanel key={volunteer.id} profile={volunteer} readOnly avatarSrc={avatarSrc} age={getAge(volunteer.date_of_birth, now)} />
+      <VolunteerProfilePanel key={volunteer.id} profile={volunteer} volunteerStats={volunteerStats} readOnly avatarSrc={avatarSrc} age={getAge(volunteer.date_of_birth, now)} />
 
       <div>
         <h2 className="mb-4 text-lg font-semibold">Volunteer History</h2>
@@ -102,6 +108,7 @@ export default async function OrganizationVolunteerDetailPage({
           variant="admin"
           showActions={false}
           volunteerBasePath="/dashboard/organization/volunteers"
+          volunteerReturnTo={opportunityReturn}
           bookings={history}
         />}
       </div>

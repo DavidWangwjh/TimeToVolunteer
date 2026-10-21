@@ -19,6 +19,7 @@ interface RegisteredVolunteersProps {
   opportunity: VolunteerOpportunity;
   registeredBookings: RegisteredBooking[];
   volunteerBasePath?: string;
+  volunteerReturnTo?: string;
   showRemoveActions?: boolean;
   showCheckInActions?: boolean;
   registeredCount?: number;
@@ -39,6 +40,7 @@ export function RegisteredVolunteers({
   opportunity,
   registeredBookings,
   volunteerBasePath = "/dashboard/admin/volunteers",
+  volunteerReturnTo,
   showRemoveActions = false,
   showCheckInActions = false,
   registeredCount = registeredBookings.length,
@@ -81,7 +83,7 @@ export function RegisteredVolunteers({
                   <div className="min-w-0">
                     {booking.profiles ? (
                       <Link
-                        href={`${volunteerBasePath}/${booking.profiles.id}`}
+                        href={`${volunteerBasePath}/${booking.profiles.id}${volunteerReturnTo ? `?returnTo=${encodeURIComponent(volunteerReturnTo)}` : ""}`}
                         className="text-sm font-medium text-slate-950 hover:text-emerald-800 hover:underline"
                       >
                         {volunteerName}

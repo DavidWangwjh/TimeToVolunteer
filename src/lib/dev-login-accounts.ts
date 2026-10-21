@@ -33,25 +33,26 @@ export const devQuickLoginGroups = [
             role: "Volunteers",
             accounts: [
               {
-                label: "Ava Martinez",
+                label: "Ava Martinez · Bronze",
                 email: "ava.volunteer@timetovolunteer.test",
                 password: DEV_LOGIN_PASSWORD,
               },
               {
-                label: "Ben Carter",
+                label: "Ben Carter · Silver",
                 email: "ben.volunteer@timetovolunteer.test",
                 password: DEV_LOGIN_PASSWORD,
               },
               {
-                label: "Maya Johnson",
+                label: "Maya Johnson · Gold",
                 email: "maya.volunteer@timetovolunteer.test",
                 password: DEV_LOGIN_PASSWORD,
               },
               {
-                label: "Jordan Lee",
+                label: "Jordan Lee · Platinum",
                 email: "jordan.volunteer@timetovolunteer.test",
                 password: DEV_LOGIN_PASSWORD,
               },
+              { label: "Riley Chen · Diamond", email: "riley.volunteer@timetovolunteer.test", password: DEV_LOGIN_PASSWORD },
             ],
           },
           {

@@ -88,6 +88,7 @@ export default async function EditOpportunityPage({ params }: Props) {
       </div>
 
       <EditOpportunityForm
+        allowStatusEdit
         opportunity={opportunity}
         organizationVisibility={organizationVisibility}
       />

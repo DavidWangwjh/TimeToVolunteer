@@ -1,5 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getVolunteerHours, getVolunteerRank } from "../src/lib/volunteer-ranks";
 import { organizationCategories } from "../src/lib/organization-options";
 
 import { DEV_ADMIN_EMAIL, DEV_LOGIN_PASSWORD, DEV_SUPABASE_PROJECT_REF, devQuickLoginGroups } from "../src/lib/dev-login-accounts";
@@ -9,14 +10,15 @@ loadEnvConfig(process.cwd());
 const DEVELOPMENT_PROJECT_REF = DEV_SUPABASE_PROJECT_REF;
 const PRODUCTION_PROJECT_REF = "chdnlpkoqoadqnmdpqrx";
 const PASSWORD = DEV_LOGIN_PASSWORD;
-const SEEDED_EMAIL_DOMAIN = "@timetovolunteer.test";
+
 
 type ProfileRole = "admin" | "organization" | "volunteer";
 type OrganizationVisibility = "public" | "private";
 type OpportunityVisibility = "public" | "private";
-type BookingStatus = "pending" | "approved" | "rejected" | "cancelled" | "completed";
+type BookingStatus = "invited" | "pending" | "approved" | "rejected" | "cancelled" | "completed";
 type MembershipStatus = "pending" | "accepted" | "rejected";
 type InboxKind =
+  | "opportunity_invited"
   | "booking_requested"
   | "booking_approved"
   | "membership_requested"
@@ -577,37 +579,94 @@ bookings.push(
 memberships.push({ organizationKey: "green-city", volunteerEmail: "maya.volunteer@timetovolunteer.test", status: "rejected" });
 applicationRows.push({ ...applicationRows[0], organization_name: "Archived Test Application", email: "apply.rejected@timetovolunteer.test", status: "rejected" });
 
-async function deleteSeedAuthUsers(supabase: SupabaseClient) {
-  const seedUserIds: string[] = [];
-  for (let page = 1; ; page += 1) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) throw new Error(`Listing auth users: ${error.message}`);
-    seedUserIds.push(...data.users.filter(user => user.email?.endsWith(SEEDED_EMAIL_DOMAIN) || user.email === adminUser.email).map(user => user.id));
-    if (data.users.length < 1000) break;
+// UI coverage: five ranks, long/scrolled member lists, sparse profiles, invitations,
+// repeat registration after removal, no-shows, and date/time lifecycle boundaries.
+volunteerUsers.push({ email: "riley.volunteer@timetovolunteer.test", firstName: "Riley", lastName: "Chen", role: "volunteer", phone: "555-2105", dateOfBirth: "1998-05-17", volunteerIntro: "Long-time volunteer supporting STEM learning and environmental restoration.", volunteerInterests: ["Education", "Environment"] });
+const memberNames = ["Olivia Patel", "Noah Williams", "Emma Garcia", "Liam Davis", "Sophia Nguyen", "Ethan Wilson", "Isabella Brown", "Lucas Anderson", "Amelia Thomas", "Mason Jackson", "Harper White", "Elijah Harris", "Evelyn Martin", "James Thompson", "Sofia Robinson", "Benjamin Clark", "Charlotte Lewis", "Henry Walker", "Mia Hall", "Alexander Young", "Camila Allen", "Daniel King", "Luna Wright", "Sebastian Scott"];
+for (const [index, name] of memberNames.entries()) {
+  const [firstName, lastName] = name.split(" ");
+  const email = `member${index + 1}@timetovolunteer.test`;
+  volunteerUsers.push({ email, firstName, lastName, role: "volunteer", phone: index % 5 === 0 ? undefined : `555-22${String(index).padStart(2, "0")}`, dateOfBirth: index === 0 ? undefined : `${1990 + index}-06-15`, volunteerIntro: index === 0 ? undefined : "I enjoy helping my community through education and hands-on service. Looking forward to meeting other volunteers and learning new skills.", volunteerInterests: index === 0 ? [] : ["Education", "Environment"] });
+  memberships.push({ organizationKey: "code-ninjas", volunteerEmail: email, status: index >= 22 ? "rejected" : index >= 19 ? "pending" : "accepted" });
+}
+for (const volunteer of volunteerUsers.slice(0, 5)) {
+  for (const organizationKey of ["code-ninjas", "green-city"]) {
+    if (!memberships.some(row => row.organizationKey === organizationKey && row.volunteerEmail === volunteer.email)) memberships.push({ organizationKey, volunteerEmail: volunteer.email, status: "accepted" });
   }
-  for (const id of seedUserIds) {
-    const { error } = await supabase.auth.admin.deleteUser(id);
-    if (error) throw new Error(`Deleting seeded auth user: ${error.message}`);
+}
+const rankTargets = [
+  { email: volunteerUsers[0].email, hours: 2, rank: "Bronze" },
+  { email: volunteerUsers[1].email, hours: 50, rank: "Silver" },
+  { email: volunteerUsers[2].email, hours: 100, rank: "Gold" },
+  { email: volunteerUsers[3].email, hours: 250, rank: "Platinum" },
+  { email: volunteerUsers[4].email, hours: 500, rank: "Diamond" },
+];
+for (const target of rankTargets) {
+  const baseline = target.email === volunteerUsers[0].email ? 2 : target.email === volunteerUsers[2].email ? 3 : 0;
+  let remaining = target.hours - baseline;
+  for (let index = 0; remaining > 0; index++) {
+    const hours = Math.min(8, remaining);
+    const key = `rank-${target.rank}-${index}`;
+    opportunities.push({ key, organizationKey: index % 2 ? "green-city" : "code-ninjas", title: `${target.rank} history · Service shift ${index + 1}`, description: "Checked-in historical service for rank and volunteer history testing.", daysFromNow: -30 - index, startTime: "09:00", endTime: `${String(9 + hours).padStart(2, "0")}:00`, location: "Community Learning Center", maxVolunteers: 10, visibility: "public", status: "completed" });
+    bookings.push({ opportunityKey: key, volunteerEmail: target.email, status: "completed", checkedIn: true });
+    remaining -= hours;
   }
-  return seedUserIds.length;
+}
+for (const fixture of [
+  { key: "ongoing", title: "Ongoing today · Community Open House", daysFromNow: 0, startTime: "00:00", endTime: "23:59" },
+  { key: "no-show", title: "Past · Attendance and No-show Review", daysFromNow: -2, startTime: "10:00", endTime: "12:00", status: "completed" as const },
+  { key: "past-published", title: "Past · Published Session", daysFromNow: -1, startTime: "10:00", endTime: "12:00" },
+  { key: "invite-lab", title: "Invitation Lab · Join, Decline, and Rejoin", daysFromNow: 3, startTime: "10:00", endTime: "12:30" },
+]) opportunities.push({ organizationKey: "code-ninjas", description: "Development scenario for attendance, invitations, and lifecycle UI.", location: "Code Ninjas Union City", maxVolunteers: 30, visibility: "public", ...fixture });
+bookings.push(
+  { opportunityKey: "invite-lab", volunteerEmail: volunteerUsers[0].email, status: "invited" },
+  { opportunityKey: "invite-lab", volunteerEmail: volunteerUsers[1].email, status: "approved" },
+  { opportunityKey: "invite-lab", volunteerEmail: volunteerUsers[2].email, status: "pending" },
+  { opportunityKey: "invite-lab", volunteerEmail: volunteerUsers[3].email, status: "cancelled" },
+  { opportunityKey: "invite-lab", volunteerEmail: volunteerUsers[4].email, status: "rejected" },
+  { opportunityKey: "invite-lab", volunteerEmail: "member1@timetovolunteer.test", status: "invited" },
+  { opportunityKey: "ongoing", volunteerEmail: volunteerUsers[0].email, status: "approved", checkedIn: true },
+  { opportunityKey: "ongoing", volunteerEmail: volunteerUsers[1].email, status: "approved" },
+  ...volunteerUsers.slice(0, 5).map(volunteer => ({ opportunityKey: "no-show", volunteerEmail: volunteer.email, status: "approved" as const })),
+  { opportunityKey: "past-published", volunteerEmail: volunteerUsers[0].email, status: "approved" },
+);
+
+function validateFixtures() {
+  const emails = new Set(volunteerUsers.map(user => user.email));
+  const keys = new Set(opportunities.map(opportunity => opportunity.key));
+  if (keys.size !== opportunities.length) throw new Error("Duplicate opportunity keys");
+  const pairs = new Set<string>();
+  for (const booking of bookings) {
+    if (!emails.has(booking.volunteerEmail) || !keys.has(booking.opportunityKey)) throw new Error("Booking references a missing fixture");
+    const pair = `${booking.volunteerEmail}/${booking.opportunityKey}`;
+    if (pairs.has(pair)) throw new Error(`Duplicate booking: ${pair}`);
+    pairs.add(pair);
+  }
+  for (const target of rankTargets) {
+    const rows = bookings.filter(row => row.volunteerEmail === target.email).map(booking => {
+      const opportunity = opportunities.find(row => row.key === booking.opportunityKey)!;
+      return { status: booking.status, checked_in_at: booking.checkedIn ? "seed" : null, opportunity: { status: opportunity.status ?? "published" as const, date: addDays(opportunity.daysFromNow), start_time: opportunity.startTime + ":00", end_time: opportunity.endTime + ":00" } };
+    });
+    const hours = getVolunteerHours(rows);
+    if (hours !== target.hours) throw new Error(`Fixture rank mismatch: ${target.email}: ${hours}`);
+  }
 }
 
-async function createAuthUser(supabase: SupabaseClient, user: SeedUser) {
+function sessionTimestamp(opportunity: SeedOpportunity) {
+  const date = addDays(opportunity.daysFromNow);
+  const zone = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "shortOffset" }).formatToParts(new Date(`${date}T12:00:00Z`)).find(part => part.type === "timeZoneName")!.value;
+  const offset = zone === "GMT-8" ? "-08:00" : "-07:00";
+  return `${date}T${opportunity.startTime}:00${offset}`;
+}
+
+async function ensureAuthUser(supabase: SupabaseClient, user: SeedUser, existing: Map<string, string>) {
+  const id = existing.get(user.email);
+  if (id) return id; // Preserve login credentials, metadata, avatar paths, and sessions.
   const { data, error } = await supabase.auth.admin.createUser({
-    email: user.email,
-    password: PASSWORD,
-    email_confirm: true,
-    user_metadata: {
-      first_name: user.firstName,
-      last_name: user.lastName,
-      role: user.role,
-    },
+    email: user.email, password: PASSWORD, email_confirm: true,
+    user_metadata: { first_name: user.firstName, last_name: user.lastName, role: user.role },
   });
-
-  if (error || !data.user) {
-    throw new Error(`Creating auth user ${user.email}: ${error?.message ?? "No user returned"}`);
-  }
-
+  if (error || !data.user) throw new Error(`Creating ${user.email}: ${error?.message}`);
   return data.user.id;
 }
 
@@ -626,15 +685,20 @@ async function seed() {
     },
   });
 
+  validateFixtures();
+  if (process.argv.includes("--dry-run")) {
+    console.log(JSON.stringify({ volunteers: volunteerUsers.length, organizations: organizations.length, opportunities: opportunities.length, memberships: memberships.length, bookings: bookings.length, ranks: rankTargets }, null, 2));
+    return;
+  }
   await assertServiceRoleTableAccess(supabase);
 
-  await clearTable(supabase, "inbox_messages");
-  await clearTable(supabase, "bookings");
-  await clearTable(supabase, "organization_memberships");
-  await clearTable(supabase, "volunteer_opportunities");
-  await clearTable(supabase, "organizations");
-  await clearTable(supabase, "organization_applications");
-  const deletedAuthUsers = await deleteSeedAuthUsers(supabase);
+  const existingUsers = new Map<string, string>();
+  for (let page = 1; ; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(`Listing users: ${error.message}`);
+    for (const user of data.users) if (user.email) existingUsers.set(user.email, user.id);
+    if (data.users.length < 1000) break;
+  }
 
   const users: SeedUser[] = [
     adminUser,
@@ -651,12 +715,19 @@ async function seed() {
   const userIds = new Map<string, string>();
 
   for (const user of users) {
-    userIds.set(user.email, await createAuthUser(supabase, user));
+    userIds.set(user.email, await ensureAuthUser(supabase, user, existingUsers));
   }
+
+  await clearTable(supabase, "inbox_messages");
+  await clearTable(supabase, "bookings");
+  await clearTable(supabase, "organization_memberships");
+  await clearTable(supabase, "volunteer_opportunities");
+  await clearTable(supabase, "organizations");
+  await clearTable(supabase, "organization_applications");
 
   await failOnError(
     "Inserting profiles",
-    supabase.from("profiles").insert(
+    supabase.from("profiles").upsert(
       users.map((user) => ({
         id: userIds.get(user.email),
         first_name: user.firstName,
@@ -705,7 +776,7 @@ async function seed() {
   await failOnError(
     "Inserting memberships",
     supabase.from("organization_memberships").insert(
-      memberships.map((membership) => ({
+      memberships.map((membership, index) => ({
         organization_id: organizationIds.get(membership.organizationKey),
         volunteer_id: userIds.get(membership.volunteerEmail),
         status: membership.status,
@@ -720,7 +791,8 @@ async function seed() {
                   .ownerEmail
               )
             : null,
-        reviewed_at: membership.status === "accepted" ? new Date().toISOString() : null,
+        created_at: `${addDays(-120 - index)}T16:00:00Z`,
+        reviewed_at: membership.status !== "pending" ? `${addDays(-90 - index)}T16:00:00Z` : null,
       }))
     )
   );
@@ -795,14 +867,14 @@ async function seed() {
               ["approved", "completed"].includes(booking.status) && organization
                 ? userIds.get(organization.ownerEmail)
                 : null,
-            approved_at: ["approved", "completed"].includes(booking.status) ? now : null,
+            approved_at: ["approved", "completed"].includes(booking.status) && opportunity ? `${addDays(opportunity.daysFromNow - 1)}T16:00:00Z` : null,
             rejected_at: booking.status === "rejected" ? now : null,
             cancelled_at: booking.status === "cancelled" ? now : null,
             checked_in_by:
               booking.checkedIn && organization
                 ? userIds.get(organization.ownerEmail)
                 : null,
-            checked_in_at: booking.checkedIn ? `${addDays(opportunity?.daysFromNow ?? 0)}T17:00:00Z` : null,
+            checked_in_at: booking.checkedIn && opportunity ? sessionTimestamp(opportunity) : null,
           };
         })
       )
@@ -811,31 +883,31 @@ async function seed() {
 
   await failOnError(
     "Inserting organization applications",
-    supabase.from("organization_applications").insert(applicationRows)
+    supabase.from("organization_applications").insert(applicationRows.map(row => ({ ...row, admin_notes: row.status === "rejected" ? "Please add a verifiable organization website and describe how volunteers will be supervised before resubmitting." : null })))
   );
 
   const inboxRows = [
-    ...insertedBookings.filter(booking => ["pending", "approved"].includes(booking.status)).map((booking) => {
+    ...insertedBookings.filter(booking => ["pending", "approved", "invited"].includes(booking.status)).map((booking) => {
       const opportunity = opportunities.find(
         (item) => opportunityIds.get(item.key) === booking.opportunity_id
       );
       const organization = organizations.find(
         (item) => item.key === opportunity?.organizationKey
       );
-      const title =
+      const title = booking.status === "invited" ? "Opportunity invitation" :
         booking.status === "approved"
           ? "Registration confirmed"
           : "Registration request sent";
       const kind: InboxKind =
-        booking.status === "approved" ? "booking_approved" : "booking_requested";
+        booking.status === "invited" ? "opportunity_invited" : booking.status === "approved" ? "booking_approved" : "booking_requested";
 
       return {
         recipient_id:
-          booking.status === "approved"
+          ["approved", "invited"].includes(booking.status)
             ? booking.volunteer_id
             : userIds.get(organization?.ownerEmail ?? ""),
         actor_id:
-          booking.status === "approved"
+          ["approved", "invited"].includes(booking.status)
             ? userIds.get(organization?.ownerEmail ?? "")
             : booking.volunteer_id,
         organization_id: organizationIds.get(opportunity?.organizationKey ?? ""),
@@ -844,14 +916,14 @@ async function seed() {
         membership_id: null,
         kind,
         title,
-        body:
-          booking.status === "approved"
+        body: booking.status === "invited" ? `You are invited to ${opportunity?.title}. Accept or decline in My Opportunities.` :
+          ["approved", "invited"].includes(booking.status)
             ? `${opportunity?.title} is confirmed for you.`
             : `A volunteer requested registration for ${opportunity?.title}.`,
         action_href:
-          booking.status === "approved"
-            ? "/dashboard/volunteer"
-            : "/dashboard/organization/bookings",
+          ["approved", "invited"].includes(booking.status)
+            ? "/dashboard/volunteer/opportunities"
+            : `/dashboard/organization/opportunities/${booking.opportunity_id}/edit?view=review`,
       };
     }),
     {
@@ -898,8 +970,14 @@ async function seed() {
     console.log(`${table}: ${count}`);
   }
 
+  for (const target of rankTargets) {
+    const rows = await failOnError("Verifying rank", supabase.from("bookings").select("status, checked_in_at, volunteer_opportunities!inner(*)").eq("volunteer_id", userIds.get(target.email)!));
+    const hours = getVolunteerHours((rows ?? []).map(row => ({ ...row, opportunity: (Array.isArray(row.volunteer_opportunities) ? row.volunteer_opportunities[0] : row.volunteer_opportunities) })));
+    if (hours !== target.hours || getVolunteerRank(hours) !== target.rank) throw new Error(`Unexpected rank for ${target.email}: ${hours} hours`);
+    console.log(`${target.rank}: ${hours} checked-in hours verified`);
+  }
   console.log("\nSeed complete.");
-  console.log(`Deleted seeded auth users: ${deletedAuthUsers}`);
+  console.log("Existing Auth accounts and avatar metadata preserved.");
   console.log("\nTest login accounts:");
   console.log(`Admin: ${adminUser.email} / ${PASSWORD}`);
   console.log("Organizations:");

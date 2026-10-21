@@ -1,16 +1,17 @@
 "use client";
 
+import { VolunteerRankBanner } from "@/components/profile/VolunteerRankBanner";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, HeartHandshake, Mail, Pencil, Phone, X } from "lucide-react";
+import { Camera, Mail, Pencil, Phone, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import type { Profile } from "@/types/database";
 
-export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = false, avatarSrc, age }: { profile: Profile; userMetadata?: Record<string, unknown>; readOnly?: boolean; avatarSrc?: string; age?: number | null }) {
+export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = false, avatarSrc, age, volunteerStats }: { profile: Profile; userMetadata?: Record<string, unknown>; readOnly?: boolean; avatarSrc?: string; age?: number | null; volunteerStats: { hours: number; completedOpportunities: number } }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
@@ -41,11 +42,7 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
 
   return (
     <section aria-label={readOnly ? "Volunteer profile" : "Your profile"} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="relative h-32 overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-800 to-teal-600 sm:h-40">
-        <div aria-hidden="true" className="absolute -right-12 -top-36 size-96 rounded-full border-[40px] border-white/10" />
-        <div aria-hidden="true" className="absolute right-60 top-16 size-64 rounded-full border-[30px] border-white/5" />
-        <p className="absolute right-6 top-6 flex items-center gap-2 text-xs font-semibold tracking-[0.16em] text-emerald-100"><HeartHandshake className="size-5" />TIME WELL GIVEN</p>
-      </div>
+      <VolunteerRankBanner {...volunteerStats} />
       <div className="px-6 pb-7 sm:px-8 sm:pb-8">
         <div className="relative -mt-12 flex flex-wrap items-end justify-between gap-4 sm:-mt-14">
           <div className="relative">
@@ -59,14 +56,13 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
         </div>
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)]">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Volunteer</p>
+            <p className="flex flex-wrap items-center gap-2 text-xs font-semibold tracking-widest text-emerald-700"><span className="uppercase">Volunteer</span>{age != null && <span className="font-normal tracking-normal text-slate-500">· {age} years old</span>}</p>
             <h1 className="mt-1 break-words text-3xl font-bold tracking-tight text-slate-950">{profile.first_name} {profile.last_name}</h1>
             <h2 className="mt-6 text-sm font-semibold text-slate-900">About me</h2>
             <p className="mt-2 max-w-2xl whitespace-pre-wrap break-words text-sm leading-7 text-slate-600">{profile.volunteer_intro || (readOnly ? "No introduction provided yet." : "Share a little about yourself and the difference you’d like to make.")}</p>
           </div>
           <div className="space-y-3 rounded-xl bg-slate-50 p-4 lg:self-start">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Contact details</h2>
-            {readOnly && <p className="text-sm text-slate-700">Age: {age ?? "—"}</p>}
             <p className="flex items-start gap-2 break-all text-sm text-slate-700"><Mail className="mt-0.5 size-4 shrink-0 text-emerald-700" />{profile.email}</p>
             {profile.phone && <p className="flex items-center gap-2 text-sm text-slate-700"><Phone className="size-4 shrink-0 text-emerald-700" />{profile.phone}</p>}
           </div>
@@ -76,7 +72,7 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
           <div className="flex flex-wrap gap-2">{profile.volunteer_interests?.length ? profile.volunteer_interests.map((interest) => <span key={interest} className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900">{interest}</span>) : <p className="text-sm text-slate-500">{readOnly ? "No interests provided yet." : "Add your interests in Edit profile."}</p>}</div>
         </div>
         {!readOnly && <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-          <span role="status">{busy ? "Updating photo…" : "Profile photo: JPEG, PNG, or WebP · Up to 3 MB"}</span>
+          {busy && <span role="status">Updating photo…</span>}
           {hasPhoto && <button type="button" disabled={busy} onClick={() => void savePhoto()} className="inline-flex items-center gap-1 underline hover:text-slate-900 disabled:opacity-50"><X className="size-3" />Remove photo</button>}
         </div>}
       </div>
