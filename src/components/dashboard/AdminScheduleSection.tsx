@@ -2,24 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Plus } from "lucide-react";
-import { CalendarListTabs } from "@/components/calendar/CalendarListTabs";
 import { AdminCalendar } from "@/components/calendar/AdminCalendar";
-import { OpportunityTable } from "@/components/opportunities/OpportunityTable";
+import { OrganizationOpportunities } from "@/components/opportunities/OrganizationOpportunities";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Organization, VolunteerOpportunity } from "@/types/database";
 
-type AdminScheduleOpportunity = VolunteerOpportunity & {
-  approved_count: number;
-  pending_count: number;
-  organizations?: Pick<Organization, "id" | "name"> | null;
-};
-type ScheduleView = "calendar" | "list";
-
-interface AdminScheduleSectionProps {
-  opportunities: AdminScheduleOpportunity[];
+type Opportunity = VolunteerOpportunity & { approved_count: number; pending_count: number; organizations?: Pick<Organization, "id" | "name"> | null };
+interface Props {
+  opportunities: Opportunity[];
   registeredCounts: Record<string, number>;
   createHref?: string;
   editBasePath?: string;
@@ -28,126 +19,22 @@ interface AdminScheduleSectionProps {
   currentOrganization?: string;
   currentStatus?: string;
 }
-
-export function AdminScheduleSection({
-  opportunities,
-  registeredCounts,
-  createHref = "/dashboard/admin/opportunities/new",
-  editBasePath = "/dashboard/admin/opportunities",
-  showFilters = true,
-  showCreateButton = true,
-  currentOrganization = "all",
-  currentStatus = "all",
-}: AdminScheduleSectionProps) {
-  const [scheduleView, setScheduleView] = useState<ScheduleView>("calendar");
-  const organizations = Array.from(
-    new Map(
-      opportunities
-        .map((opportunity) => opportunity.organizations)
-        .filter((organization): organization is Pick<Organization, "id" | "name"> =>
-          Boolean(organization?.id)
-        )
-        .map((organization) => [organization.id, organization])
-    ).values()
-  ).sort((a, b) => a.name.localeCompare(b.name));
-
-  return (
-    <section className="mt-6">
-      <Tabs
-        value={scheduleView}
-        onValueChange={(value) => setScheduleView(value as ScheduleView)}
-      >
-        <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5">
-          <div
-            className={cn(
-              "grid gap-3 lg:items-end",
-              showCreateButton
-                ? "lg:grid-cols-[auto_1fr_1fr_auto]"
-                : "lg:grid-cols-[auto_1fr_1fr]"
-            )}
-          >
-            <div className="space-y-1">
-              <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                View
-              </span>
-              <CalendarListTabs listCount={opportunities.length} />
-            </div>
-
-            {showFilters ? (
-              <>
-                <label className="space-y-1">
-                  <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Organization
-                  </span>
-                  <select
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-colors focus:border-emerald-500"
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      const url = new URL(window.location.href);
-                      if (value === "all") url.searchParams.delete("org");
-                      else url.searchParams.set("org", value);
-                      window.location.href = url.toString();
-                    }}
-                    defaultValue={currentOrganization}
-                  >
-                    <option value="all">All organizations</option>
-                    {organizations.map((organization) => (
-                      <option key={organization.id} value={organization.id}>
-                        {organization.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Status
-                  </span>
-                  <select
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-colors focus:border-emerald-500"
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      const url = new URL(window.location.href);
-                      if (value === "all") url.searchParams.delete("status");
-                      else url.searchParams.set("status", value);
-                      window.location.href = url.toString();
-                    }}
-                    defaultValue={currentStatus}
-                  >
-                    <option value="all">All statuses</option>
-                    <option value="published">Published</option>
-                    <option value="draft">Draft</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </label>
-              </>
-            ) : (
-              <div className="hidden lg:block lg:col-span-2" />
-            )}
-
-            {showCreateButton && (
-              <Button asChild>
-                <Link href={createHref}>
-                  <Plus className="size-4" />
-                  Create Opportunity
-                </Link>
-              </Button>
-            )}
-          </div>
+export function AdminScheduleSection({ opportunities, createHref = "/dashboard/admin/opportunities/new", editBasePath = "/dashboard/admin/opportunities", showFilters = true, showCreateButton = true, currentOrganization = "all" }: Props) {
+  const [organization, setOrganization] = useState(currentOrganization);
+  const [initialNow] = useState(() => new Date().toISOString());
+  const organizations = Array.from(new Map(opportunities.flatMap(opportunity => opportunity.organizations ? [[opportunity.organizations.id, opportunity.organizations] as const] : [])).values()).sort((a, b) => a.name.localeCompare(b.name));
+  const filtered = organization === "all" ? opportunities : opportunities.filter(opportunity => opportunity.organization_id === organization);
+  return <section className="space-y-5">
+    <Tabs defaultValue="opportunities">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+        <TabsList variant="line"><TabsTrigger value="opportunities">Opportunities</TabsTrigger><TabsTrigger value="calendar">Calendar</TabsTrigger></TabsList>
+        <div className="flex flex-wrap items-end gap-3">
+          {showFilters && <label className="space-y-2 text-sm font-medium">Organization<select className="block h-10 rounded-md border bg-white px-3" value={organization} onChange={event => setOrganization(event.target.value)}><option value="all">All organizations</option>{organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label>}
+          {showCreateButton && <Button asChild><Link href={createHref}>Create Opportunity</Link></Button>}
         </div>
-
-        <TabsContent value="calendar">
-          <AdminCalendar opportunities={opportunities} editBasePath={editBasePath} />
-        </TabsContent>
-
-        <TabsContent value="list">
-          <OpportunityTable
-            opportunities={opportunities}
-            registeredCounts={registeredCounts}
-            basePath={editBasePath}
-          />
-        </TabsContent>
-      </Tabs>
-    </section>
-  );
+      </div>
+      <TabsContent value="opportunities"><OrganizationOpportunities opportunities={filtered} initialNow={initialNow} editBasePath={editBasePath} /></TabsContent>
+      <TabsContent value="calendar"><AdminCalendar opportunities={filtered} editBasePath={editBasePath} /></TabsContent>
+    </Tabs>
+  </section>;
 }

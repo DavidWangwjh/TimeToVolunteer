@@ -73,13 +73,13 @@ export default async function PlatformAdminOverviewPage() {
       label: "Total organizations",
       value: totalOrganizations ?? 0,
       icon: Building2,
-      description: "Approved organization profiles",
+      description: "All organization profiles",
     },
     {
       label: "Total opportunities",
       value: totalOpportunities ?? 0,
       icon: Briefcase,
-      description: "Draft, published, and completed sessions",
+      description: "All opportunity statuses",
     },
     {
       label: "Total registrations",
@@ -110,6 +110,7 @@ export default async function PlatformAdminOverviewPage() {
 
   return (
     <div className="space-y-5">
+      <div><h1 className="text-2xl font-bold">Overview</h1><p className="mt-1 text-sm text-slate-600">Monitor community activity and manage the platform.</p></div>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />

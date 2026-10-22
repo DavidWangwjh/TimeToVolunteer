@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTime, getOpportunityLifecycle, type OpportunityCategory } from "@/lib/dates";
 import type { VolunteerOpportunity } from "@/types/database";
 
-type Opportunity = VolunteerOpportunity & { approved_count: number; pending_count: number };
+type Opportunity = VolunteerOpportunity & { approved_count: number; pending_count: number; organizations?: { id: string; name: string } | null };
 
 const categories = [
   { value: "active", label: "Active" },
@@ -17,7 +17,7 @@ const categories = [
   { value: "cancelled", label: "Cancelled" },
 ] as const;
 
-export function OrganizationOpportunities({ opportunities, initialNow }: { opportunities: Opportunity[]; initialNow: string }) {
+export function OrganizationOpportunities({ opportunities, initialNow, editBasePath = "/dashboard/organization/opportunities" }: { opportunities: Opportunity[]; initialNow: string; editBasePath?: string }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<OpportunityCategory>("active");
   const [now, setNow] = useState(() => new Date(initialNow));
@@ -36,7 +36,7 @@ export function OrganizationOpportunities({ opportunities, initialNow }: { oppor
   }, { active: 0, draft: 0, past: 0, cancelled: 0 });
   const visible = categorized.filter((opportunity) =>
     opportunity.category === category &&
-    `${opportunity.title} ${opportunity.location} ${opportunity.description ?? ""}`.toLowerCase().includes(query)
+    `${opportunity.title} ${opportunity.location} ${opportunity.description ?? ""} ${opportunity.organizations?.name ?? ""}`.toLowerCase().includes(query)
   ).sort((a, b) => {
     const chronological = `${a.date}T${a.start_time}`.localeCompare(`${b.date}T${b.start_time}`);
     if (sort === "title") return a.title.localeCompare(b.title) || chronological;
@@ -79,9 +79,10 @@ export function OrganizationOpportunities({ opportunities, initialNow }: { oppor
         <ul className="space-y-3">
           {visible.map((opportunity) => (
             <li key={opportunity.id}>
-              <Link href={`/dashboard/organization/opportunities/${opportunity.id}/edit`} className={`group flex flex-col gap-4 rounded-lg border p-5 shadow-sm transition-colors hover:border-emerald-400 focus-visible:outline-2 focus-visible:outline-emerald-700 sm:flex-row sm:items-center sm:justify-between ${opportunity.ongoing ? "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200" : "border-slate-200 bg-white"}`}>
+              <Link href={`${editBasePath}/${opportunity.id}/edit`} className={`group flex flex-col gap-4 rounded-lg border p-5 shadow-sm transition-colors hover:border-emerald-400 focus-visible:outline-2 focus-visible:outline-emerald-700 sm:flex-row sm:items-center sm:justify-between ${opportunity.ongoing ? "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200" : "border-slate-200 bg-white"}`}>
                 <div className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-3"><h2 className="break-words text-lg font-semibold text-slate-950">{opportunity.title}</h2>{opportunity.ongoing && <span className="inline-flex items-center gap-2 rounded-full bg-emerald-800 px-3 py-1 text-xs font-semibold text-white"><span className="size-2 rounded-full bg-emerald-300" />Ongoing</span>}</div>
+                  {opportunity.organizations && <p className="text-sm font-medium text-emerald-800">{opportunity.organizations.name}</p>}
                   <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
                     <span className="inline-flex items-center gap-2"><CalendarDays className="size-4 shrink-0" />{formatDate(opportunity.date)} · {formatTime(opportunity.start_time)} – {formatTime(opportunity.end_time)}</span>
                     <span className="inline-flex items-center gap-2"><MapPin className="size-4 shrink-0" />{opportunity.location}</span>
