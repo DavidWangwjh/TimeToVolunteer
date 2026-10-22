@@ -80,9 +80,9 @@ If you want to intentionally wipe the current app database and rebuild it, run `
 
 ## Reset development test data
 
-Run `npm run db:seed` to replace app data with development fixtures. The script requires `APP_ENV=development`, `NEXT_PUBLIC_APP_URL=http://localhost:3000`, and the explicitly allowlisted dev Supabase project `hdsevwlvtlpxjikynkof`. It clears app activity, recreates accounts ending in `@timetovolunteer.test` and the dev admin `support@timetovolunteer.org`, and preserves other Auth accounts and their profiles. It does not reset the schema or clear uploaded storage files.
+Run `npm run db:seed` to replace app data with development fixtures. The script requires `APP_ENV=development`, `NEXT_PUBLIC_APP_URL=http://localhost:3000`, and the explicitly allowlisted dev Supabase project `hdsevwlvtlpxjikynkof`. It replaces app activity and refreshes fixture profiles, reuses existing Auth accounts without changing passwords or avatar metadata, and creates missing fixture accounts. Other Auth accounts and profiles are preserved. It does not reset the schema or clear uploaded storage files.
 
-All seeded logins use `password123`: admin `support@timetovolunteer.org`, organization `org.codeninjas@timetovolunteer.test` or `org.greencity@timetovolunteer.test`, and volunteers `ava.volunteer@timetovolunteer.test`, `ben.volunteer@timetovolunteer.test`, `maya.volunteer@timetovolunteer.test`, and `jordan.volunteer@timetovolunteer.test`.
+New seeded logins use `password123` (existing account passwords are preserved): admin `support@timetovolunteer.org`, organization `org.codeninjas@timetovolunteer.test` or `org.greencity@timetovolunteer.test`, and volunteers `ava.volunteer@timetovolunteer.test`, `ben.volunteer@timetovolunteer.test`, `maya.volunteer@timetovolunteer.test`, `jordan.volunteer@timetovolunteer.test`, and `riley.volunteer@timetovolunteer.test`.
 
 Fixtures cover public/private organizations and opportunities; pending/contacted/accepted/rejected applications; pending/accepted/rejected memberships; every registration and opportunity status; today's check-in session; a full session; completed hours; a three-session weekly series; and read/unread inbox messages. Pending organization logins include `apply.newroots@timetovolunteer.test` and `apply.servicelab@timetovolunteer.test`. Seeding sends no emails. For actual email delivery tests, submit a new application with an address you control; the seeded `.test` addresses are not delivery inboxes.
 
@@ -292,3 +292,28 @@ The transactional database regression test is `supabase/tests/opportunity_invita
 Volunteers edit their profile from Overview; the old `/dashboard/volunteer/profile` URL redirects there. Photos are optional and are not part of signup. The authenticated `/api/volunteer/avatar` endpoint accepts JPEG, PNG, and WebP files up to 3 MB, validates and re-encodes them to a 512×512 WebP, and strips EXIF metadata. It serves only the signed-in volunteer's own photo with private, non-cacheable responses.
 
 No SQL migration is required. On the first upload in each environment, the server provisions a private `volunteer-avatars` Supabase Storage bucket using the existing service-role key. The object path is stored in Supabase Auth user metadata (`volunteer_avatar_path`). No public bucket or client storage policies are needed. Replacement/removal cleans up the previous object. Photos appear on the volunteer's own Overview and on the read-only volunteer detail page for organizations authorized to view that volunteer. The organization page checks the membership or registration relationship before issuing a one-hour signed photo URL.
+
+### Volunteer ranks
+
+Profile banners use total scheduled hours from checked-in registrations across all organizations. Only approved/completed registrations on published/completed opportunities whose end time has passed (America/Los_Angeles) contribute; cancelled sessions and no-shows do not. Bronze starts at 0 hours, Silver at 50, Gold at 100, Platinum at 250, and Diamond at 500. Totals are computed from existing bookings; no migration or stored rank field is required. Organizations receive only the aggregate after the existing profile access check.
+
+### Comprehensive UI fixtures
+
+Run `npm run db:seed -- --dry-run` to validate fixtures and preview counts without modifying Supabase. `npm run db:seed` refreshes **development only**, replacing organization/application, membership, opportunity, booking, and inbox data. Existing account IDs and profile photos remain intact. Dates are relative to the seed day in America/Los_Angeles; rerun to refresh date-sensitive scenarios.
+
+| Quick login | Rank | Verified hours |
+| --- | --- | --- |
+| Ava Martinez | Bronze | 2 |
+| Ben Carter | Silver | 50 |
+| Maya Johnson | Gold | 100 |
+| Jordan Lee | Platinum | 250 |
+| Riley Chen | Diamond | 500 |
+
+- **Code Ninjas → Memberships:** 24 joined volunteers, three awaiting review, and two rejected memberships hidden from joined members. Includes varied ages/member-since dates and a profile with no birthdate, phone, introduction, or interests (Olivia Patel). Test name links and back navigation.
+- **Invitation Lab · Join, Decline, and Rejoin:** Ava and Olivia are invited, Ben joined, Maya requested registration, Jordan was removed/cancelled, and Riley was rejected. The other joined members remain eligible for bulk selection, scrolling, searching, and select-all. Jordan and Riley can be invited or request registration again.
+- **Ongoing today · Community Open House:** Ava is checked in, Ben is not. The event runs 00:00–23:59 on the seed day to exercise ongoing styling; it earns no hours until it ends. Invitation controls should be hidden once it starts.
+- **Past · Attendance and No-show Review:** all five rank accounts have an approved registration with no check-in, exercising No show. Historical attended shifts populate Completed and Volunteer History; a past published opportunity tests automatic time-based categorization.
+- **Other opportunities:** draft, cancelled, full, public/private, future, recurring, and completed sessions. Rank history spans Code Ninjas and Green City to verify global totals while organization history stays organization-specific.
+- **Applications and inbox:** pending/contacted/accepted/rejected applications, a rejection reason for resubmission, actionable invitation and registration messages, and read/unread direct messages. Fixture insertion sends no email.
+
+Seed completion verifies persisted rank totals and table counts. Existing uploaded photos are retained; new accounts use initials so the empty-photo state and upload flow remain testable.

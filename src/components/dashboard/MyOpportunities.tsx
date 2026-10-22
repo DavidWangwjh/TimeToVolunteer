@@ -32,7 +32,7 @@ export function MyOpportunities({ bookings, approvedCounts, initialNow }: {
   }));
   const registrations = bookings.filter((booking) => booking.status !== "invited" && ["published", "completed"].includes(booking.opportunity.status)).map((booking) => {
     const lifecycle = getOpportunityLifecycle(booking.opportunity, now);
-    return { booking, lifecycle, category: lifecycle.category === "past" ? "completed" : "upcoming" };
+    return { booking, lifecycle, category: lifecycle.category === "past" ? "completed" : booking.status === "pending" ? "awaiting-approval" : "upcoming" };
   }).filter((row) => row.category !== "completed" || row.booking.status !== "pending");
   const visible = registrations.filter((row) => row.category === category &&
     `${row.booking.opportunity.title} ${row.booking.opportunity.organizations?.name ?? ""} ${row.booking.opportunity.location}`.toLowerCase().includes(search.trim().toLowerCase()))
@@ -47,8 +47,8 @@ export function MyOpportunities({ bookings, approvedCounts, initialNow }: {
     <div className="space-y-6">
       <div><h1 className="text-2xl font-bold">My Opportunities</h1><p className="mt-1 text-sm text-slate-600">Manage your registrations, invitations, and attendance.</p></div>
       <VolunteerInvitations invitations={invitations} />
-      <nav aria-label="My opportunity categories" className="flex gap-2 border-b pb-3">
-        {[{ value: "upcoming", label: "Upcoming" }, { value: "completed", label: "Completed" }].map(({ value, label }) => (
+      <nav aria-label="My opportunity categories" className="flex flex-wrap gap-2 border-b pb-3">
+        {[{ value: "upcoming", label: "Upcoming" }, { value: "awaiting-approval", label: "Awaiting approval" }, { value: "completed", label: "Completed" }].map(({ value, label }) => (
           <button key={value} type="button" aria-pressed={category === value} onClick={() => setCategory(value)} className={`rounded-lg px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700 ${category === value ? "bg-emerald-800 text-white" : "bg-white text-slate-600"}`}>{label} ({registrations.filter((row) => row.category === value).length})</button>
         ))}
       </nav>
@@ -57,7 +57,7 @@ export function MyOpportunities({ bookings, approvedCounts, initialNow }: {
         <label className="text-sm font-medium">Sort by<select className="mt-2 block h-10 rounded-md border bg-white px-3" value={sort} onChange={(event) => setSort(event.target.value)}><option value="date-asc">Date: ascending</option><option value="date-desc">Date: descending</option></select></label>
       </div>
       {category === "completed" && <p className="text-sm text-slate-600">No show means the opportunity ended without an organization check-in. Contact the organization if your attendance needs correcting.</p>}
-      {!visible.length && <p className="rounded-lg border border-dashed bg-white p-10 text-center text-slate-500">No {category} opportunities match your search.</p>}
+      {!visible.length && <p className="rounded-lg border border-dashed bg-white p-10 text-center text-slate-500">{category === "awaiting-approval" ? "No opportunities awaiting approval match your search." : `No ${category} opportunities match your search.`}</p>}
       <ul className="space-y-3">
         {visible.map(({ booking, lifecycle }) => {
           const opportunity = booking.opportunity;

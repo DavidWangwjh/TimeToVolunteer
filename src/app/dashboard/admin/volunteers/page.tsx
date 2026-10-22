@@ -1,3 +1,4 @@
+import { AdminStatusNavigation } from "@/components/admin/AdminStatusNavigation";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -12,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ProfileStatus } from "@/types/database";
 
 interface VolunteersPageProps {
   searchParams: Promise<{ q?: string; status?: string }>;
@@ -37,36 +37,24 @@ export default async function VolunteersPage({
     );
   }
 
-  if (["active", "inactive", "suspended"].includes(status)) {
-    query = query.eq("status", status as ProfileStatus);
-  }
 
-  const { data: volunteers } = await query;
+
+  const { data: allRows } = await query;
+  const counts = (allRows ?? []).reduce<Record<string, number>>((counts, row) => { counts.all += 1; counts[row.status] = (counts[row.status] ?? 0) + 1; return counts; }, { all: 0 });
+  const volunteers = (allRows ?? []).filter(row => status === "all" || row.status === status);
 
   return (
-    <div className="space-y-4">
-      <form className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5 md:grid-cols-[1fr_220px_auto] md:items-end">
+    <div className="space-y-5">
+      <h1 className="text-2xl font-bold">Volunteers</h1>
+      <AdminStatusNavigation basePath="/dashboard/admin/volunteers" currentStatus={status} statuses={["active", "inactive", "suspended"]} filters={{ q }} counts={counts} />
+      <form className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/5 md:grid-cols-[1fr_auto] md:items-end">
         <label className="space-y-1">
           <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Search
           </span>
           <Input name="q" defaultValue={q} placeholder="Name or email" />
         </label>
-        <label className="space-y-1">
-          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Status
-          </span>
-          <select
-            name="status"
-            defaultValue={status}
-            className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:border-emerald-500"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="suspended">Suspended</option>
-          </select>
-        </label>
+        <input type="hidden" name="status" value={status} />
         <Button type="submit">Filter</Button>
       </form>
 

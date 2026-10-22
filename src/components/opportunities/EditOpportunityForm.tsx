@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -15,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { updateOpportunity } from "@/lib/actions";
+import { updateOpportunity, cancelOpportunity } from "@/lib/actions";
 import {
   opportunityUpdateSchema,
   type OpportunityUpdateInput,
@@ -32,12 +34,16 @@ import type {
 interface EditOpportunityFormProps {
   opportunity: VolunteerOpportunity;
   organizationVisibility?: OrganizationVisibility;
+  allowStatusEdit?: boolean;
 }
 
 export function EditOpportunityForm({
   opportunity,
   organizationVisibility = "public",
+  allowStatusEdit = false,
 }: EditOpportunityFormProps) {
+  const router = useRouter();
+  const [cancelling, setCancelling] = useState(false);
   const opportunityVisibilityLabels =
     getOpportunityVisibilityLabels(organizationVisibility);
   const {
@@ -71,7 +77,7 @@ export function EditOpportunityForm({
   const recurrenceFrequency = useWatch({ control, name: "recurrence_frequency" });
 
   async function onSubmit(data: OpportunityUpdateInput) {
-    const result = await updateOpportunity(opportunity.id, data);
+    const result = await updateOpportunity(opportunity.id, allowStatusEdit ? data : { ...data, status: opportunity.status });
     if (result?.error) {
       toast.error(result.error);
     }
@@ -245,7 +251,7 @@ export function EditOpportunityForm({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          {allowStatusEdit && <div className="space-y-2">
             <Label>Status</Label>
             <Select
               value={status}
@@ -268,11 +274,22 @@ export function EditOpportunityForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
 
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Update Opportunity"}
-          </Button>
+          <div className="flex flex-wrap justify-end gap-3">
+            {!allowStatusEdit && !["cancelled", "completed"].includes(opportunity.status) && <Button type="button" variant="destructive" disabled={isSubmitting || cancelling} onClick={async () => {
+              setCancelling(true);
+              try {
+                const result = await cancelOpportunity(opportunity.id);
+                if (result.error) toast.error(result.error);
+                else { toast.success("Opportunity cancelled"); router.refresh(); }
+              } catch { toast.error("Unable to cancel opportunity. Please try again."); }
+              finally { setCancelling(false); }
+            }}>{cancelling ? "Cancelling..." : "Cancel Opportunity"}</Button>}
+            <Button type="submit" disabled={isSubmitting || cancelling}>
+              {isSubmitting ? "Saving..." : "Update Opportunity"}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

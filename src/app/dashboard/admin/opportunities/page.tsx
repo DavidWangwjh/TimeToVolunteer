@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminScheduleSection } from "@/components/dashboard/AdminScheduleSection";
-import type { OpportunityStatus } from "@/types/database";
 
 interface OpportunitiesPageProps {
   searchParams: Promise<{ org?: string; status?: string }>;
@@ -12,18 +11,14 @@ export default async function OpportunitiesPage({
   const { org = "all", status = "all" } = await searchParams;
   const supabase = await createClient();
 
-  let opportunityQuery = supabase
+  const opportunityQuery = supabase
     .from("volunteer_opportunities")
     .select("*, organizations(id, name)")
     .order("date", { ascending: true });
 
-  if (org !== "all") {
-    opportunityQuery = opportunityQuery.eq("organization_id", org);
-  }
 
-  if (["draft", "published", "cancelled", "completed"].includes(status)) {
-    opportunityQuery = opportunityQuery.eq("status", status as OpportunityStatus);
-  }
+
+
 
   const [{ data: opportunities }, { data: bookings }] = await Promise.all([
     opportunityQuery,
@@ -37,7 +32,7 @@ export default async function OpportunitiesPage({
       result[booking.opportunity_id] = { approved: 0, pending: 0 };
     }
 
-    if (booking.status === "approved") result[booking.opportunity_id].approved += 1;
+    if (["approved", "completed"].includes(booking.status)) result[booking.opportunity_id].approved += 1;
     if (booking.status === "pending") result[booking.opportunity_id].pending += 1;
 
     return result;
@@ -60,6 +55,8 @@ export default async function OpportunitiesPage({
   }));
 
   return (
+    <div className="space-y-5">
+    <h1 className="text-2xl font-bold">Opportunities</h1>
     <AdminScheduleSection
       opportunities={opportunitiesWithCounts}
       registeredCounts={registeredCounts}
@@ -67,5 +64,6 @@ export default async function OpportunitiesPage({
       currentStatus={status}
       showCreateButton={false}
     />
+    </div>
   );
 }

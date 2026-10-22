@@ -1200,6 +1200,10 @@ export async function updateOpportunity(
     return { error: "Opportunity not found" };
   }
 
+  if (admin.role === "organization" && parsed.data.status !== existingOpportunity.status) {
+    return { error: "Status cannot be changed through Edit details. Use Cancel Opportunity to cancel." };
+  }
+
   const baseData = normalizeOpportunityFields(parsed.data);
   const recurringGroupId =
     baseData.recurring_frequency && baseData.recurring_until
@@ -1210,7 +1214,7 @@ export async function updateOpportunity(
     .from("volunteer_opportunities")
     .update({
       ...baseData,
-      status: parsed.data.status,
+      ...(admin.role === "admin" ? { status: parsed.data.status } : {}),
       recurring_group_id: recurringGroupId,
       updated_at: new Date().toISOString(),
     })
@@ -1276,6 +1280,39 @@ export async function updateOpportunity(
   revalidateInbox();
 
   redirect(admin.role === "admin" ? "/dashboard/admin/opportunities" : "/dashboard/organization/opportunities");
+}
+
+export async function cancelOpportunity(id: string) {
+  const actor = await requireAdmin();
+  const supabase = await createClient();
+  const { organization, error: organizationError } = await getOwnedOrganization(actor.id);
+  if (organizationError) return { error: organizationError.message };
+  if (actor.role !== "organization" || !organization || organization.status !== "active") {
+    return { error: "An active organization account is required" };
+  }
+  const { data: opportunity, error } = await supabase.from("volunteer_opportunities")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", id).eq("organization_id", organization.id)
+    .in("status", ["draft", "published"])
+    .select("id").maybeSingle();
+  if (error) return { error: error.message };
+  if (!opportunity) return { error: "Opportunity not found or already cancelled/completed" };
+
+  const { data: registrations } = await createAdminClient().from("bookings")
+    .select("id, volunteer_id").eq("opportunity_id", id).in("status", ["pending", "approved", "invited"]);
+  await Promise.all((registrations ?? []).map(booking => createInboxMessage({
+    recipientId: booking.volunteer_id, actorId: actor.id, organizationId: organization.id,
+    opportunityId: id, bookingId: booking.id, kind: "opportunity_updated",
+    title: "Opportunity cancelled", body: "The organization has cancelled this opportunity.",
+    actionHref: "/dashboard/volunteer/opportunities",
+  })));
+  revalidatePath("/dashboard/organization");
+  revalidatePath("/dashboard/organization/opportunities");
+  revalidatePath(`/dashboard/organization/opportunities/${id}/edit`);
+  revalidatePath("/dashboard/volunteer");
+  revalidatePath("/dashboard/volunteer/opportunities");
+  revalidateInbox();
+  return { success: true };
 }
 
 export async function deleteOpportunity(id: string) {

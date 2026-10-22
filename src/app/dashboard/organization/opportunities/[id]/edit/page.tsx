@@ -169,6 +169,7 @@ export default async function EditOpportunityPage({ params, searchParams }: Prop
               variant="admin"
               showOpportunity={false}
               volunteerBasePath="/dashboard/organization/volunteers"
+              volunteerReturnTo={`/dashboard/organization/opportunities/${opportunity.id}/edit${showReview ? "?view=review" : ""}`}
             />
           ) : (
             <>
@@ -177,6 +178,7 @@ export default async function EditOpportunityPage({ params, searchParams }: Prop
                 registeredBookings={registeredBookings}
                 registeredCount={registeredBookings.length}
                 volunteerBasePath="/dashboard/organization/volunteers"
+              volunteerReturnTo={`/dashboard/organization/opportunities/${opportunity.id}/edit${showReview ? "?view=review" : ""}`}
                 showRemoveActions
                 showCheckInActions
               />

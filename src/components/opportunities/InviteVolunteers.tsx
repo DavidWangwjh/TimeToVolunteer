@@ -101,7 +101,7 @@ export function InviteVolunteers({ opportunityId, volunteers, canInvite }: {
                 <input type="checkbox" aria-label={`Select ${name}`} checked={!state && selected.has(volunteer.id)} disabled={Boolean(state) || isPending || !canInvite}
                   onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(volunteer.id)) next.delete(volunteer.id); else next.add(volunteer.id); return next; })} />
                 <div className="min-w-0 flex-1">
-                  <Link href={`/dashboard/organization/volunteers/${volunteer.id}`} className="font-semibold text-slate-950 hover:text-emerald-800 hover:underline">{name}</Link>
+                  <Link href={`/dashboard/organization/volunteers/${volunteer.id}?returnTo=${encodeURIComponent(`/dashboard/organization/opportunities/${opportunityId}/edit`)}`} className="font-semibold text-slate-950 hover:text-emerald-800 hover:underline">{name}</Link>
                   <p className="truncate text-sm text-slate-500">{volunteer.email}</p>
                 </div>
                 {state && <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{state}</span>}

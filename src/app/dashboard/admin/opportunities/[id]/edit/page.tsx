@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Copy } from "lucide-react";
@@ -78,7 +79,9 @@ export default async function EditOpportunityPage({ params }: Props) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <Link href="/dashboard/admin/opportunities" className="mb-4 inline-block text-sm font-semibold text-emerald-800 hover:underline">← All opportunities</Link>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{opportunity.title}</h1>
         <Button asChild variant="outline">
           <Link href={`/dashboard/admin/opportunities/new?duplicate=${opportunity.id}`}>
             <Copy className="size-4" />
@@ -87,16 +90,25 @@ export default async function EditOpportunityPage({ params }: Props) {
         </Button>
       </div>
 
+      <Tabs defaultValue="volunteers">
+      <TabsList variant="line"><TabsTrigger value="volunteers">Volunteers</TabsTrigger><TabsTrigger value="details">Edit details</TabsTrigger></TabsList>
+      <TabsContent value="details" keepMounted>
       <EditOpportunityForm
+        allowStatusEdit
         opportunity={opportunity}
         organizationVisibility={organizationVisibility}
       />
 
+      </TabsContent>
+      <TabsContent value="volunteers">
       <RegisteredVolunteers
         opportunity={opportunity}
         registeredBookings={registeredBookings}
         registeredCount={registeredBookings.length}
+        volunteerReturnTo={`/dashboard/admin/opportunities/${id}/edit`}
       />
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }

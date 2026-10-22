@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminScheduleSection } from "@/components/dashboard/AdminScheduleSection";
 import { AdminOrganizationProfilePanel } from "@/components/organizations/AdminOrganizationProfilePanel";
 import { OrganizationStatusActions } from "@/components/organizations/OrganizationStatusActions";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
-import type { OpportunityStatus, Organization } from "@/types/database";
+import type { Organization } from "@/types/database";
 
 interface OrganizationDetailPageProps {
   params: Promise<{ id: string }>;
@@ -27,15 +28,13 @@ export default async function OrganizationDetailPage({
 
   if (!organization) notFound();
 
-  let opportunityQuery = supabase
+  const opportunityQuery = supabase
     .from("volunteer_opportunities")
     .select("*, organizations(id, name)")
     .eq("organization_id", organization.id)
     .order("date", { ascending: true });
 
-  if (["draft", "published", "cancelled", "completed"].includes(status)) {
-    opportunityQuery = opportunityQuery.eq("status", status as OpportunityStatus);
-  }
+
 
   const [{ data: opportunities }, { data: bookings }] = await Promise.all([
     opportunityQuery,
@@ -49,7 +48,7 @@ export default async function OrganizationDetailPage({
       result[booking.opportunity_id] = { approved: 0, pending: 0 };
     }
 
-    if (booking.status === "approved") result[booking.opportunity_id].approved += 1;
+    if (["approved", "completed"].includes(booking.status)) result[booking.opportunity_id].approved += 1;
     if (booking.status === "pending") result[booking.opportunity_id].pending += 1;
 
     return result;
@@ -73,6 +72,7 @@ export default async function OrganizationDetailPage({
 
   return (
     <div className="space-y-5">
+      <Link href="/dashboard/admin/organizations" className="inline-block text-sm font-semibold text-emerald-800 hover:underline">← Back to organizations</Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <StatusBadge status={organization.status} />
         <OrganizationStatusActions
@@ -91,6 +91,7 @@ export default async function OrganizationDetailPage({
         registeredCounts={registeredCounts}
         currentOrganization={organization.id}
         currentStatus={status}
+        showFilters={false}
         showCreateButton={false}
       />
     </div>

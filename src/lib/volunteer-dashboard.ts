@@ -1,14 +1,15 @@
 import "server-only";
 import { getCurrentUserProfile } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import type { VolunteerOpportunityBooking } from "@/lib/volunteer-opportunities";
 
 export async function getVolunteerDashboardData() {
   const profile = await getCurrentUserProfile();
-  if (!profile || profile.role !== "volunteer") redirect("/dashboard");
-  const supabase = await createClient();
+  if (!profile || profile.role !== "volunteer" || profile.status !== "active") redirect("/dashboard");
+  // Published-only opportunity RLS hides completed sessions in nested joins.
+  // Read on the server, scoped strictly to the authenticated active volunteer.
+  const supabase = createAdminClient();
   const { data, error } = await supabase.from("bookings")
     .select("*, volunteer_opportunities(*, organizations(*))")
     .eq("volunteer_id", profile.id).in("status", ["pending", "approved", "completed", "invited"])
