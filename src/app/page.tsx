@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CategoryCarousel } from "@/components/landing/CategoryCarousel";
 import type { Metadata } from "next";
 import {
   ArrowRight,
@@ -53,21 +54,21 @@ export default async function HomePage() {
       <Navbar />
 
       <main className="flex-1 overflow-hidden">
-        <section className="relative border-b border-emerald-950/10 px-4 py-10 sm:py-16 lg:px-8 xl:py-20">
+        <section className="relative border-b border-emerald-950/10 px-4 py-10 sm:py-12 lg:px-8 xl:py-14">
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 overflow-hidden text-emerald-100">
             <div className="absolute -bottom-14 left-0 h-32 w-full rounded-[50%] border-t border-emerald-200/70" />
             <div className="absolute -bottom-20 left-0 h-40 w-full rounded-[50%] border-t border-emerald-200/60" />
             <div className="absolute -bottom-28 left-0 h-52 w-full rounded-[50%] border-t border-emerald-200/50" />
           </div>
 
-          <div className="container relative mx-auto grid max-w-6xl items-center gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] xl:gap-10">
-            <div className="mx-auto max-w-2xl text-center xl:mx-0 xl:text-left">
+          <div className="container relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:gap-16">
+            <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
               <div className="mb-6 inline-flex max-w-full items-center gap-3 rounded-full border border-emerald-800/20 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 sm:mb-7">
                 <Heart className="size-4 fill-emerald-800" />
                 <span className="truncate">Make a difference in your community</span>
               </div>
 
-              <h1 className="font-serif text-4xl font-bold leading-[1.08] text-slate-950 min-[430px]:text-5xl sm:text-6xl xl:text-7xl">
+              <h1 className="font-serif text-4xl font-bold leading-[1.08] text-slate-950 min-[430px]:text-5xl sm:text-6xl lg:text-[3.5rem] xl:text-[4.5rem]">
                 {auth.isSignedIn ? (
                   <>
                     Welcome back,{" "}
@@ -75,13 +76,13 @@ export default async function HomePage() {
                   </>
                 ) : (
                   <>
-                    Find Volunteer Opportunities{" "}
-                    <span className="italic text-emerald-800">Near You</span>
+                    Find Volunteer<br className="hidden xl:block" /> Opportunities{" "}
+                    <span className="block italic text-emerald-800">Near You</span>
                   </>
                 )}
               </h1>
 
-              <p className="mx-auto mt-6 max-w-lg text-base leading-7 text-slate-600 sm:mt-7 sm:text-lg sm:leading-8 xl:mx-0">
+              <p className="mx-auto mt-6 max-w-lg text-base leading-7 text-slate-600 sm:mt-7 sm:text-lg sm:leading-8 lg:mx-0">
                 {auth.isSignedIn
                   ? auth.mustResetPassword
                     ? "Please set a new password to continue using your account."
@@ -91,7 +92,7 @@ export default async function HomePage() {
                   : "Find volunteer opportunities near you, student volunteering programs, volunteer jobs, and trusted organizations. Sign up to register and manage your schedule in one place."}
               </p>
 
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center xl:justify-start">
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
                 {auth.isSignedIn ? (
                   <Button
                     asChild
@@ -127,7 +128,7 @@ export default async function HomePage() {
                 )}
               </div>
 
-              <div className="mx-auto mt-8 grid max-w-lg grid-cols-1 gap-4 text-left text-sm text-slate-600 min-[520px]:grid-cols-3 sm:mt-10 xl:mx-0">
+              <div className="mx-auto mt-8 grid max-w-lg grid-cols-1 gap-4 text-left text-sm text-slate-600 min-[520px]:grid-cols-3 sm:mt-10 lg:mx-0">
                 {[
                   { icon: Users, label: "Trusted by local organizations" },
                   { icon: Calendar, label: "Flexible scheduling that works for you" },
@@ -141,7 +142,15 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <HeroCalendar />
+            <HeroCalendar dashboardHref={auth.isSignedIn ? auth.dashboardHref : "/signup"} />
+          </div>
+        </section>
+
+        <section aria-labelledby="explore-heading" className="border-b border-emerald-950/10 bg-gradient-to-b from-emerald-50/70 to-white px-4 py-10 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <h2 id="explore-heading" className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">Explore What’s Possible</h2>
+            <p className="mt-2 text-base text-slate-600 sm:text-lg">Discover meaningful ways to make a difference in your community.</p>
+            <CategoryCarousel />
           </div>
         </section>
 
@@ -254,7 +263,7 @@ export default async function HomePage() {
   );
 }
 
-function HeroCalendar() {
+function HeroCalendar({ dashboardHref }: { dashboardHref: string }) {
   const today = new Date();
   const visibleStart = new Date(today);
   visibleStart.setDate(today.getDate() - 2);
@@ -276,14 +285,17 @@ function HeroCalendar() {
 
   return (
     <div className="relative min-w-0">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-20 top-8 size-72 rounded-full bg-emerald-100/50" />
+      <div aria-hidden="true" className="pointer-events-none absolute -right-8 top-24 size-72 rounded-full bg-emerald-100/40" />
       <div className="absolute -left-10 -top-8 hidden grid-cols-6 gap-3 text-emerald-800/20 lg:grid">
         {Array.from({ length: 48 }).map((_, index) => (
           <span key={index} className="size-1 rounded-full bg-current" />
         ))}
       </div>
 
-      <div className="relative mx-auto max-w-[34rem] rounded-lg border border-slate-200 bg-white p-3 shadow-xl shadow-slate-950/10 sm:p-4">
+      <div className="relative mx-auto max-w-[36rem] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-950/10 sm:p-4">
         <div className="grid gap-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">A preview of your volunteer schedule</p>
           <div>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3 sm:gap-4">
@@ -291,12 +303,12 @@ function HeroCalendar() {
                   {monthLabel}
                 </h2>
                 <div className="flex items-center gap-3 text-slate-800">
-                  <button type="button" aria-label="Previous week">
+                  <span aria-hidden="true">
                     <ChevronLeft className="size-4" />
-                  </button>
-                  <button type="button" aria-label="Next week">
+                  </span>
+                  <span aria-hidden="true">
                     <ChevronRight className="size-4" />
-                  </button>
+                  </span>
                 </div>
                 <span className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600">
                   Today
@@ -309,7 +321,7 @@ function HeroCalendar() {
             </div>
 
             <div className="hidden overflow-x-auto pb-2 md:block">
-              <div className="grid min-w-[31rem] grid-cols-[2.75rem_repeat(5,minmax(4.9rem,1fr))] text-center text-xs xl:min-w-0">
+              <div className="grid min-w-0 grid-cols-[2.75rem_repeat(5,minmax(0,1fr))] text-center text-xs xl:min-w-0">
                 <div />
                 {days.map((day) => (
                   <div key={day.key} className="pb-3">
@@ -351,11 +363,11 @@ function HeroCalendar() {
                         key={`${time}-${day.key}`}
                         className="relative min-h-11 border-l border-t border-slate-200"
                       >
-                        {row === 1 && column === 0 ? (
+                        {row === 0 && column === 0 ? (
                           <CalendarEvent
                             className="border-emerald-300 bg-emerald-50"
                             title="Food Pantry"
-                            time="9:30 - 12:00 PM"
+                            time="9:30 AM - 12:00 PM"
                             team="Helping Hands"
                           />
                         ) : null}
@@ -367,7 +379,7 @@ function HeroCalendar() {
                             team="Green City Project"
                           />
                         ) : null}
-                        {row === 2 && column === 3 ? (
+                        {row === 1 && column === 3 ? (
                           <CalendarEvent
                             className="border-sky-300 bg-sky-50"
                             title="Youth Tutoring"
@@ -448,14 +460,14 @@ function HeroCalendar() {
                   City Green Team · Riverside Park
                 </p>
               </div>
-              <Button className="h-8 shrink-0 bg-emerald-800 px-3 text-xs hover:bg-emerald-700">
-                View
+              <Button asChild className="h-8 shrink-0 bg-emerald-800 px-3 text-xs hover:bg-emerald-700">
+                <Link href={dashboardHref}>Get started</Link>
               </Button>
             </div>
             <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3 text-xs text-slate-600 sm:grid-cols-3">
               <span className="flex items-center gap-1.5">
                 <Calendar className="size-3.5" />
-                May 24
+                {new Date(visibleStart.getFullYear(), visibleStart.getMonth(), visibleStart.getDate() + 3).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="size-3.5" />
