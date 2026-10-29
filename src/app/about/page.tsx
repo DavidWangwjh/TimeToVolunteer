@@ -1,6 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
+  Award,
+  Gem,
+  Medal,
+  Shield,
+  Sparkles,
   Building2,
   CalendarCheck,
   Compass,
@@ -174,6 +179,42 @@ export default function AboutPage() {
                   programs and opportunities, review memberships, handle
                   registrations, and communicate updates through the inbox.
                 </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="volunteer-ranks-heading" className="border-b border-emerald-950/10 px-4 py-10 lg:px-8">
+          <div className="container mx-auto max-w-6xl">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Every hour makes a difference</p>
+              <h2 id="volunteer-ranks-heading" className="mt-2 font-serif text-3xl font-bold">Grow your impact. Earn your rank.</h2>
+              <p className="mt-3 leading-7 text-slate-600">Start at Bronze and progress as you volunteer. Your rank celebrates the time you’ve given to your community, based on completed opportunities where your organization checked you in.</p>
+            </div>
+            <ol className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                { name: "Bronze", hours: "0 to under 50 hours", icon: Medal, gradient: "from-stone-950 via-amber-950 to-orange-800", accent: "text-orange-200" },
+                { name: "Silver", hours: "50 to under 100 hours", icon: Award, gradient: "from-slate-800 via-slate-600 to-slate-500", accent: "text-slate-100" },
+                { name: "Gold", hours: "100 to under 250 hours", icon: Sparkles, gradient: "from-yellow-950 via-yellow-800 to-amber-700", accent: "text-amber-100" },
+                { name: "Platinum", hours: "250 to under 500 hours", icon: Shield, gradient: "from-slate-900 via-teal-800 to-cyan-700", accent: "text-cyan-100" },
+                { name: "Diamond", hours: "500+ hours", icon: Gem, gradient: "from-indigo-950 via-blue-900 to-cyan-700", accent: "text-cyan-100" },
+              ].map((rank) => (
+                <li key={rank.name} className={`relative overflow-hidden rounded-xl bg-gradient-to-br p-5 text-white ${rank.gradient}`}>
+                  <div aria-hidden="true" className="absolute -right-6 -top-6 size-24 rotate-45 rounded-2xl border-8 border-white/10" />
+                  <rank.icon aria-hidden="true" className={`size-7 ${rank.accent}`} strokeWidth={1.5} />
+                  <h3 className="mt-4 text-lg font-semibold">{rank.name}</h3>
+                  <p className="mt-1 text-sm text-white">{rank.hours}</p>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-6 grid gap-5 rounded-xl border border-emerald-100 bg-emerald-50/50 p-5 sm:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-semibold text-emerald-950">How hours count</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">Once an opportunity ends, its scheduled duration counts toward your total if your registration is approved or completed and your organization has checked you in. Cancelled opportunities and sessions without a check-in don’t count.</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-emerald-950">See your progress</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">Your volunteer profile banner shows your current rank, completed opportunities, and completed hours. If a check-in is missing, contact the organization so they can review your attendance.</p>
               </div>
             </div>
           </div>
