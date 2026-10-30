@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CategoryCarousel } from "@/components/landing/CategoryCarousel";
 import type { Metadata } from "next";
 import {
   ArrowRight,
@@ -53,151 +54,84 @@ export default async function HomePage() {
       <Navbar />
 
       <main className="flex-1 overflow-hidden">
-        <section className="relative border-b border-emerald-950/10 px-4 py-10 sm:py-16 lg:px-8 xl:py-20">
+        <section className="relative border-b border-emerald-950/10 px-4 py-5 lg:px-8">
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 overflow-hidden text-emerald-100">
             <div className="absolute -bottom-14 left-0 h-32 w-full rounded-[50%] border-t border-emerald-200/70" />
             <div className="absolute -bottom-20 left-0 h-40 w-full rounded-[50%] border-t border-emerald-200/60" />
             <div className="absolute -bottom-28 left-0 h-52 w-full rounded-[50%] border-t border-emerald-200/50" />
           </div>
 
-          <div className="container relative mx-auto grid max-w-6xl items-center gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] xl:gap-10">
-            <div className="mx-auto max-w-2xl text-center xl:mx-0 xl:text-left">
-              <div className="mb-6 inline-flex max-w-full items-center gap-3 rounded-full border border-emerald-800/20 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 sm:mb-7">
+          <div className="container relative mx-auto grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-8">
+            <div className="mx-auto w-full max-w-2xl text-center lg:mx-0 lg:text-left">
+              <div className="mb-4 inline-flex max-w-full items-center gap-3 rounded-full border border-emerald-800/20 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
                 <Heart className="size-4 fill-emerald-800" />
                 <span className="truncate">Make a difference in your community</span>
               </div>
 
-              <h1 className="font-serif text-4xl font-bold leading-[1.08] text-slate-950 min-[430px]:text-5xl sm:text-6xl xl:text-7xl">
-                {auth.isSignedIn ? (
-                  <>
-                    Welcome back,{" "}
-                    <span className="italic text-emerald-800">{auth.firstName}</span>
-                  </>
-                ) : (
-                  <>
-                    Find Volunteer Opportunities{" "}
-                    <span className="italic text-emerald-800">Near You</span>
-                  </>
-                )}
+              <h1 className="font-serif text-4xl font-bold leading-[1.12] tracking-tight text-slate-950 sm:text-5xl xl:text-[3.5rem]">
+                Find Volunteer<br className="hidden xl:block" /> Opportunities{" "}
+                <span className="block italic text-emerald-800">Near You</span>
               </h1>
 
-              <p className="mx-auto mt-6 max-w-lg text-base leading-7 text-slate-600 sm:mt-7 sm:text-lg sm:leading-8 xl:mx-0">
-                {auth.isSignedIn
-                  ? auth.mustResetPassword
-                    ? "Please set a new password to continue using your account."
-                    : auth.role === "organization" || auth.role === "admin"
-                      ? "Manage organization opportunities, membership requests, and registrations from your dashboard."
-                      : "Continue browsing sessions and managing your volunteer registrations."
-                  : "Find volunteer opportunities near you, student volunteering programs, volunteer jobs, and trusted organizations. Sign up to register and manage your schedule in one place."}
+              <p className="mx-auto mt-4 max-w-lg text-base leading-7 text-slate-600 lg:mx-0 lg:max-w-none">
+                Make time for what matters. Connect with local organizations, find a cause you care about, and choose opportunities that fit your schedule—all in one place.
               </p>
 
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center xl:justify-start">
-                {auth.isSignedIn ? (
-                  <Button
-                    asChild
-                    size="lg"
-                    className="h-12 w-full bg-emerald-800 px-7 text-base shadow-lg shadow-emerald-950/15 hover:bg-emerald-700 sm:w-auto"
-                  >
-                    <Link href={auth.dashboardHref}>
-                      {auth.dashboardLabel}
-                      <ArrowRight className="ml-2 size-5" />
-                    </Link>
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      asChild
-                      size="lg"
-                      className="h-12 w-full bg-emerald-800 px-7 text-base shadow-lg shadow-emerald-950/15 hover:bg-emerald-700 sm:w-auto"
-                    >
-                      <Link href="/signup">
-                        Create Volunteer Account
-                        <ArrowRight className="ml-2 size-5" />
-                      </Link>
-                    </Button>
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="lg"
-                      className="h-12 w-full border-slate-200 bg-white px-7 text-base text-slate-900 shadow-sm hover:bg-slate-50 sm:w-auto"
-                    >
-                      <Link href="/apply">Apply as Organization</Link>
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              <div className="mx-auto mt-8 grid max-w-lg grid-cols-1 gap-4 text-left text-sm text-slate-600 min-[520px]:grid-cols-3 sm:mt-10 xl:mx-0">
-                {[
-                  { icon: Users, label: "Trusted by local organizations" },
-                  { icon: Calendar, label: "Flexible scheduling that works for you" },
-                  { icon: ShieldCheck, label: "Safe, simple, and secure" },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-3">
-                    <item.icon className="size-6 shrink-0 text-emerald-800" />
-                    <span className="leading-snug">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <HeroCalendar />
-          </div>
-        </section>
-
-        <section className="border-b border-emerald-950/10 bg-emerald-50/40 px-4 py-8 lg:px-8">
-          <div className="container mx-auto max-w-5xl">
-            <h2 className="mb-6 text-center font-serif text-2xl font-bold">
-              How it works
-            </h2>
-            <div className="grid gap-6 md:grid-cols-3 md:divide-x md:divide-emerald-950/15">
-              {[
-                {
-                  icon: Compass,
-                  title: "Create Profile",
-                  description:
-                    "Sign up as a volunteer and share your interests, availability, and student volunteer goals.",
-                },
-                {
-                  icon: CheckCircle2,
-                  title: "Join Organizations",
-                  description:
-                    "Browse volunteer organizations, request access, and discover programs near you.",
-                },
-                {
-                  icon: Calendar,
-                  title: "Book & Volunteer",
-                  description:
-                    "Register for volunteer jobs, track approvals, and show up ready to help.",
-                },
-              ].map((item, index) => (
-                <div
-                  key={item.title}
-                  className="grid grid-cols-[auto_1fr] items-center gap-4 px-2 py-3 md:px-8"
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <Button
+                  asChild
+                  size="lg"
+                  className="h-11 w-full bg-emerald-800 px-5 text-sm shadow-lg shadow-emerald-950/15 hover:bg-emerald-700 sm:w-auto"
                 >
-                  <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
-                    <item.icon className="size-7" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-950">
-                      {index + 1}. {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                  <Link href={auth.isSignedIn ? auth.dashboardHref : "/signup"}>
+                    {auth.isSignedIn ? auth.dashboardLabel : "Create Volunteer Account"}
+                    <ArrowRight className="ml-2 size-5" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-11 w-full border-slate-200 bg-white px-5 text-sm text-slate-900 shadow-sm hover:bg-slate-50 sm:w-auto"
+                >
+                  <Link href={auth.isSignedIn ? "/about" : "/apply"}>{auth.isSignedIn ? "About TimeToVolunteer" : "Apply as Organization"}</Link>
+                </Button>
+              </div>
+
+              <div className="mx-auto mt-5 max-w-lg border-t border-emerald-950/10 pt-4 text-left lg:mx-0 lg:max-w-none">
+                <h2 className="mb-2 text-sm font-semibold text-slate-900">{auth.isSignedIn ? "Volunteering in 3 simple steps" : "Get started in 3 simple steps"}</h2>
+                <ol className="space-y-3">
+                  {[
+                    { title: "Create your account", description: "Add a few details about yourself to get started." },
+                    { title: "Find your community", description: "Explore local organizations and request to join your favorites." },
+                    { title: "Pick a time. Make a difference.", description: "Sign up for an opportunity. Once approved, you’re ready to help." },
+                  ].map((step, index) => (
+                    <li key={step.title} className="flex items-start gap-3">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800">{index + 1}</span>
+                      <div><h3 className="text-sm font-semibold">{step.title}</h3><p className="mt-0.5 text-sm leading-5 text-slate-600">{step.description}</p></div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
             </div>
+
+            <HeroCalendar actionHref={auth.isSignedIn ? auth.dashboardHref : "/signup"} actionLabel={auth.isSignedIn ? auth.dashboardLabel : "Get started"} />
           </div>
         </section>
 
-        <section className="px-4 py-14 lg:px-8">
+        <section aria-labelledby="explore-heading" className="border-b border-emerald-950/10 bg-gradient-to-b from-emerald-50/70 to-white px-4 py-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <CategoryCarousel />
+          </div>
+        </section>
+
+        <section className="px-4 py-9 lg:px-8">
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-center font-serif text-3xl font-bold text-slate-950">
+            <h2 className="text-center font-serif text-2xl font-bold text-slate-950">
               Built for volunteers. Backed by community.
             </h2>
-            <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {[
                 {
                   icon: Compass,
@@ -230,7 +164,7 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-950">{item.title}</h3>
-                    <p className="mt-4 text-sm leading-6 text-slate-600">
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
                       {item.description}
                     </p>
                   </div>
@@ -254,7 +188,7 @@ export default async function HomePage() {
   );
 }
 
-function HeroCalendar() {
+function HeroCalendar({ actionHref, actionLabel }: { actionHref: string; actionLabel: string }) {
   const today = new Date();
   const visibleStart = new Date(today);
   visibleStart.setDate(today.getDate() - 2);
@@ -276,27 +210,30 @@ function HeroCalendar() {
 
   return (
     <div className="relative min-w-0">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-20 top-8 size-72 rounded-full bg-emerald-100/50" />
+      <div aria-hidden="true" className="pointer-events-none absolute -right-8 top-24 size-72 rounded-full bg-emerald-100/40" />
       <div className="absolute -left-10 -top-8 hidden grid-cols-6 gap-3 text-emerald-800/20 lg:grid">
         {Array.from({ length: 48 }).map((_, index) => (
           <span key={index} className="size-1 rounded-full bg-current" />
         ))}
       </div>
 
-      <div className="relative mx-auto max-w-[34rem] rounded-lg border border-slate-200 bg-white p-3 shadow-xl shadow-slate-950/10 sm:p-4">
-        <div className="grid gap-4">
+      <div className="relative mx-auto max-w-[33rem] lg:max-w-none rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-950/10 sm:p-4">
+        <div className="grid gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Volunteering at a Glance</p>
           <div>
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3 sm:gap-4">
                 <h2 className="text-base font-bold text-slate-950">
                   {monthLabel}
                 </h2>
                 <div className="flex items-center gap-3 text-slate-800">
-                  <button type="button" aria-label="Previous week">
+                  <span aria-hidden="true">
                     <ChevronLeft className="size-4" />
-                  </button>
-                  <button type="button" aria-label="Next week">
+                  </span>
+                  <span aria-hidden="true">
                     <ChevronRight className="size-4" />
-                  </button>
+                  </span>
                 </div>
                 <span className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600">
                   Today
@@ -309,10 +246,10 @@ function HeroCalendar() {
             </div>
 
             <div className="hidden overflow-x-auto pb-2 md:block">
-              <div className="grid min-w-[31rem] grid-cols-[2.75rem_repeat(5,minmax(4.9rem,1fr))] text-center text-xs xl:min-w-0">
+              <div className="grid min-w-0 grid-cols-[2.75rem_repeat(5,minmax(0,1fr))] text-center text-xs xl:min-w-0">
                 <div />
                 {days.map((day) => (
-                  <div key={day.key} className="pb-3">
+                  <div key={day.key} className="pb-2">
                     <div
                       className={`font-semibold ${
                         day.isToday ? "text-emerald-800" : "text-slate-500"
@@ -349,13 +286,13 @@ function HeroCalendar() {
                     {days.map((day, column) => (
                       <div
                         key={`${time}-${day.key}`}
-                        className="relative min-h-11 border-l border-t border-slate-200"
+                        className="relative min-h-9 border-l border-t border-slate-200"
                       >
-                        {row === 1 && column === 0 ? (
+                        {row === 0 && column === 0 ? (
                           <CalendarEvent
                             className="border-emerald-300 bg-emerald-50"
                             title="Food Pantry"
-                            time="9:30 - 12:00 PM"
+                            time="9:30 AM - 12:00 PM"
                             team="Helping Hands"
                           />
                         ) : null}
@@ -367,7 +304,7 @@ function HeroCalendar() {
                             team="Green City Project"
                           />
                         ) : null}
-                        {row === 2 && column === 3 ? (
+                        {row === 1 && column === 3 ? (
                           <CalendarEvent
                             className="border-sky-300 bg-sky-50"
                             title="Youth Tutoring"
@@ -448,14 +385,14 @@ function HeroCalendar() {
                   City Green Team · Riverside Park
                 </p>
               </div>
-              <Button className="h-8 shrink-0 bg-emerald-800 px-3 text-xs hover:bg-emerald-700">
-                View
+              <Button asChild className="h-8 shrink-0 bg-emerald-800 px-3 text-xs hover:bg-emerald-700">
+                <Link href={actionHref}>{actionLabel}</Link>
               </Button>
             </div>
             <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3 text-xs text-slate-600 sm:grid-cols-3">
               <span className="flex items-center gap-1.5">
                 <Calendar className="size-3.5" />
-                May 24
+                {new Date(visibleStart.getFullYear(), visibleStart.getMonth(), visibleStart.getDate() + 3).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="size-3.5" />
