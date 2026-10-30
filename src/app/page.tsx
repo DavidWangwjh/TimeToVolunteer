@@ -175,7 +175,7 @@ export default async function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-emerald-950/10 px-4 py-5">
+      <footer className="border-t border-emerald-950/10 px-4 py-8">
         <div className="container mx-auto max-w-4xl text-center text-sm text-slate-500">
           <p className="mb-1 font-medium text-slate-950">TimeToVolunteer</p>
           <p>Questions? Contact us at support@timetovolunteer.org</p>
