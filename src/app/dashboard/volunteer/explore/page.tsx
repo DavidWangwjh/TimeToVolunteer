@@ -194,6 +194,7 @@ export default async function VolunteerExplorePage() {
         description: organization.description,
         category,
         imageUrl: organization.image_url,
+        imagePosition: organization.image_position,
         visibility: organization.visibility,
         membershipStatus,
         opportunityCount,

@@ -1,8 +1,10 @@
 "use client";
 
 import { VolunteerRankBanner } from "@/components/profile/VolunteerRankBanner";
-import Image from "next/image";
-import { useRef, useState } from "react";
+import { PhotoFrame } from "./PhotoFrame";
+import { PhotoEditor } from "./PhotoEditor";
+import { photoPosition, type PhotoPosition } from "@/lib/photo-position";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Mail, Pencil, Phone, X } from "lucide-react";
 import { toast } from "sonner";
@@ -15,13 +17,15 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
+  const [photoEditor, setPhotoEditor] = useState<{ src: string; file?: File } | null>(null);
+  useEffect(() => () => { if (photoEditor?.src.startsWith("blob:")) URL.revokeObjectURL(photoEditor.src); }, [photoEditor]);
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
   const [photoFailed, setPhotoFailed] = useState(false);
   const hasPhoto = readOnly ? Boolean(avatarSrc) : Boolean(userMetadata.volunteer_avatar_path);
   const initials = `${profile.first_name[0] ?? ""}${profile.last_name[0] ?? ""}`.toUpperCase();
 
-  async function savePhoto(file?: File) {
+  async function savePhoto(file?: File, position?: PhotoPosition) {
     if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 3 * 1024 * 1024)) {
       toast.error("Choose a JPEG, PNG, or WebP photo up to 3 MB"); return;
     }
@@ -29,14 +33,16 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
     try {
       const form = new FormData();
       if (file) form.set("photo", file);
-      const response = await fetch("/api/volunteer/avatar", { method: file ? "POST" : "DELETE", body: file ? form : undefined });
+      if (position) form.set("position", JSON.stringify(position));
+      const response = await fetch("/api/volunteer/avatar", { method: file ? "POST" : position ? "PATCH" : "DELETE", body: file || position ? form : undefined });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to update photo");
+      setPhotoEditor(null);
       setPhotoFailed(false);
       setVersion((value) => value + 1);
       router.refresh();
       if (result.warning) toast.warning(result.warning);
-      toast.success(file ? "Profile photo updated" : "Profile photo removed");
+      toast.success(file || position ? "Profile photo updated" : "Profile photo removed");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update photo"); }
     finally { setBusy(false); if (fileInput.current) fileInput.current.value = ""; }
   }
@@ -48,10 +54,13 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
         <div className="relative -mt-12 flex flex-wrap items-end justify-between gap-4 sm:-mt-14">
           <div className="relative">
             <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-emerald-100 text-3xl font-bold text-emerald-900 shadow-md sm:size-32">
-              {hasPhoto && !photoFailed ? <Image key={version} src={avatarSrc ?? `/api/volunteer/avatar?v=${version}`} width={128} height={128} unoptimized alt={`${profile.first_name} ${profile.last_name}`} className="size-full object-cover" onError={() => setPhotoFailed(true)} /> : <span aria-label="Profile initials">{initials}</span>}
+              {hasPhoto && !photoFailed ? <PhotoFrame key={version} position={photoPosition(userMetadata.volunteer_avatar_position)} src={avatarSrc ?? `/api/volunteer/avatar?v=${version}`} alt={`${profile.first_name} ${profile.last_name}`} className="size-full object-cover" onError={() => setPhotoFailed(true)} /> : <span aria-label="Profile initials">{initials}</span>}
             </div>
-            {!readOnly && <><button type="button" aria-label={hasPhoto ? "Change profile photo" : "Add profile photo"} title={hasPhoto ? "Change profile photo" : "Add profile photo"} disabled={busy} onClick={() => fileInput.current?.click()} className="absolute bottom-1 right-0 flex size-9 items-center justify-center rounded-full border-2 border-white bg-emerald-800 text-white shadow-sm hover:bg-emerald-900 disabled:opacity-50"><Camera className="size-4" /></button>
-            <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" aria-label="Upload profile photo" onChange={(event) => { const file = event.target.files?.[0]; if (file) void savePhoto(file); }} /></>}
+            {!readOnly && <><button type="button" aria-label={hasPhoto ? "Change profile photo" : "Add profile photo"} title={hasPhoto ? "Change profile photo" : "Add profile photo"} disabled={busy} onClick={() => hasPhoto ? setPhotoEditor({ src: `/api/volunteer/avatar?v=${Date.now()}` }) : fileInput.current?.click()} className="absolute bottom-1 right-0 flex size-9 items-center justify-center rounded-full border-2 border-white bg-emerald-800 text-white shadow-sm hover:bg-emerald-900 disabled:opacity-50"><Camera className="size-4" /></button>
+            <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" aria-label="Upload profile photo" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) {
+              if (file.size > 3 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) { toast.error("Choose a JPEG, PNG, or WebP photo up to 3 MB"); return; }
+              setPhotoEditor({ src: URL.createObjectURL(file), file });
+            } }} /></>}
           </div>
           {!readOnly && <Button variant="outline" className="mb-1 rounded-full" onClick={() => setEditing(true)}><Pencil className="size-4" />Edit profile</Button>}
         </div>
@@ -74,9 +83,11 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
         </div>
         {!readOnly && <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
           {busy && <span role="status">Updating photo…</span>}
+          {hasPhoto && <button type="button" disabled={busy} onClick={() => fileInput.current?.click()} className="underline">Replace photo</button>}
           {hasPhoto && <button type="button" disabled={busy} onClick={() => void savePhoto()} className="inline-flex items-center gap-1 underline hover:text-slate-900 disabled:opacity-50"><X className="size-3" />Remove photo</button>}
         </div>}
       </div>
+      {!readOnly && photoEditor && <PhotoEditor src={photoEditor.src} kind="avatar" busy={busy} initialPosition={photoEditor.file ? undefined : userMetadata.volunteer_avatar_position} onCancel={() => setPhotoEditor(null)} onSave={(position) => void savePhoto(photoEditor.file, position)} />}
       {!readOnly && <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
           <DialogHeader><DialogTitle>Edit your profile</DialogTitle><DialogDescription>Introduce yourself and tell organizations what matters to you.</DialogDescription></DialogHeader>

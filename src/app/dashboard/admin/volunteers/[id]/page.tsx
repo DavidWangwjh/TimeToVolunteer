@@ -60,7 +60,7 @@ export default async function VolunteerDetailPage({ params, searchParams }: Prop
   const history = rows.filter(({ booking, opportunity }) => getVolunteerHours([{ ...booking, opportunity }], now) > 0).sort((a, b) => `${b.opportunity.date}T${b.opportunity.end_time}`.localeCompare(`${a.opportunity.date}T${a.opportunity.end_time}`));
   return <div className="space-y-6">
     <Link href={fromOpportunity ? returnTo! : "/dashboard/admin/volunteers"} className="text-sm font-semibold text-emerald-800 hover:underline">← {fromOpportunity ? "Back to opportunity" : "Back to volunteers"}</Link>
-    <VolunteerProfilePanel profile={volunteer} readOnly avatarSrc={avatarSrc} age={getAge(volunteer.date_of_birth)} volunteerStats={stats} />
+    <VolunteerProfilePanel profile={volunteer} readOnly avatarSrc={avatarSrc} userMetadata={{ volunteer_avatar_position: authData.user?.user_metadata.volunteer_avatar_position }} age={getAge(volunteer.date_of_birth)} volunteerStats={stats} />
     <Tabs defaultValue="history">
       <TabsList variant="line"><TabsTrigger value="history">Volunteer History ({history.length})</TabsTrigger><TabsTrigger value="registrations">All registrations ({rows.length})</TabsTrigger><TabsTrigger value="manage">Manage profile</TabsTrigger></TabsList>
       <TabsContent value="history"><BookingTable variant="admin" showActions={false} bookings={history} /></TabsContent>

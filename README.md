@@ -289,9 +289,17 @@ The transactional database regression test is `supabase/tests/opportunity_invita
 
 ### Volunteer profile photos
 
-Volunteers edit their profile from Overview; the old `/dashboard/volunteer/profile` URL redirects there. Photos are optional and are not part of signup. The authenticated `/api/volunteer/avatar` endpoint accepts JPEG, PNG, and WebP files up to 3 MB, validates and re-encodes them to a 512×512 WebP, and strips EXIF metadata. It serves only the signed-in volunteer's own photo with private, non-cacheable responses.
+Volunteers edit their profile from Overview; the old `/dashboard/volunteer/profile` URL redirects there. Photos are optional and are not part of signup. The authenticated `/api/volunteer/avatar` endpoint accepts JPEG, PNG, and WebP files up to 3 MB, validates and re-encodes them to WebP (up to 1,024 pixels, preserving the full frame), and strips EXIF metadata. Volunteers can drag, zoom, and preview the circular crop before saving; framing is stored in `volunteer_avatar_position` Auth metadata and can be edited again without re-uploading. Previously cropped photos remain compatible, but re-upload the original to recover any edges already removed. It serves only the signed-in volunteer's own photo with private, non-cacheable responses.
 
 No SQL migration is required. On the first upload in each environment, the server provisions a private `volunteer-avatars` Supabase Storage bucket using the existing service-role key. The object path is stored in Supabase Auth user metadata (`volunteer_avatar_path`). No public bucket or client storage policies are needed. Replacement/removal cleans up the previous object. Photos appear on the volunteer's own Overview and on the read-only volunteer detail page for organizations authorized to view that volunteer. The organization page checks the membership or registration relationship before issuing a one-hour signed photo URL.
+
+### Cover photo editing
+
+Apply `005_organization_cover_position.sql` through the migration workflow before deploying this version. It adds `organizations.image_position` and permits owners to edit that field while retaining the existing approval/ownership protections. Fresh installations use the updated `supabase/schema.sql`.
+
+Organization settings support upload, replace, reposition, zoom, desktop/mobile previews, and removal. Choose **Use photo**, then **Save Profile**. Profile banners use 3:1 on desktop and 16:9 on mobile; cards use the same saved framing. The full image is retained as an optimized WebP up to 1,600 pixels, with one reusable storage object per organization. Framing edits only change metadata. Volunteer photos likewise retain one reusable object; their circular display uses saved framing without discarding the original frame.
+
+Photo tests: `node --import tsx --test src/lib/photo-position.test.ts src/lib/photo-storage.test.ts src/lib/profile-photo.test.ts`. Database regression: `supabase/tests/organization_cover_position.sql` (isolated test database; rolls back fixtures).
 
 ### Volunteer ranks
 

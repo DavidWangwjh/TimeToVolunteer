@@ -51,6 +51,7 @@ export default async function JoinedOrganizationsPage() {
         organization.name
       ),
       imageUrl: organization.image_url,
+        imagePosition: organization.image_position,
       visibility: organization.visibility,
       membershipStatus: "accepted" as const,
       opportunityCount: opportunityCounts.get(organization.id) ?? 0,

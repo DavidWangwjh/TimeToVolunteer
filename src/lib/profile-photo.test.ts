@@ -3,12 +3,12 @@ import { test } from "node:test";
 import sharp from "sharp";
 import { normalizeProfilePhoto } from "./profile-photo";
 
-test("profile photos become square WebP images without EXIF", async () => {
+test("profile photos retain their full frame as WebP without EXIF", async () => {
   const input = await sharp({ create: { width: 800, height: 600, channels: 3, background: "#167461" } }).jpeg().withMetadata().toBuffer();
   const result = await normalizeProfilePhoto(input);
   const metadata = await sharp(result).metadata();
-  assert.equal(metadata.width, 512);
-  assert.equal(metadata.height, 512);
+  assert.equal(metadata.width, 800);
+  assert.equal(metadata.height, 600);
   assert.equal(metadata.format, "webp");
   assert.equal(metadata.exif, undefined);
 });

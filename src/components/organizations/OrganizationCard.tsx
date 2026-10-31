@@ -1,5 +1,7 @@
 "use client";
 
+import { PhotoFrame } from "@/components/profile/PhotoFrame";
+import type { PhotoPosition } from "@/lib/photo-position";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +21,7 @@ export interface OrganizationCardData {
   description: string | null;
   category?: string | null;
   imageUrl?: string | null;
+  imagePosition?: PhotoPosition;
   visibility: OrganizationVisibility;
   membershipStatus?: MembershipStatus;
   opportunityCount: number;
@@ -47,12 +50,7 @@ export function OrganizationCard({
         <CardContent className="flex h-full flex-col p-0">
           <Link href={href} className="group block">
             <div className="relative h-28 overflow-hidden bg-emerald-50">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={getOrganizationImageUrl(organization.imageUrl)}
-                alt={`${organization.name} organization`}
-                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-              />
+              <PhotoFrame src={getOrganizationImageUrl(organization.imageUrl)} alt={`${organization.name} organization`} position={organization.imagePosition} className="h-full w-full" />
               <div className="absolute inset-0 bg-linear-to-t from-slate-950/40 to-transparent" />
               <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1 text-xs font-bold uppercase text-emerald-900 shadow-sm">
                 <Building2 className="size-3.5" />

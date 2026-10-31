@@ -95,6 +95,17 @@ create table organizations (
   category text not null,
   description text not null,
   image_url text,
+  image_position jsonb not null default '{"x":50,"y":50,"zoom":1}'::jsonb
+    constraint organizations_image_position_valid check (
+      jsonb_typeof(image_position) = 'object'
+      and image_position ?& array['x','y','zoom']
+      and jsonb_typeof(image_position->'x') = 'number'
+      and jsonb_typeof(image_position->'y') = 'number'
+      and jsonb_typeof(image_position->'zoom') = 'number'
+      and (image_position->>'x')::numeric between 0 and 100
+      and (image_position->>'y')::numeric between 0 and 100
+      and (image_position->>'zoom')::numeric between 1 and 3
+    ),
   website text,
   contact_email text not null,
   contact_phone text,
@@ -607,8 +618,8 @@ begin
         raise exception 'Only an administrator can change account access fields' using errcode='42501';
       end if;
     elsif tg_table_name = 'organizations' then
-      if (to_jsonb(new) - array['name','category','description','image_url','website','contact_email','contact_phone','visibility','updated_at'])
-         is distinct from (to_jsonb(old) - array['name','category','description','image_url','website','contact_email','contact_phone','visibility','updated_at']) then
+      if (to_jsonb(new) - array['name','category','description','image_url','image_position','website','contact_email','contact_phone','visibility','updated_at'])
+         is distinct from (to_jsonb(old) - array['name','category','description','image_url','image_position','website','contact_email','contact_phone','visibility','updated_at']) then
         raise exception 'Only an administrator can change organization approval or ownership' using errcode='42501';
       end if;
     end if;

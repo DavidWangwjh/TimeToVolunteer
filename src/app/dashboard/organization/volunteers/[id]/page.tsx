@@ -99,7 +99,7 @@ export default async function OrganizationVolunteerDetailPage({
       <Link href={backHref} className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:underline">
         <ArrowLeft className="size-4" />{backLabel}
       </Link>
-      <VolunteerProfilePanel key={volunteer.id} profile={volunteer} volunteerStats={volunteerStats} readOnly avatarSrc={avatarSrc} age={getAge(volunteer.date_of_birth, now)} />
+      <VolunteerProfilePanel key={volunteer.id} profile={volunteer} volunteerStats={volunteerStats} readOnly avatarSrc={avatarSrc} userMetadata={{ volunteer_avatar_position: authData.user?.user_metadata.volunteer_avatar_position }} age={getAge(volunteer.date_of_birth, now)} />
 
       <div>
         <h2 className="mb-4 text-lg font-semibold">Volunteer History</h2>
