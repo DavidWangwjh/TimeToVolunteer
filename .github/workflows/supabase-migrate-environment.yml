@@ -1,0 +1,66 @@
+name: Run Supabase migration
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      operation:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  migrate:
+    name: ${{ inputs.operation }} / ${{ inputs.environment }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase-${{ inputs.environment }}
+    concurrency:
+      group: supabase-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      OPERATION: ${{ inputs.operation }}
+      PGCONNECT_TIMEOUT: '15'
+      PGSSLMODE: require
+      PGOPTIONS: '-c lock_timeout=10000 -c statement_timeout=120000'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Validate operation and database target
+        run: |
+          case "$OPERATION" in plan|apply|baseline) ;; *) echo "Invalid migration operation"; exit 1 ;; esac
+          python3 scripts/check-migration-target.py
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.121.0
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+      - name: Initialize CLI configuration
+        run: supabase init --yes
+      - name: Reconcile already-applied migration history
+        if: inputs.operation == 'baseline'
+        run: |
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/check-migration-baseline.sql
+          supabase migration repair 001 002 003 --status applied --db-url "$SUPABASE_DB_URL" --yes
+      - name: Require reconciled baseline
+        if: inputs.operation != 'baseline'
+        run: |
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+          do $$ begin
+            if (select count(*) from supabase_migrations.schema_migrations where version in ('001','002','003')) <> 3 then
+              raise exception 'Run the baseline operation before planning or applying new migrations';
+            end if;
+          end $$;
+          SQL
+      - name: Preview pending migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
+      - name: Apply pending migrations
+        if: inputs.operation == 'apply'
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --yes
+      - name: Show migration history
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"
