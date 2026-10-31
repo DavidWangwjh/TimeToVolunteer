@@ -1,3 +1,4 @@
+import { isVolunteerAvatarPath } from "@/lib/photo-storage";
 import { getVolunteerStats } from "@/lib/volunteer-rank-data";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -70,7 +71,7 @@ export default async function OrganizationVolunteerDetailPage({
   const { data: authData } = await adminClient.auth.admin.getUserById(id);
   const avatarPath = authData.user?.user_metadata.volunteer_avatar_path;
   let avatarSrc: string | undefined;
-  if (typeof avatarPath === "string" && new RegExp(`^${id}/[a-f0-9-]+\\.webp$`).test(avatarPath)) {
+  if (isVolunteerAvatarPath(avatarPath, id)) {
     const { data: signedPhoto } = await adminClient.storage.from("volunteer-avatars").createSignedUrl(avatarPath, 3600);
     avatarSrc = signedPhoto?.signedUrl;
   }

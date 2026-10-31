@@ -35,6 +35,7 @@ export function VolunteerProfilePanel({ profile, userMetadata = {}, readOnly = f
       setPhotoFailed(false);
       setVersion((value) => value + 1);
       router.refresh();
+      if (result.warning) toast.warning(result.warning);
       toast.success(file ? "Profile photo updated" : "Profile photo removed");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update photo"); }
     finally { setBusy(false); if (fileInput.current) fileInput.current.value = ""; }

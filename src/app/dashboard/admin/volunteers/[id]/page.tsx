@@ -1,3 +1,4 @@
+import { isVolunteerAvatarPath } from "@/lib/photo-storage";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/bookings/BookingStatusBadge";
@@ -46,7 +47,7 @@ export default async function VolunteerDetailPage({ params, searchParams }: Prop
   const { data: authData } = await adminClient.auth.admin.getUserById(id);
   const path = authData.user?.user_metadata.volunteer_avatar_path;
   let avatarSrc: string | undefined;
-  if (typeof path === "string" && new RegExp(`^${id}/[a-f0-9-]+\\.webp$`).test(path)) {
+  if (isVolunteerAvatarPath(path, id)) {
     const { data } = await adminClient.storage.from("volunteer-avatars").createSignedUrl(path, 3600);
     avatarSrc = data?.signedUrl;
   }

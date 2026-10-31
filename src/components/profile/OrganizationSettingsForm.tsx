@@ -69,6 +69,7 @@ export function OrganizationSettingsForm({
     if (imageFile) {
       const formData = new FormData();
       formData.append("image", imageFile);
+      formData.append("organizationId", organization.id);
       const uploadResult = await uploadOrganizationImage(formData);
 
       if (uploadResult.error) {
@@ -79,6 +80,9 @@ export function OrganizationSettingsForm({
 
       nextImageUrl = uploadResult.url ?? "";
       setImageUrl(nextImageUrl);
+      setImageFile(null);
+      setImagePreview(nextImageUrl);
+      if (uploadResult.warning) toast.warning(uploadResult.warning);
     }
 
     const payload = {
