@@ -266,7 +266,9 @@ public
 
 `CI` runs on pull requests, pushes to main, and manual dispatch. It installs the locked dependencies with Node 22.13.0 / npm 10.9.2, runs ESLint, generates Next.js route types, checks TypeScript, and builds the app. It uses dummy build credentials; it cannot access hosted databases or send email. Vercel continues handling application deployments through its Git integration. CI does not automatically block Vercel deployments; require the `Lint, types, and build` check in a main-branch ruleset and merge via PRs to enforce it.
 
-`Supabase migrations` is manually triggered from Actions, on main only. Select `development` or `production`, then `plan` (default), `apply`, or the one-time `baseline` operation. No local Docker setup is needed for these remote operations.
+`Supabase migrations` automatically runs when a push to main changes `supabase/migrations/**` or the migration workflow/shared action. Each environment previews pending migrations and then applies them: development first, production only if development succeeds. Production uses the existing `supabase-production` environment protection rules, so a required reviewer must still approve that job. Each top-level job declares its GitHub environment and resolves its secrets directly; a shared composite action runs the migration steps, no new credentials are needed. Merging these workflow changes will also apply any pending migrations, including 005 if it is present and pending.
+
+Manual Actions runs remain available on main for `development` or `production`: `plan` (default), `apply`, or the one-time `baseline` operation. No local Docker setup is needed. Automatic runs never invoke baseline or repair migration history. Runs serialize per database; do not dispatch a manual apply while an automatic rollout is pending.
 
 ### One-time database automation setup
 
@@ -275,7 +277,9 @@ public
 3. Run `baseline` once for development, then production. It checks the existing schema and records migrations 001, 002, and 003 as already applied; it does not rerun them. These projects were previously upgraded through the SQL Editor. Do not use baseline against a fresh database.
 4. Run `plan` and confirm that nothing is pending before adding new migrations.
 
-For future changes, add a new timestamp-prefixed SQL file under `supabase/migrations` (for example via `supabase migration new descriptive_name`); do not edit already-applied migrations. Run plan/apply on development and test the application. Deploy any required compatible app version to production first, then run plan/apply for production and verify the affected workflows. Apply does not wait for or verify Vercel readiness. The baseline files do not reconstruct a brand-new database; `schema.sql` remains the fresh-install definition. Never use `reset.sql` or development seeds in production.
+For future changes, add a new timestamp-prefixed SQL file under `supabase/migrations` (for example via `supabase migration new descriptive_name`); do not edit already-applied migrations. Merge a backward-compatible migration-only PR first. The workflow applies it to development, then production (after any configured approval). Confirm success before merging the dependent application changes. A successful development migration does not substitute for functional testing.
+
+**Vercel still deploys independently through its Git integration. This automation does not gate Vercel on migrations or CI.** Do not merge a database-dependent feature and its migration together assuming execution order. For destructive changes, first deploy application code that stops using the affected fields, then migrate in a separate PR. Apply does not wait for or verify Vercel readiness. The baseline files do not reconstruct a brand-new database; `schema.sql` remains the fresh-install definition. Never use `reset.sql` or development seeds in production.
 
 The workflows do not reset, seed, or automatically repair migration history during normal deployment. If history diverges, investigate before using any repair command. Secrets are scoped to the selected GitHub environment; the target check rejects a connection string for the other project.
 
