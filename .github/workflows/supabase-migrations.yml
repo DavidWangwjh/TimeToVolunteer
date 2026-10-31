@@ -7,6 +7,7 @@ on:
       - 'supabase/migrations/**'
       - '.github/workflows/supabase-migrations.yml'
       - '.github/workflows/supabase-migrate-environment.yml'
+      - '.github/actions/run-supabase-migration/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -23,8 +24,7 @@ on:
         required: true
 permissions:
   contents: read
-# Keep automatic development → production runs in order. The reusable job also
-# serializes by database, including manual runs, to prevent simultaneous writes.
+# Keep automatic rollouts in order; each job also serializes its database writes.
 concurrency:
   group: supabase-pipeline-${{ github.event_name == 'push' && 'automatic' || inputs.environment }}
   cancel-in-progress: false
@@ -32,22 +32,64 @@ jobs:
   development:
     name: Automatic apply / development
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/supabase-migrate-environment.yml
-    with:
-      environment: development
-      operation: apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase-development
+    concurrency:
+      group: supabase-development
+      cancel-in-progress: false
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      TARGET_ENVIRONMENT: development
+      OPERATION: apply
+      PGCONNECT_TIMEOUT: '15'
+      PGSSLMODE: require
+      PGOPTIONS: '-c lock_timeout=10000 -c statement_timeout=120000'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/run-supabase-migration
   production:
     name: Automatic apply / production
     needs: development
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/supabase-migrate-environment.yml
-    with:
-      environment: production
-      operation: apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase-production
+    concurrency:
+      group: supabase-production
+      cancel-in-progress: false
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      TARGET_ENVIRONMENT: production
+      OPERATION: apply
+      PGCONNECT_TIMEOUT: '15'
+      PGSSLMODE: require
+      PGOPTIONS: '-c lock_timeout=10000 -c statement_timeout=120000'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/run-supabase-migration
   manual:
     name: Manual ${{ inputs.operation }} / ${{ inputs.environment }}
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/supabase-migrate-environment.yml
-    with:
-      environment: ${{ inputs.environment }}
-      operation: ${{ inputs.operation }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase-${{ inputs.environment }}
+    concurrency:
+      group: supabase-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      OPERATION: ${{ inputs.operation }}
+      PGCONNECT_TIMEOUT: '15'
+      PGSSLMODE: require
+      PGOPTIONS: '-c lock_timeout=10000 -c statement_timeout=120000'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/run-supabase-migration

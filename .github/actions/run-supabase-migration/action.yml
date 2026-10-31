@@ -1,0 +1,46 @@
+name: Run Supabase migration
+description: Validate, preview, and optionally apply migrations using the job environment.
+runs:
+  using: composite
+  steps:
+  - name: Validate operation and database target
+    run: |
+      case "$OPERATION" in plan|apply|baseline) ;; *) echo "Invalid migration operation"; exit 1 ;; esac
+      python3 scripts/check-migration-target.py
+    shell: bash
+  - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+    with:
+      version: 2.121.0
+  - name: Install PostgreSQL client
+    run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+    shell: bash
+  - name: Initialize CLI configuration
+    run: supabase init --yes
+    shell: bash
+  - name: Reconcile already-applied migration history
+    if: env.OPERATION == 'baseline'
+    run: |
+      psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/check-migration-baseline.sql
+      supabase migration repair 001 002 003 --status applied --db-url "$SUPABASE_DB_URL" --yes
+    shell: bash
+  - name: Require reconciled baseline
+    if: env.OPERATION != 'baseline'
+    run: |
+      psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+      do $$ begin
+        if (select count(*) from supabase_migrations.schema_migrations where version in ('001','002','003')) <> 3 then
+          raise exception 'Run the baseline operation before planning or applying new migrations';
+        end if;
+      end $$;
+      SQL
+    shell: bash
+  - name: Preview pending migrations
+    run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
+    shell: bash
+  - name: Apply pending migrations
+    if: env.OPERATION == 'apply'
+    run: supabase db push --db-url "$SUPABASE_DB_URL" --yes
+    shell: bash
+  - name: Show migration history
+    run: supabase migration list --db-url "$SUPABASE_DB_URL"
+    shell: bash
