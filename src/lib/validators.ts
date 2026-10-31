@@ -1,3 +1,4 @@
+import { photoPositionSchema } from "@/lib/photo-position";
 import { z } from "zod";
 import { organizationCategories } from "@/lib/organization-options";
 
@@ -96,6 +97,7 @@ export const profileUpdateSchema = z.object({
 });
 
 export const organizationSettingsSchema = z.object({
+  image_position: photoPositionSchema.optional(),
   name: z.string().min(1, "Organization name is required"),
   category: z.enum(organizationCategories),
   description: z.string().min(20, "Please share a short organization description"),

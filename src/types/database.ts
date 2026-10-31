@@ -36,6 +36,7 @@ export interface Profile {
 }
 
 export interface Organization {
+  image_position?: { x: number; y: number; zoom: number };
   id: string;
   owner_id: string;
   name: string;

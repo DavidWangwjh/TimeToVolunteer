@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import {
   updateOrganizationByAdmin,
   updateOrganizationSettings,
   uploadOrganizationImage,
+  removeOrganizationCover,
 } from "@/lib/actions";
 import {
   organizationCategories,
@@ -28,6 +29,10 @@ import {
   isOrganizationImageTooLarge,
   ORGANIZATION_IMAGE_SIZE_LABEL,
 } from "@/lib/file-limits";
+import { organizationSettingsSchema } from "@/lib/validators";
+import { PhotoEditor } from "./PhotoEditor";
+import { PhotoFrame } from "./PhotoFrame";
+import { defaultPhotoPosition, photoPosition } from "@/lib/photo-position";
 import type { Organization, OrganizationVisibility } from "@/types/database";
 
 interface OrganizationSettingsFormProps {
@@ -56,6 +61,11 @@ export function OrganizationSettingsForm({
   const [imageUrl, setImageUrl] = useState(organization.image_url ?? "");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState(organization.image_url ?? "");
+  const [position, setPosition] = useState(() => photoPosition(organization.image_position));
+  const [editor, setEditor] = useState<{ src: string; file?: File } | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
+  useEffect(() => () => { if (editor?.file && editor.src.startsWith("blob:")) URL.revokeObjectURL(editor.src); }, [editor]);
+  useEffect(() => () => { if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview); }, [imagePreview]);
   const [visibility, setVisibility] = useState<OrganizationVisibility>(
     organization.visibility ?? "public"
   );
@@ -63,12 +73,25 @@ export function OrganizationSettingsForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const validation = organizationSettingsSchema.safeParse({ name, category, description, website, contact_email: contactEmail, contact_phone: contactPhone, image_url: imageUrl, image_position: position, visibility });
+    if (!validation.success) { toast.error(validation.error.issues[0].message); return; }
     setIsSubmitting(true);
+    try {
     let nextImageUrl = imageUrl;
 
+    if (removeCover) {
+      const result = await removeOrganizationCover(organization.id);
+      if (result.error) { toast.error(result.error); setIsSubmitting(false); return; }
+      if (result.warning) toast.warning(result.warning);
+      nextImageUrl = "";
+      setImageUrl("");
+      setRemoveCover(false);
+    }
     if (imageFile) {
       const formData = new FormData();
       formData.append("image", imageFile);
+      formData.append("organizationId", organization.id);
+      formData.append("position", JSON.stringify(position));
       const uploadResult = await uploadOrganizationImage(formData);
 
       if (uploadResult.error) {
@@ -79,6 +102,9 @@ export function OrganizationSettingsForm({
 
       nextImageUrl = uploadResult.url ?? "";
       setImageUrl(nextImageUrl);
+      setImageFile(null);
+      setImagePreview(nextImageUrl);
+      if (uploadResult.warning) toast.warning(uploadResult.warning);
     }
 
     const payload = {
@@ -89,6 +115,7 @@ export function OrganizationSettingsForm({
       contact_email: contactEmail,
       contact_phone: contactPhone,
       image_url: nextImageUrl,
+      image_position: position,
       visibility,
     };
     const result = platformAdmin
@@ -100,6 +127,11 @@ export function OrganizationSettingsForm({
     } else {
       toast.success("Organization profile updated");
       onSaved?.();
+    }
+    } catch {
+      toast.error("Unable to save your profile. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -192,31 +224,24 @@ export function OrganizationSettingsForm({
               <Input
                 id="organization_image"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={isSubmitting}
                 onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  if (file && isOrganizationImageTooLarge(file)) {
-                    event.target.value = "";
-                    setImageFile(null);
-                    setImagePreview(imageUrl);
-                    toast.error(
-                      `Organization images must be ${ORGANIZATION_IMAGE_SIZE_LABEL} or smaller`
-                    );
-                    return;
-                  }
-                  setImageFile(file);
-                  setImagePreview(file ? URL.createObjectURL(file) : imageUrl);
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  if (isOrganizationImageTooLarge(file)) { toast.error(`Organization images must be ${ORGANIZATION_IMAGE_SIZE_LABEL} or smaller`); return; }
+                  setEditor({ src: URL.createObjectURL(file), file });
                 }}
               />
               <p className="text-xs text-slate-500">
                 Upload an image up to {ORGANIZATION_IMAGE_SIZE_LABEL}.
               </p>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={getOrganizationImageUrl(imagePreview)}
-                  alt="Organization profile"
-                  className="mt-2 h-44 w-full rounded-lg object-cover sm:h-56 lg:h-64"
-                />
+              <PhotoFrame src={getOrganizationImageUrl(imagePreview)} alt="Organization cover preview" position={position} className="mt-2 aspect-video w-full rounded-lg sm:aspect-[3/1]" />
+              {imagePreview && <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={isSubmitting} onClick={() => setEditor({ src: imagePreview })}>Reposition / zoom</Button>
+                <Button type="button" variant="ghost" size="sm" disabled={isSubmitting} onClick={() => { setImageFile(null); setImagePreview(""); setPosition(defaultPhotoPosition); setRemoveCover(true); }}>Remove cover</Button>
+              </div>}
             </div>
           </div>
 
@@ -247,6 +272,12 @@ export function OrganizationSettingsForm({
           </Button>
         </form>
       </CardContent>
+      {editor && <PhotoEditor src={editor.src} kind="cover" initialPosition={editor.file ? defaultPhotoPosition : position} onCancel={() => setEditor(null)} onSave={(nextPosition) => {
+        setPosition(nextPosition);
+        if (editor.file) { setImageFile(editor.file); setImagePreview(URL.createObjectURL(editor.file)); }
+        setRemoveCover(false);
+        setEditor(null);
+      }} />}
     </Card>
   );
 }

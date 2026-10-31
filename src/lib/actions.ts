@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { normalizeOrganizationCover } from "@/lib/profile-photo";
+import { photoPositionSchema, defaultPhotoPosition } from "@/lib/photo-position";
+import { organizationImagePath } from "@/lib/photo-storage";
 import { Resend } from "resend";
 import { sendNewOrganizationApplicationEmail, sendOrganizationApprovalEmail, sendOrganizationRejectionEmail } from "@/lib/organization-approval-email";
 import { canAccessOrganizationApplication, getOwnOrganizationApplication } from "@/lib/organization-application-access";
@@ -180,12 +183,6 @@ function normalizeOrganizationDescription(description: string | null | undefined
   return normalized || null;
 }
 
-function getImageExtension(file: File) {
-  const extension = file.name.split(".").pop()?.toLowerCase();
-  if (extension && /^[a-z0-9]+$/.test(extension)) return extension;
-  return file.type.split("/")[1] || "jpg";
-}
-
 export async function uploadOrganizationImage(formData: FormData) {
   const file = formData.get("image");
 
@@ -203,26 +200,66 @@ export async function uploadOrganizationImage(formData: FormData) {
     };
   }
 
+  let position = defaultPhotoPosition;
+  try {
+    position = photoPositionSchema.parse(JSON.parse(String(formData.get("position") || JSON.stringify(defaultPhotoPosition))));
+  } catch { return { error: "Invalid photo position" }; }
   const adminClient = createAdminClient();
-  const extension = getImageExtension(file);
-  const path = `profiles/${crypto.randomUUID()}.${extension}`;
-
-  const { error } = await adminClient.storage
-    .from(ORGANIZATION_IMAGE_BUCKET)
-    .upload(path, file, {
-      contentType: file.type,
-      cacheControl: "31536000",
-    });
-
-  if (error) {
-    return { error: error.message };
+  const organizationId = formData.get("organizationId");
+  // Application uploads have no organization yet. Existing covers use one key,
+  // with ownership checked on the server before allowing an overwrite.
+  let organization: { id: string; image_url: string | null } | null = null;
+  if (organizationId !== null) {
+    if (typeof organizationId !== "string") return { error: "Invalid organization" };
+    const profile = await getCurrentUserProfile();
+    if (!profile || !["admin", "organization"].includes(profile.role)) return { error: "Not authorized" };
+    let query = adminClient.from("organizations").select("id, image_url").eq("id", organizationId);
+    if (profile.role !== "admin") query = query.eq("owner_id", profile.id);
+    const { data, error } = await query.single();
+    if (error || !data) return { error: "Organization not found or not authorized" };
+    organization = data;
   }
 
-  const { data } = adminClient.storage
-    .from(ORGANIZATION_IMAGE_BUCKET)
-    .getPublicUrl(path);
+  let bytes: Buffer;
+  try { bytes = await normalizeOrganizationCover(Buffer.from(await file.arrayBuffer())); }
+  catch { return { error: "This image could not be read. Try a JPEG, PNG, or WebP image." }; }
+  const path = organization ? `profiles/${organization.id}/cover.webp` : `profiles/${crypto.randomUUID()}.webp`;
+  const storage = adminClient.storage.from(ORGANIZATION_IMAGE_BUCKET);
+  const { error } = await storage.upload(path, bytes, {
+    contentType: "image/webp",
+    upsert: Boolean(organization),
+    cacheControl: "0",
+  });
+  if (error) return { error: error.message };
 
-  return { url: data.publicUrl };
+  // A new URL version refreshes browser/Next image caches without another object.
+  const { data } = storage.getPublicUrl(path);
+  const url = `${data.publicUrl}?v=${crypto.randomUUID()}`;
+  let warning: string | undefined;
+  if (organization) {
+    const { error: saveError } = await adminClient.from("organizations")
+      .update({ image_url: url, image_position: position, updated_at: new Date().toISOString() }).eq("id", organization.id);
+    if (saveError) return { error: "Unable to save the cover photo. Please try again." };
+    const previousPath = organizationImagePath(organization.image_url, process.env.NEXT_PUBLIC_SUPABASE_URL!);
+    if (previousPath && previousPath !== path) {
+      // Applications may still display the original cover. Move those references
+      // before deleting the legacy file, and never delete a shared org cover.
+      const { error: applicationError } = await adminClient.from("organization_applications")
+        .update({ image_url: url }).eq("image_url", organization.image_url!);
+      const { data: references, error: referenceError } = await adminClient.from("organizations")
+        .select("id").eq("image_url", organization.image_url!).neq("id", organization.id).limit(1);
+      if (applicationError || referenceError) {
+        warning = "Photo saved, but the previous file could not be cleaned up. Please contact support.";
+      } else if (!references?.length) {
+        const { error: removeError } = await storage.remove([previousPath]);
+        if (removeError) warning = "Photo saved, but the previous file could not be cleaned up. Please contact support.";
+      }
+    }
+    revalidatePath("/dashboard/organization");
+    revalidatePath("/dashboard/admin/organizations");
+    revalidatePath("/organizations");
+  }
+  return { url, warning };
 }
 
 function getAppUrl() {
@@ -2765,6 +2802,7 @@ export async function updateOrganizationSettings(data: OrganizationSettingsInput
       contact_email: parsed.data.contact_email,
       contact_phone: parsed.data.contact_phone?.trim() || null,
       image_url: parsed.data.image_url?.trim() || null,
+      image_position: parsed.data.image_position ?? defaultPhotoPosition,
       visibility: parsed.data.visibility,
       updated_at: new Date().toISOString(),
     })
@@ -2911,6 +2949,7 @@ export async function updateOrganizationByAdmin(
       contact_email: parsed.data.contact_email,
       contact_phone: parsed.data.contact_phone?.trim() || null,
       image_url: parsed.data.image_url?.trim() || null,
+      image_position: parsed.data.image_position ?? defaultPhotoPosition,
       visibility: parsed.data.visibility,
       updated_at: new Date().toISOString(),
     })
@@ -3144,4 +3183,30 @@ export async function signIn(
   }
 
   redirectAfterLogin(profile, redirectTo);
+}
+
+export async function removeOrganizationCover(organizationId: string) {
+  const profile = await getCurrentUserProfile();
+  if (!profile || !["admin", "organization"].includes(profile.role)) return { error: "Not authorized" };
+  const admin = createAdminClient();
+  let query = admin.from("organizations").select("id, image_url").eq("id", organizationId);
+  if (profile.role !== "admin") query = query.eq("owner_id", profile.id);
+  const { data: organization, error } = await query.single();
+  if (error || !organization) return { error: "Organization not found or not authorized" };
+  const { error: saveError } = await admin.from("organizations").update({ image_url: null, image_position: defaultPhotoPosition }).eq("id", organization.id);
+  if (saveError) return { error: "Unable to remove cover photo" };
+  const path = organizationImagePath(organization.image_url, process.env.NEXT_PUBLIC_SUPABASE_URL!);
+  let warning: string | undefined;
+  if (path) {
+    const { error: applicationError } = await admin.from("organization_applications").update({ image_url: null }).eq("image_url", organization.image_url!);
+    const { data: references, error: referenceError } = await admin.from("organizations").select("id").eq("image_url", organization.image_url!).limit(1);
+    if (applicationError || referenceError) warning = "Cover removed, but its file could not be cleaned up.";
+    else if (!references?.length) {
+      const { error: removeError } = await admin.storage.from(ORGANIZATION_IMAGE_BUCKET).remove([path]);
+      if (removeError) warning = "Cover removed, but its file could not be cleaned up.";
+    }
+  }
+  revalidatePath("/dashboard/organization");
+  revalidatePath("/dashboard/admin/organizations");
+  return { success: true, warning };
 }

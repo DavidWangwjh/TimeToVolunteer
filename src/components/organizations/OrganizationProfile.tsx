@@ -1,3 +1,4 @@
+import { PhotoFrame } from "@/components/profile/PhotoFrame";
 import Link from "next/link";
 import { Building2, Globe, Mail, Pencil, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,13 +41,8 @@ export function OrganizationProfile({
 
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-950/5">
-      <div className="relative h-44 bg-slate-100 sm:h-56 lg:h-64">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageUrl}
-          alt={`${organization.name} organization`}
-          className="h-full w-full object-cover"
-        />
+      <div className="relative aspect-video overflow-hidden bg-slate-100 sm:aspect-[3/1]">
+        <PhotoFrame src={imageUrl} alt={`${organization.name} organization`} position={organization.image_position} className="h-full w-full" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-950/35 to-transparent" />
       </div>
 
